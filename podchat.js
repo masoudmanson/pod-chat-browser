@@ -12819,7 +12819,6 @@ module.exports = ws
      */
     var Async,
         ChatUtility,
-        FormData,
         Dexie;
 
     function Chat(params) {
@@ -12833,7 +12832,6 @@ module.exports = ws
         else {
             Async = window.POD.Async,
                 ChatUtility = window.POD.ChatUtility,
-                FormData = window.FormData,
                 Dexie = window.Dexie;
         }
 
