@@ -1436,10 +1436,12 @@
                      */
                     case chatMessageVOTypes.CREATE_THREAD:
                         messageContent.uniqueId = uniqueId;
-                        createThread(messageContent, true);
 
                         if (messagesCallbacks[uniqueId]) {
+                            createThread(messageContent, true, true);
                             messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        } else {
+                            createThread(messageContent, true, false);
                         }
 
                         break;
@@ -1905,7 +1907,7 @@
                         break;
 
                     /**
-                     * Type 18    Remove a /participant from Thread
+                     * Type 18    Remove a participant from Thread
                      */
                     case chatMessageVOTypes.REMOVE_PARTICIPANT:
                         if (messagesCallbacks[uniqueId]) {
@@ -2746,12 +2748,14 @@
              *
              * @return {object} Formatted Thread Object
              */
-            createThread = function (messageContent, addFromService) {
+            createThread = function (messageContent, addFromService, showThread) {
                 var threadData = formatDataToMakeConversation(messageContent);
+                var redirectToThread = (showThread === true) ? showThread : false;
 
                 if (addFromService) {
                     fireEvent('threadEvents', {
                         type: 'THREAD_NEW',
+                        redirectToThread: redirectToThread,
                         result: {
                             thread: threadData
                         }
