@@ -2926,6 +2926,26 @@
                     receiveEnable: messageContent.receiveEnable
                 };
 
+                if (messageContent.contactId) {
+                    user.contactId = messageContent.contactId;
+                }
+
+                if (messageContent.contactName) {
+                    user.contactName = messageContent.contactName;
+                }
+
+                if (messageContent.contactFirstName) {
+                    user.contactFirstName = messageContent.contactFirstName;
+                }
+
+                if (messageContent.contactLastName) {
+                    user.contactLastName = messageContent.contactLastName;
+                }
+
+                if (messageContent.blocked) {
+                    user.blocked = messageContent.blocked;
+                }
+
                 return user;
             },
 
@@ -3594,7 +3614,7 @@
                                             result: {
                                                 threads: cacheData,
                                                 contentCount: threadsCount,
-                                                hasNext: (offset + count < threadsCount && threads.length > 0),
+                                                hasNext: !(threads.length < count),//(offset + count < threadsCount && threads.length > 0),
                                                 nextOffset: offset + threads.length
                                             }
                                         };
@@ -5193,7 +5213,7 @@
                                                     result: {
                                                         participants: cacheData,
                                                         contentCount: participantsCount,
-                                                        hasNext: (offset + count < participantsCount && participants.length > 0),
+                                                        hasNext: !(participants.length < count),//(offset + count < participantsCount && participants.length > 0),
                                                         nextOffset: offset + participants.length
                                                     }
                                                 };
@@ -6539,11 +6559,11 @@
 
             if (params) {
                 if (parseInt(params.count) > 0) {
-                    count = params.count;
+                    count = parseInt(params.count);
                 }
 
                 if (parseInt(params.offset) > 0) {
-                    offset = params.offset;
+                    offset = parseInt(params.offset);
                 }
 
                 if (typeof params.query === 'string') {
@@ -6636,7 +6656,7 @@
                                                 result: {
                                                     contacts: cacheData,
                                                     contentCount: contactsCount,
-                                                    hasNext: (offset + count < contactsCount && contacts.length > 0),
+                                                    hasNext: !(contacts.length < count),//(offset + count < contactsCount && contacts.length > 0),
                                                     nextOffset: offset + contacts.length
                                                 }
                                             };
@@ -8951,7 +8971,7 @@
                                                 result: {
                                                     contacts: cacheData,
                                                     contentCount: contactsCount,
-                                                    hasNext: (data.offset + data.size < contactsCount && contacts.length > 0),
+                                                    hasNext: !(contacts.length < data.size),//(data.offset + data.size < contactsCount && contacts.length > 0),
                                                     nextOffset: data.offset + contacts.length
                                                 }
                                             };
