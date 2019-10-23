@@ -56,6 +56,8 @@ var params = {
     connectionCheckTimeout: 10000, // Socket connection live time on server
     messageTtl: 24 * 60 * 60, // Message time to live (1 day in seonds)
     reconnectOnClose: true, // auto connect to socket after socket close
+    httpRequestTimeout: 30000,
+    httpUploadRequestTimeout: 0, // 0 means No timeout
     asyncLogging: {
         onFunction: true, // log main actions on console
         onMessageReceive: true, // log received messages on console
