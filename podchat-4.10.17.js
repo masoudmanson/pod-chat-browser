@@ -13062,7 +13062,8 @@ module.exports = ws
             httpRequestObject = {},
             connectionCheckTimeout = params.connectionCheckTimeout,
             connectionCheckTimeoutThreshold = params.connectionCheckTimeoutThreshold,
-            httpRequestTimeout = params.httpRequestTimeout || 20000,
+            httpRequestTimeout = (params.httpRequestTimeout >= 0) ? params.httpRequestTimeout : 30000,
+            httpUploadRequestTimeout = (params.httpUploadRequestTimeout >= 0) ? params.httpUploadRequestTimeout : 0,
             actualTimingLog = (params.asyncLogging.actualTiming && typeof params.asyncLogging.actualTiming === 'boolean')
                 ? params.asyncLogging.actualTiming
                 : false,
@@ -13550,9 +13551,15 @@ module.exports = ws
                 httpRequestObject[eval('fileUploadUniqueId')] = new XMLHttpRequest(),
                     settings = params.settings;
 
-                httpRequestObject[eval('fileUploadUniqueId')].timeout = (settings && typeof parseInt(settings.timeout) > 0 && settings.timeout > 0)
-                    ? settings.timeout
-                    : httpRequestTimeout;
+                if(data && typeof data === 'object' && (data.hasOwnProperty('image') || data.hasOwnProperty('file'))) {
+                    httpRequestObject[eval('fileUploadUniqueId')].timeout = (settings && typeof parseInt(settings.timeout) > 0 && settings.timeout > 0)
+                        ? settings.timeout
+                        : httpUploadRequestTimeout;
+                } else {
+                    httpRequestObject[eval('fileUploadUniqueId')].timeout = (settings && typeof parseInt(settings.uploadTimeout) > 0 && settings.uploadTimeout > 0)
+                        ? settings.uploadTimeout
+                        : httpRequestTimeout;
+                }
 
                 httpRequestObject[eval('fileUploadUniqueId')]
                     .addEventListener('error', function (event) {
@@ -14248,10 +14255,12 @@ module.exports = ws
                      */
                     case chatMessageVOTypes.CREATE_THREAD:
                         messageContent.uniqueId = uniqueId;
-                        createThread(messageContent, true);
 
                         if (messagesCallbacks[uniqueId]) {
+                            createThread(messageContent, true, true);
                             messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        } else {
+                            createThread(messageContent, true, false);
                         }
 
                         break;
@@ -14717,7 +14726,7 @@ module.exports = ws
                         break;
 
                     /**
-                     * Type 18    Remove a /participant from Thread
+                     * Type 18    Remove a participant from Thread
                      */
                     case chatMessageVOTypes.REMOVE_PARTICIPANT:
                         if (messagesCallbacks[uniqueId]) {
@@ -15558,12 +15567,14 @@ module.exports = ws
              *
              * @return {object} Formatted Thread Object
              */
-            createThread = function (messageContent, addFromService) {
+            createThread = function (messageContent, addFromService, showThread) {
                 var threadData = formatDataToMakeConversation(messageContent);
+                var redirectToThread = (showThread === true) ? showThread : false;
 
                 if (addFromService) {
                     fireEvent('threadEvents', {
                         type: 'THREAD_NEW',
+                        redirectToThread: redirectToThread,
                         result: {
                             thread: threadData
                         }
@@ -15733,6 +15744,26 @@ module.exports = ws
                     sendEnable: messageContent.sendEnable,
                     receiveEnable: messageContent.receiveEnable
                 };
+
+                if (messageContent.contactId) {
+                    user.contactId = messageContent.contactId;
+                }
+
+                if (messageContent.contactName) {
+                    user.contactName = messageContent.contactName;
+                }
+
+                if (messageContent.contactFirstName) {
+                    user.contactFirstName = messageContent.contactFirstName;
+                }
+
+                if (messageContent.contactLastName) {
+                    user.contactLastName = messageContent.contactLastName;
+                }
+
+                if (messageContent.blocked) {
+                    user.blocked = messageContent.blocked;
+                }
 
                 return user;
             },
@@ -16402,7 +16433,7 @@ module.exports = ws
                                             result: {
                                                 threads: cacheData,
                                                 contentCount: threadsCount,
-                                                hasNext: (offset + count < threadsCount && threads.length > 0),
+                                                hasNext: !(threads.length < count),//(offset + count < threadsCount && threads.length > 0),
                                                 nextOffset: offset + threads.length
                                             }
                                         };
@@ -17018,7 +17049,7 @@ module.exports = ws
                                                                 .toArray()
                                                                 .then(function (res) {
                                                                     var hasNext = true;
-                                                                    if (res[0].threadId == parseInt(params.threadId)) {
+                                                                    if (res.length > 0 && res[0].threadId == parseInt(params.threadId)) {
                                                                         contentCount = res[0].contentCount;
                                                                         hasNext = offset + count < res[0].contentCount && messages.length > 0
                                                                     } else {
@@ -18001,7 +18032,7 @@ module.exports = ws
                                                     result: {
                                                         participants: cacheData,
                                                         contentCount: participantsCount,
-                                                        hasNext: (offset + count < participantsCount && participants.length > 0),
+                                                        hasNext: !(participants.length < count),//(offset + count < participantsCount && participants.length > 0),
                                                         nextOffset: offset + participants.length
                                                     }
                                                 };
@@ -19347,11 +19378,11 @@ module.exports = ws
 
             if (params) {
                 if (parseInt(params.count) > 0) {
-                    count = params.count;
+                    count = parseInt(params.count);
                 }
 
                 if (parseInt(params.offset) > 0) {
-                    offset = params.offset;
+                    offset = parseInt(params.offset);
                 }
 
                 if (typeof params.query === 'string') {
@@ -19444,7 +19475,7 @@ module.exports = ws
                                                 result: {
                                                     contacts: cacheData,
                                                     contentCount: contactsCount,
-                                                    hasNext: (offset + count < contactsCount && contacts.length > 0),
+                                                    hasNext: !(contacts.length < count),//(offset + count < contactsCount && contacts.length > 0),
                                                     nextOffset: offset + contacts.length
                                                 }
                                             };
@@ -21759,7 +21790,7 @@ module.exports = ws
                                                 result: {
                                                     contacts: cacheData,
                                                     contentCount: contactsCount,
-                                                    hasNext: (data.offset + data.size < contactsCount && contacts.length > 0),
+                                                    hasNext: !(contacts.length < data.size),//(data.offset + data.size < contactsCount && contacts.length > 0),
                                                     nextOffset: data.offset + contacts.length
                                                 }
                                             };
