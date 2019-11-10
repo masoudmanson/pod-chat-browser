@@ -13009,7 +13009,7 @@ module.exports = ws
                 'image/bmp',
                 'image/png',
                 'image/tiff',
-                'image/gif',
+                // 'image/gif',
                 'image/x-icon',
                 'image/jpeg',
                 'image/webp'
@@ -13020,7 +13020,7 @@ module.exports = ws
                 'png',
                 'tiff',
                 'tiff2',
-                'gif',
+                // 'gif',
                 'ico',
                 'jpg',
                 'jpeg',
@@ -18582,7 +18582,7 @@ module.exports = ws
                     .pop();
 
 
-                if (imageMimeTypes.indexOf(fileType) > 0 || imageExtentions.indexOf(fileExtension) > 0) {
+                if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
                     uploadImageData = {};
 
                     if (params) {
@@ -20004,7 +20004,7 @@ module.exports = ws
                      * File is a valid Image
                      * Should upload to image server
                      */
-                    if (imageMimeTypes.indexOf(fileType) > 0 || imageExtentions.indexOf(fileExtension) > 0) {
+                    if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
                         fileUploadParams.image = params.file;
 
                         if (typeof params.xC == 'string') {
@@ -20060,7 +20060,7 @@ module.exports = ws
                         },
                         callbacks: callbacks
                     }, function () {
-                        if (imageMimeTypes.indexOf(fileType) > 0 || imageExtentions.indexOf(fileExtension) > 0) {
+                        if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
                             uploadImage(fileUploadParams, function (result) {
                                 if (!result.hasError) {
                                     metadata['file']['actualHeight'] = result.result.actualHeight;
@@ -20725,7 +20725,7 @@ module.exports = ws
                      * File is a valid Image
                      * Should upload to image server
                      */
-                    if (imageMimeTypes.indexOf(fileType) > 0 || imageExtentions.indexOf(fileExtension) > 0) {
+                    if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
                         fileUploadParams.image = params.file;
 
                         if (typeof params.xC == 'string') {
@@ -20784,7 +20784,7 @@ module.exports = ws
                         },
                         callbacks: callbacks
                     }, function () {
-                        if (imageMimeTypes.indexOf(fileType) > 0 || imageExtentions.indexOf(fileExtension) > 0) {
+                        if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
                             uploadImage(fileUploadParams, function (result) {
                                 if (!result.hasError) {
                                     metadata['file']['actualHeight'] = result.result.actualHeight;
