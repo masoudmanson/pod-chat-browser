@@ -45,7 +45,7 @@ var params = {
     fullResponseObject: false,
     mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
     // typeCode: "chattest",
-    token: "31698d5728bf4082994e2e1bf535551b",
+    // token: "31698d5728bf4082994e2e1bf535551b",
     // token: '7cba09ff83554fc98726430c30afcfc6', // {**REQUIRED**} SSO Token ZiZi
     // token: "fbd4ecedb898426394646e65c6b1d5d1", //  {**REQUIRED**} SSO Token JiJi
     // token: "5fb88da4c6914d07a501a76d68a62363", // {**REQUIRED**} SSO Token FiFi
