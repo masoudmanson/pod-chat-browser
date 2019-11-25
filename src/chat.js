@@ -2836,7 +2836,9 @@
                  */
 
                 var linkedUser = {
-                    coreUserId: messageContent.coreUserId,
+                    coreUserId: (messageContent.coreUserId !== undefined)
+                        ? messageContent.coreUserId
+                        : messageContent.id,
                     username: messageContent.username,
                     nickname: messageContent.nickname,
                     name: messageContent.name,
