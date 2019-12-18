@@ -6633,6 +6633,10 @@
                                 var message = uploadQueue[i].message,
                                     callbacks = uploadQueue[i].callbacks;
 
+                                if (message.content.hasOwnProperty('message')) {
+                                    message.content.message['metadata'] = metadata;
+                                }
+
                                 message.metadata = metadata;
                             }
                             catch (e) {
@@ -7576,6 +7580,209 @@
             return {
                 uniqueId: fileUniqueId,
                 threadId: params.threadId,
+                participant: userInfo,
+                content: params.content
+            };
+        };
+
+        this.crateThreadWithFile = function (params, callbacks) {
+            var metadata = {},
+                fileUploadParams = {},
+                fileUniqueId = Utility.generateUUID(),
+                content = {};
+
+            if (params) {
+                if (typeof params.title === 'string') {
+                    content.title = params.title;
+                }
+
+                if (typeof params.type === 'string') {
+                    var threadType = params.type;
+                    content.type = createThreadTypes[threadType];
+                }
+
+                if (Array.isArray(params.invitees)) {
+                    var tempInvitee;
+                    content.invitees = [];
+                    for (var i = 0; i < params.invitees.length; i++) {
+                        var tempInvitee = formatDataToMakeInvitee(params.invitees[i]);
+                        if (tempInvitee) {
+                            content.invitees.push(tempInvitee);
+                        }
+                    }
+                }
+
+                if (typeof params.image === 'string') {
+                    content.image = params.image;
+                }
+
+                if (typeof params.description === 'string') {
+                    content.description = params.description;
+                }
+
+                if (typeof params.metadata === 'string') {
+                    content.metadata = params.metadata;
+                }
+                else if (typeof params.metadata === 'object') {
+                    try {
+                        content.metadata = JSON.stringify(params.metadata);
+                    }
+                    catch (e) {
+                        console.log(e);
+                    }
+                }
+
+                if (typeof params.file != 'undefined') {
+
+                    var fileName,
+                        fileType,
+                        fileSize,
+                        fileExtension;
+
+                    fileName = params.file.name;
+                    fileType = params.file.type;
+                    fileSize = params.file.size;
+                    fileExtension = params.file.name.split('.')
+                        .pop();
+
+
+                    fireEvent('fileUploadEvents', {
+                        threadId: 0,
+                        uniqueId: fileUniqueId,
+                        state: 'NOT_STARTED',
+                        progress: 0,
+                        fileInfo: {
+                            fileName: fileName,
+                            fileSize: fileSize
+                        },
+                        fileObject: params.file
+                    });
+
+                    /**
+                     * File is a valid Image
+                     * Should upload to image server
+                     */
+                    if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
+                        fileUploadParams.image = params.file;
+
+                        if (typeof params.xC == 'string') {
+                            fileUploadParams.xC = params.xC;
+                        }
+
+                        if (typeof params.yC == 'string') {
+                            fileUploadParams.yC = params.yC;
+                        }
+
+                        if (typeof params.hC == 'string') {
+                            fileUploadParams.hC = params.hC;
+                        }
+
+                        if (typeof params.wC == 'string') {
+                            fileUploadParams.wC = params.wC;
+                        }
+                    }
+                    else {
+                        fileUploadParams.file = params.file;
+                    }
+
+                    metadata['file'] = {};
+
+                    metadata['file']['originalName'] = fileName;
+                    metadata['file']['mimeType'] = fileType;
+                    metadata['file']['size'] = fileSize;
+
+                    fileUploadParams.threadId = 0;
+                    fileUploadParams.uniqueId = fileUniqueId;
+                    fileUploadParams.fileObject = params.file;
+                    fileUploadParams.originalFileName = fileName;
+
+                    content.message = {};
+                    content.message['uniqueId'] = Utility.generateUUID();
+                    content.message['text'] = params.caption;
+                    content.message['messageType'] = params.messageType;
+
+                    putInChatUploadQueue({
+                        message: {
+                            chatMessageVOType: chatMessageVOTypes.CREATE_THREAD,
+                            content: content,
+                            subjectId: 0,
+                            uniqueId: fileUniqueId,
+                            pushMsgType: 4
+                        },
+                        callbacks: callbacks
+                    }, function () {
+                        if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
+                            uploadImage(fileUploadParams, function (result) {
+                                if (!result.hasError) {
+                                    metadata['file']['actualHeight'] = result.result.actualHeight;
+                                    metadata['file']['actualWidth'] = result.result.actualWidth;
+                                    metadata['file']['height'] = result.result.height;
+                                    metadata['file']['width'] = result.result.width;
+                                    metadata['file']['name'] = result.result.name;
+                                    metadata['file']['hashCode'] = result.result.hashCode;
+                                    metadata['file']['id'] = result.result.id;
+                                    metadata['file']['link'] = SERVICE_ADDRESSES.FILESERVER_ADDRESS +
+                                        SERVICES_PATH.GET_IMAGE + '?imageId=' +
+                                        result.result.id + '&hashCode=' +
+                                        result.result.hashCode;
+
+                                    transferFromUploadQToSendQ(0, fileUniqueId, JSON.stringify(metadata), function () {
+                                        chatSendQueueHandler();
+                                    });
+                                }
+                                else {
+                                    deleteFromChatUploadQueue({message: {uniqueId: fileUniqueId}});
+                                }
+                            });
+                        }
+                        else {
+                            uploadFile(fileUploadParams, function (result) {
+                                if (!result.hasError) {
+                                    metadata['file']['name'] = result.result.name;
+                                    metadata['file']['hashCode'] = result.result.hashCode;
+                                    metadata['file']['id'] = result.result.id;
+                                    metadata['file']['link'] = SERVICE_ADDRESSES.FILESERVER_ADDRESS +
+                                        SERVICES_PATH.GET_FILE + '?fileId=' +
+                                        result.result.id + '&hashCode=' +
+                                        result.result.hashCode;
+
+                                    transferFromUploadQToSendQ(0, fileUniqueId, JSON.stringify(metadata), function () {
+                                        chatSendQueueHandler();
+                                    });
+                                }
+                                else {
+                                    deleteFromChatUploadQueue({message: {uniqueId: fileUniqueId}});
+                                }
+                            });
+                        }
+                    });
+
+                    return {
+                        uniqueId: fileUniqueId,
+                        threadId: 0,
+                        participant: userInfo,
+                        content: {
+                            caption: params.content,
+                            file: {
+                                uniqueId: fileUniqueId,
+                                fileName: fileName,
+                                fileSize: fileSize,
+                                fileObject: params.file
+                            }
+                        }
+                    };
+                }
+                else {
+                    fireEvent('error', {
+                        code: 6302,
+                        message: CHAT_ERRORS[6302]
+                    });
+                }
+            }
+
+            return {
+                uniqueId: fileUniqueId,
+                threadId: 0,
                 participant: userInfo,
                 content: params.content
             };

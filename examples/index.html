@@ -24,52 +24,99 @@
         // Production
         //        var PodChat = window.PodChat;
 
+
         var params = {
             appId: new Date().getTime(),
 
             /**
+             * ActiveMQ Config
+             */
+            // protocol: "queue",
+            // queueHost: "10.56.16.25",
+            // queuePort: "61613",
+            // queueUsername: "root",
+            // queuePassword: "zalzalak",
+            // queueReceive: "queue-in-amjadi-stomp",
+            // queueSend: "queue-out-amjadi-stomp",
+            // queueConnectionTimeout: 20000,
+            // serverName: "chat-server",
+
+            /**
+             * ActiveMQ Config - Sheikh
+             */
+            // protocol: "queue",
+            // queueHost: "192.168.112.23",
+            // queuePort: "61613",
+            // queueUsername: "root",
+            // queuePassword: "j]Bm0RU8gLhbPUG",
+            // queueReceive: "queue-in-local_chat",
+            // queueSend: "queue-out-local_chat",
+            // queueConnectionTimeout: 20000,
+
+            // protocol: "queue",
+            // queueHost: "172.16.0.248",
+            // queuePort: "61613",
+            // queueUsername: "root",
+            // queuePassword: "zalzalak",
+            // queueReceive: "queue-in-wepod",
+            // queueSend: "queue-out-wepod",
+            // queueConnectionTimeout: 20000,
+            // serverName: "chat-server",
+
+            /**
              * Main Server
              */
-//            socketAddress: 'wss://msg.pod.land/ws',
-//            ssoHost: 'https://accounts.pod.land',
-//            platformHost: 'https://api.pod.land/srv/core',
-//            fileServer: 'https://core.pod.land',
-//            serverName: 'chat-server',
+            // socketAddress: 'wss://msg.pod.ir/ws', // {**REQUIRED**} Socket Address
+            // ssoHost: 'https://accounts.pod.ir', // {**REQUIRED**} Socket Address
+            // platformHost: 'https://api.pod.ir/srv/core', // {**REQUIRED**} Platform Core Address
+            // fileServer: 'https://core.pod.ir', // {**REQUIRED**} File Server Address
+            // serverName: 'chat-server', // {**REQUIRED**} Server to to register on
 
             /**
              * Hamed Mehrara
              */
-//             socketAddress: 'ws://172.16.106.26:8003/ws', // {**REQUIRED**} Socket Address
-//             ssoHost: 'http://172.16.110.76', // {**REQUIRED**} Socket Address
-//             platformHost: 'http://172.16.106.26:8080/hamsam', // {**REQUIRED**} Platform Core Address
-//             fileServer: 'http://172.16.106.26:8080/hamsam', // {**REQUIRED**} File Server Address
-//             serverName: 'chat-server', // {**REQUIRED**} Server to to register on
+            // socketAddress: 'ws://172.16.106.26:8003/ws', // {**REQUIRED**} Socket Address
+            // ssoHost: 'http://172.16.110.76', // {**REQUIRED**} Socket Address
+            // platformHost: 'http://172.16.106.26:8080/hamsam', // {**REQUIRED**} Platform Core Address
+            // fileServer: 'http://172.16.106.26:8080/hamsam', // {**REQUIRED**} File Server Address
+            // serverName: 'chat-server', // {**REQUIRED**} Server to to register on
 
             /**
              * Mehdi Sheikh Hosseini
              */
-            socketAddress: 'ws://172.16.110.131:8003/ws', // {**REQUIRED**} Socket Address
-            ssoHost: 'http://172.16.110.76', // {**REQUIRED**} Socket Address
-            platformHost: 'http://172.16.110.131:8080', // {**REQUIRED**} Platform Core Address
-            fileServer: 'http://172.16.110.131:8080', // {**REQUIRED**} File Server Address
-            serverName: 'chat-server2', // {**REQUIRED**} Server to to register on
+            // socketAddress: 'ws://172.16.110.235:8003/ws', // {**REQUIRED**} Socket Address
+            // ssoHost: 'http://172.16.110.76', // {**REQUIRED**} Socket Address
+            // platformHost: 'http://172.16.110.76:8080', // {**REQUIRED**} Platform Core Address
+            // fileServer: 'http://172.16.110.76:8080', // {**REQUIRED**} File Server Address
+            // serverName: 'chat-server', // {**REQUIRED**} Server to to register on
+
+
+            /**
+             * Leila Nemati
+             */
+            // socketAddress: 'ws://172.16.110.235:8003/ws', // {**REQUIRED**} Socket Address
+            // ssoHost: 'http://172.16.110.76', // {**REQUIRED**} Socket Address
+            // platformHost: 'http:///172.16.110.76:8080', // {**REQUIRED**} Platform Core Address
+            // fileServer: 'http:///172.16.110.76:8080', // {**REQUIRED**} File Server Address
+            // serverName: 'sheikh_chat', // {**REQUIRED**} Server to to
 
             /**
              * Sand Box
              */
-            // socketAddress: "wss://chat-sandbox.pod.land/ws", // {**REQUIRED**} Socket Address
-            // ssoHost: "https://accounts.pod.land", // {**REQUIRED**} Socket Address
-            // platformHost: "https://sandbox.pod.land:8043/srv/basic-platform", // {**REQUIRED**} Platform Core Address
-            // fileServer: "https://sandbox.pod.land:8443", // {**REQUIRED**} File Server Address
-            // serverName: "chat-server", // {**REQUIRED**} Server to to register on
+            socketAddress: "wss://chat-sandbox.pod.ir/ws", // {**REQUIRED**} Socket Address
+            ssoHost: "https://accounts.pod.ir", // {**REQUIRED**} Socket Address
+            platformHost: "https://sandbox.pod.ir:8043/srv/basic-platform", // {**REQUIRED**} Platform Core Address
+            fileServer: "https://sandbox.pod.ir:8443", // {**REQUIRED**} File Server Address
+            serverName: "chat-server", // {**REQUIRED**} Server to to register on
 
             grantDeviceIdFromSSO: false,
-            enableCache: true, // Enable Client side caching
-            fullResponseObject: true,
-            mapApiKey: "8b77db18704aa646ee5aaea13e7370f4f88b9e8c",
-
-            token: "7cba09ff83554fc98726430c30afcfc6", // {**REQUIRED**} SSO Token ZiZi
-            // token: "fbd4ecedb898426394646e65c6b1d5d1", // {**REQUIRED**} SSO Token JiJi
+            enableCache: false, // Enable Client side caching
+            fullResponseObject: false,
+            mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
+            // typeCode: "talk",
+            token: "7f4a7c042cc64d52b90e553a2bd28973",
+            // token: "7cba09ff83554fc98726430c30afcfc6", // {**REQUIRED**} SSO Token ZiZi
+            // token: "fbd4ecedb898426394646e65c6b1d5d1", //  {**REQUIRED**} SSO Token JiJi
             // token: "5fb88da4c6914d07a501a76d68a62363", // {**REQUIRED**} SSO Token FiFi
             // token: "bebc31c4ead6458c90b607496dae25c6", // {**REQUIRED**} SSO Token Alexi
             // token: "e4f1d5da7b254d9381d0487387eabb0a", // {**REQUIRED**} SSO Token Felfeli
@@ -84,9 +131,10 @@
                 onFunction: true, // log main actions on console
                 // onMessageReceive: true, // log received messages on console
                 // onMessageSend: true, // log sent messaged on console
-                // actualTiming: true // log actual functions running time
+                actualTiming: true // log actual functions running time
             }
         };
+
 
         var chatAgent = new PodChat(params),
             PID,
@@ -927,6 +975,51 @@
             });
         }
 
+        function createThreadWithFile(file, invitees, threadType) {
+            if (typeof threadType == 'string') {
+                threadTypeText = threadType;
+            }
+            else {
+                threadTypeText = 'NORMAL';
+            }
+
+            createThreadParams = {
+                threadId: 0,
+                title: 'Thread Title Sample',
+                type: threadTypeText,
+                invitees: [],
+                file: file,
+                caption: 'Create thread with file message',
+                image: 'https://core.pod.ir/nzh/image?imageId=333415&hashCode=16e37b412fe-0.9111035145050199',
+                description: 'This is some Description.'
+            };
+
+            if (Array.isArray(invitees)) {
+                for (var i = 0; i < invitees.length; i++) {
+                    invitee = formatDataToMakeInvitee({
+                        id: invitees[i].id,
+                        type: invitees[i].type
+                    });
+                    if (invitee) {
+                        createThreadParams.invitees.push(invitee);
+                    }
+                }
+            }
+            else {
+                invitee = formatDataToMakeInvitee({
+                    id: invitees.id,
+                    type: invitees.type
+                });
+                if (invitee) {
+                    createThreadParams.invitees.push(invitee);
+                }
+            }
+
+            chatAgent.crateThreadWithFile(createThreadParams, function (createThreadResult) {
+                console.log(createThreadResult);
+            });
+        }
+
         function renameThread(threadId, newName) {
             renameThreadParams = {
                 title: newName,
@@ -1169,6 +1262,56 @@
       </textarea>
 
         <button type="button" name="button" id="createThreadButton">Create Thread</button>
+    </fieldset>
+</form>
+
+
+<form>
+    <fieldset>
+        <legend>Create Thread with File</legend>
+        <label for="createThreadWithFileTitle">Thread title</label>
+        <input type="text" name="createThreadWithFileTitle" id="createThreadWithFileTitle" value="Thread Title">
+        <br>
+        <label for="createThreadWithFileType">Thread Type</label>
+        <select name="createThreadWithFileType" id="createThreadWithFileType">
+            <option value="NORMAL">NORMAL</option>
+            <option value="OWNER_GROUP">OWNER_GROUP</option>
+            <option value="PUBLIC_GROUP">PUBLIC_GROUP</option>
+            <option value="CHANNEL_GROUP">CHANNEL_GROUP</option>
+            <option value="CHANNEL">CHANNEL</option>
+        </select>
+        <br>
+        <label for="createThreadWithFileFile">File to send to thread</label>
+        <input type="file" name="createThreadWithFileFile" id="createThreadWithFileFile">
+        <br>
+        <label for="createThreadWithFileCaption">Thread File Caption</label>
+        <input type="text" name="createThreadWithFileCaption" id="createThreadWithFileCaption" value="Thread Description">
+        <br>
+        <label for="createThreadWithFileImage">Thread img</label>
+        <input type="text" name="createThreadWithFileImage" id="createThreadWithFileImage" value="">
+        <br>
+        <label for="createThreadWithFileDesc">Thread Desc</label>
+        <input type="text" name="createThreadWithFileDesc" id="createThreadWithFileDesc" value="Thread Description">
+
+        <br>
+
+        <label for="createThreadWithFileMetadata">Thread Metadata (JSON)</label>
+        <textarea name="createThreadWithFileMetadata" id="createThreadWithFileMetadata" rows="4" cols="70"></textarea>
+
+        <br>
+
+        <label for="createThreadWithFileInvitees">Thread Invitees (JSON Array)</label>
+        <textarea name="createThreadWithFileInvitees" id="createThreadWithFileInvitees" rows="10" cols="70">
+[{
+  "id": 122,
+  "type": "TO_BE_USER_CONTACT_ID"
+}, {
+  "id": 1102,
+  "type": "TO_BE_USER_CONTACT_ID"
+}]
+      </textarea>
+
+        <button type="button" name="button" id="createThreadWithFileButton">Create Thread With File</button>
     </fieldset>
 </form>
 
@@ -1447,6 +1590,100 @@
                 console.log(createThreadResult);
             });
         });
+
+
+    /**
+     * CREATE THREAD WITH FILE MESSAGE
+     */
+    document.getElementById("createThreadWithFileButton")
+        .addEventListener("click", function() {
+
+            // if (typeof threadType == 'string') {
+            //     threadTypeText = threadType;
+            // }
+            // else {
+            //     threadTypeText = 'NORMAL';
+            // }
+            //
+            // createThreadParams = {
+            //     threadId: 0,
+            //     title: 'Thread Title Sample',
+            //     type: threadTypeText,
+            //     invitees: [],
+            //     file: file,
+            //     caption: 'Create thread with file message',
+            //     image: 'https://core.pod.ir/nzh/image?imageId=333415&hashCode=16e37b412fe-0.9111035145050199',
+            //     description: 'This is some Description.'
+            // };
+            //
+            // if (Array.isArray(invitees)) {
+            //     for (var i = 0; i < invitees.length; i++) {
+            //         invitee = formatDataToMakeInvitee({
+            //             id: invitees[i].id,
+            //             type: invitees[i].type
+            //         });
+            //         if (invitee) {
+            //             createThreadParams.invitees.push(invitee);
+            //         }
+            //     }
+            // }
+            // else {
+            //     invitee = formatDataToMakeInvitee({
+            //         id: invitees.id,
+            //         type: invitees.type
+            //     });
+            //     if (invitee) {
+            //         createThreadParams.invitees.push(invitee);
+            //     }
+            // }
+            //
+            // chatAgent.crateThreadWithFile(createThreadParams, function (createThreadResult) {
+            //     console.log(createThreadResult);
+            // });
+
+            var fileInput = document.getElementById("createThreadWithFileFile"),
+                file = fileInput.files[0]
+
+            var invitees = JSON.parse(document.getElementById("createThreadWithFileInvitees").value);
+
+            createThreadParams = {
+                threadId: 0,
+                title: document.getElementById("createThreadWithFileTitle").value,
+                type: document.getElementById("createThreadWithFileType").value,
+                invitees: [],
+                file: file,
+                caption: document.getElementById("createThreadWithFileCaption").value,
+                image: document.getElementById("createThreadWithFileImage").value,
+                description: document.getElementById("createThreadWithFileDesc").value,
+                metadata: document.getElementById("createThreadWithFileMetadata").value
+            };
+
+            if (Array.isArray(invitees)) {
+                for (var i = 0; i < invitees.length; i++) {
+                    invitee = formatDataToMakeInvitee({
+                        id: invitees[i].id,
+                        type: invitees[i].type
+                    });
+                    if (invitee) {
+                        createThreadParams.invitees.push(invitee);
+                    }
+                }
+            }
+            else {
+                invitee = formatDataToMakeInvitee({
+                    id: invitees.id,
+                    type: invitees.type
+                });
+                if (invitee) {
+                    createThreadParams.invitees.push(invitee);
+                }
+            }
+
+            chatAgent.crateThreadWithFile(createThreadParams, function(createThreadResult) {
+                console.log(createThreadResult);
+            });
+        });
+
 
     /**
      * SEND FILE
