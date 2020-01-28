@@ -110,6 +110,15 @@
                 GET_NOT_SEEN_DURATION: 47,
                 PIN_THREAD: 48,
                 UNPIN_THREAD: 49,
+                PIN_MESSAGE: 50,
+                UNPIN_MESSAGE: 51,
+                UPDATE_CHAT_PROFILE: 52,
+                GET_PARTICIPANT_ROLES: 54,
+                GET_REPORT_REASONS: 56,
+                REPORT_THREAD: 57,
+                REPORT_USER: 58,
+                REPORT_MESSAGE: 59,
+                GET_CONTACT_NOT_SEEN_DURATION: 60,
                 LOGOUT: 100,
                 ERROR: 999
             },
@@ -4241,6 +4250,14 @@
                             sendMessageParams.content.query = whereClause.query = params.query;
                         }
 
+                        if (params.allMentioned && typeof params.allMentioned == 'boolean') {
+                            sendMessageParams.content.allMentioned = whereClause.allMentioned = params.allMentioned;
+                        }
+
+                        if (params.unreadMentioed && typeof params.unreadMentioed == 'boolean') {
+                            sendMessageParams.content.unreadMentioed = whereClause.unreadMentioed = params.unreadMentioed;
+                        }
+
                         if (typeof params.metadataCriteria == 'object' && params.metadataCriteria.hasOwnProperty('field')) {
                             sendMessageParams.content.metadataCriteria = whereClause.metadataCriteria = params.metadataCriteria;
                         }
@@ -6814,6 +6831,38 @@
         this.getAllThreadList = getAllThreadList;
 
         this.getHistory = getHistory;
+
+        this.getAllMentionedMessages = function(params, callback) {
+            return getHistory({
+                threadId: params.threadId,
+                allMentioned: true,
+                typeCode: params.typeCode,
+                count: params.count || 50,
+                offset: params.offset || 0,
+                cache: false,
+                queues: {
+                    uploading: false,
+                    sending: false,
+                    uploading: false
+                }
+            }, callback);
+        };
+
+        this.getUnreadMentionedMessages = function(params, callback) {
+            return getHistory({
+                threadId: params.threadId,
+                unreadMentioned: true,
+                typeCode: params.typeCode,
+                count: params.count || 50,
+                offset: params.offset || 0,
+                cache: false,
+                queues: {
+                    uploading: false,
+                    sending: false,
+                    uploading: false
+                }
+            }, callback);
+        };
 
         /**
          * Get Contacts
