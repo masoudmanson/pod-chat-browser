@@ -59,6 +59,7 @@
                 threadEvents: {},
                 contactEvents: {},
                 botEvents: {},
+                userEvents: {},
                 fileUploadEvents: {},
                 systemEvents: {},
                 chatReady: {},
@@ -136,6 +137,14 @@
                 CHANNEL_GROUP: 4,
                 CHANNEL: 8,
                 NOTIFICATION_CHANNEL: 16
+            },
+            chatMessageTypes = {
+                TEXT: '1',
+                VOICE: '2',
+                PICTURE: '3',
+                VIDEO: '4',
+                SOUND: '5',
+                FILE: '6'
             },
             systemMessageTypes = {
                 IS_TYPING: '1',
@@ -751,7 +760,7 @@
                 httpRequestObject[eval('fileUploadUniqueId')] = new XMLHttpRequest(),
                     settings = params.settings;
 
-                if(data && typeof data === 'object' && (data.hasOwnProperty('image') || data.hasOwnProperty('file'))) {
+                if (data && typeof data === 'object' && (data.hasOwnProperty('image') || data.hasOwnProperty('file'))) {
                     httpRequestObject[eval('fileUploadUniqueId')].timeout = (settings && typeof parseInt(settings.timeout) > 0 && settings.timeout > 0)
                         ? settings.timeout
                         : httpUploadRequestTimeout;
@@ -928,58 +937,58 @@
                 }
 
                 httpRequestObject[eval('fileUploadUniqueId')].onreadystatechange = function () {
-                        if (httpRequestObject[eval('fileUploadUniqueId')].readyState == 4) {
-                            if (httpRequestObject[eval('fileUploadUniqueId')].status == 200) {
-                                if (hasFile) {
-                                    hasError = false;
-                                    fireEvent('fileUploadEvents', {
-                                        threadId: threadId,
-                                        uniqueId: fileUniqueId,
-                                        state: 'UPLOADED',
-                                        progress: 100,
-                                        fileInfo: {
-                                            fileName: originalFileName,
-                                            fileSize: fileSize
-                                        },
-                                        fileObject: fileObject
-                                    });
-                                }
+                    if (httpRequestObject[eval('fileUploadUniqueId')].readyState == 4) {
+                        if (httpRequestObject[eval('fileUploadUniqueId')].status == 200) {
+                            if (hasFile) {
+                                hasError = false;
+                                fireEvent('fileUploadEvents', {
+                                    threadId: threadId,
+                                    uniqueId: fileUniqueId,
+                                    state: 'UPLOADED',
+                                    progress: 100,
+                                    fileInfo: {
+                                        fileName: originalFileName,
+                                        fileSize: fileSize
+                                    },
+                                    fileObject: fileObject
+                                });
+                            }
 
-                                callback && callback({
-                                    hasError: false,
-                                    cache: false,
-                                    result: {
-                                        responseText: httpRequestObject[eval('fileUploadUniqueId')].responseText,
-                                        responseHeaders: httpRequestObject[eval('fileUploadUniqueId')].getAllResponseHeaders()
-                                    }
-                                });
-                            }
-                            else {
-                                if (hasFile) {
-                                    hasError = true;
-                                    fireEvent('fileUploadEvents', {
-                                        threadId: threadId,
-                                        uniqueId: fileUniqueId,
-                                        state: 'UPLOAD_ERROR',
-                                        progress: 0,
-                                        fileInfo: {
-                                            fileName: originalFileName,
-                                            fileSize: fileSize
-                                        },
-                                        fileObject: fileObject,
-                                        errorCode: 6200,
-                                        errorMessage: CHAT_ERRORS[6200] + ' (Request Status != 200)',
-                                        statusCode: httpRequestObject[eval('fileUploadUniqueId')].status
-                                    });
+                            callback && callback({
+                                hasError: false,
+                                cache: false,
+                                result: {
+                                    responseText: httpRequestObject[eval('fileUploadUniqueId')].responseText,
+                                    responseHeaders: httpRequestObject[eval('fileUploadUniqueId')].getAllResponseHeaders()
                                 }
-                                callback && callback({
-                                    hasError: true,
-                                    errorMessage: httpRequestObject[eval('fileUploadUniqueId')].responseText,
-                                    errorCode: httpRequestObject[eval('fileUploadUniqueId')].status
+                            });
+                        }
+                        else {
+                            if (hasFile) {
+                                hasError = true;
+                                fireEvent('fileUploadEvents', {
+                                    threadId: threadId,
+                                    uniqueId: fileUniqueId,
+                                    state: 'UPLOAD_ERROR',
+                                    progress: 0,
+                                    fileInfo: {
+                                        fileName: originalFileName,
+                                        fileSize: fileSize
+                                    },
+                                    fileObject: fileObject,
+                                    errorCode: 6200,
+                                    errorMessage: CHAT_ERRORS[6200] + ' (Request Status != 200)',
+                                    statusCode: httpRequestObject[eval('fileUploadUniqueId')].status
                                 });
                             }
+                            callback && callback({
+                                hasError: true,
+                                errorMessage: httpRequestObject[eval('fileUploadUniqueId')].responseText,
+                                errorCode: httpRequestObject[eval('fileUploadUniqueId')].status
+                            });
                         }
-                    };
+                    }
+                };
             },
 
             /**
@@ -1496,7 +1505,7 @@
                                 threadId: threadId,
                                 id: messageContent.messageId,
                                 cache: false
-                            }, function(result) {
+                            }, function (result) {
                                 if (!result.hasError) {
                                     fireEvent('messageEvents', {
                                         type: 'MESSAGE_DELIVERY',
@@ -1533,7 +1542,7 @@
                                 threadId: threadId,
                                 id: messageContent.messageId,
                                 cache: false
-                            }, function(result) {
+                            }, function (result) {
                                 if (!result.hasError) {
                                     fireEvent('messageEvents', {
                                         type: 'MESSAGE_SEEN',
@@ -2595,6 +2604,78 @@
                         break;
 
                     /**
+                     * Type 50    Pin Message
+                     */
+                    case chatMessageVOTypes.PIN_MESSAGE:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+                        fireEvent('threadEvents', {
+                            type: 'MESSAGE_PIN',
+                            result: {
+                                thread: threadId,
+                                pinMessage: formatDataToMakePinMessage(messageContent)
+                            }
+                        });
+                        break;
+
+                    /**
+                     * Type 51    UnPin Message
+                     */
+                    case chatMessageVOTypes.UNPIN_MESSAGE:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+                        fireEvent('threadEvents', {
+                            type: 'MESSAGE_UNPIN',
+                            result: {
+                                thread: threadId,
+                                pinMessage: formatDataToMakePinMessage(messageContent)
+                            }
+                        });
+                        break;
+
+                    /**
+                     * Type 52    Update Chat Profile
+                     */
+                    case chatMessageVOTypes.UPDATE_CHAT_PROFILE:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+                        fireEvent('userEvents', {
+                            type: 'CHAT_PROFILE_UPDATED',
+                            result: {
+                                user: messageContent
+                            }
+                        });
+                        break;
+
+                    /**
+                     * Type 54    Get Participant Roles
+                     */
+                    case chatMessageVOTypes.GET_PARTICIPANT_ROLES:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+                        fireEvent('userEvents', {
+                            type: 'GET_PARTICIPANT_ROLES',
+                            result: {
+                                roles: messageContent
+                            }
+                        });
+                        break;
+
+                    /**
+                     * Type 60    Get Contact Not Seen Duration
+                     */
+                    case chatMessageVOTypes.GET_CONTACT_NOT_SEEN_DURATION:
+                        fireEvent('contactEvents', {
+                            type: 'CONTACTS_LAST_SEEN',
+                            result: messageContent
+                        });
+                        break;
+
+                    /**
                      * Type 999   All unknown errors
                      */
                     case chatMessageVOTypes.ERROR:
@@ -3107,6 +3188,7 @@
                  *    - lastSeen              {long}
                  *    - sendEnable            {boolean}
                  *    - receiveEnable         {boolean}
+                 *    - chatProfileVO         {object:chatProfileVO}
                  */
 
                 var user = {
@@ -3138,6 +3220,11 @@
 
                 if (messageContent.blocked) {
                     user.blocked = messageContent.blocked;
+                }
+
+                // Add chatProfileVO if exist
+                if (messageContent.chatProfileVO) {
+                    user.chatProfileVO = messageContent.chatProfileVO;
                 }
 
                 return user;
@@ -3237,7 +3324,7 @@
                  *    - admin                        {boolean}
                  *    - auditor                      {boolean}
                  *    - keyId                        {string}
-                 *    - roles                        {string}
+                 *    - roles                        {list:string}
                  *    - username                     {string}
                  */
 
@@ -3304,6 +3391,7 @@
                  *    - lastSeenMessageTime                 {long}
                  *    - lastSeenMessageNanos                {integer}
                  *    - lastMessageVO                       {object : ChatMessageVO}
+                 *    - pinMessageVO                        {object : pinMessageVO}
                  *    - partnerLastSeenMessageId            {long}
                  *    - partnerLastSeenMessageTime          {long}
                  *    - partnerLastSeenMessageNanos         {integer}
@@ -3341,6 +3429,7 @@
                         ? (parseInt(parseInt(messageContent.lastSeenMessageTime) / 1000) * 1000000000) + parseInt(messageContent.lastSeenMessageNanos)
                         : (parseInt(messageContent.lastSeenMessageTime)),
                     lastMessageVO: undefined,
+                    pinMessageVO: undefined,
                     partnerLastSeenMessageId: messageContent.partnerLastSeenMessageId,
                     partnerLastSeenMessageTime: (messageContent.partnerLastSeenMessageNanos)
                         ? (parseInt(parseInt(messageContent.partnerLastSeenMessageTime) / 1000) * 1000000000) +
@@ -3382,6 +3471,11 @@
                 // Add lastMessageVO if exist
                 if (messageContent.lastMessageVO) {
                     conversation.lastMessageVO = formatDataToMakeMessage(messageContent.id, messageContent.lastMessageVO);
+                }
+
+                // Add pinMessageVO if exist
+                if (messageContent.pinMessageVO) {
+                    conversation.pinMessageVO = formatDataToMakePinMessage(messageContent.pinMessageVO);
                 }
 
                 return conversation;
@@ -3568,6 +3662,34 @@
                 }
 
                 return message;
+            },
+
+            /**
+             * Format Data To Make Pin Message
+             *
+             * This functions reformats given JSON to proper Object
+             *
+             * @access private
+             *
+             * @param {object}  messageContent    Json object of thread taken from chat server
+             *
+             * @return {object} pin message Object
+             */
+            formatDataToMakePinMessage = function (pushMessageVO) {
+                /**
+                 * + PinMessageVO                    {object}
+                 *    - messageId                    {long}
+                 *    - text                         {string}
+                 *    - notifyAll                    {boolean}
+                 */
+                var pinMessage = {
+                    messageId: pushMessageVO.messageId,
+                    text: pushMessageVO.text
+                };
+                if (typeof pushMessageVO.notifyAll === 'boolean') {
+                    pinMessage.notifyAll = pushMessageVO.notifyAll
+                }
+                return pinMessage;
             },
 
             /**
@@ -4118,6 +4240,7 @@
                         cacheLastMessage,
                         messages,
                         returnCache,
+                        cacheReady = false,
                         dynamicHistoryCount = (params.dynamicHistoryCount && typeof params.dynamicHistoryCount === 'boolean')
                             ? params.dynamicHistoryCount
                             : false,
@@ -4362,7 +4485,7 @@
                                                 db.messageGaps
                                                     .where('[threadId+owner+time]')
                                                     .between([parseInt(params.threadId), parseInt(userInfo.id), cacheFirstMessage.time],
-                                                             [parseInt(params.threadId), parseInt(userInfo.id), maxIntegerValue * 1000], true, true)
+                                                        [parseInt(params.threadId), parseInt(userInfo.id), maxIntegerValue * 1000], true, true)
                                                     .toArray()
                                                     .then(function (gaps) {
                                                         // TODO fill these gaps in a worker
@@ -4471,6 +4594,8 @@
                                                                     if (failedQueue) {
                                                                         returnData.result.failed = failedQueueMessages;
                                                                     }
+
+                                                                    cacheReady = true;
 
                                                                     callback && callback(returnData);
                                                                     callback = undefined;
@@ -5123,13 +5248,13 @@
                                              * other conditions applied on getHistory that
                                              * count and offset
                                              */
-                                            if((Object.keys(whereClause).length === 0)) {
+                                            if ((Object.keys(whereClause).length === 0)) {
                                                 db.contentCount
                                                     .put({
                                                         threadId: parseInt(params.threadId),
                                                         contentCount: result.contentCount
                                                     })
-                                                    .catch(function(error) {
+                                                    .catch(function (error) {
                                                         fireEvent('error', {
                                                             code: error.code,
                                                             message: error.message,
@@ -5171,7 +5296,7 @@
                                     /**
                                      * Check Differences between Cache and Server response
                                      */
-                                    if (returnCache) {
+                                    if (returnCache && cacheReady) {
                                         /**
                                          * If there are some messages in cache but they
                                          * are not in server's response, we can assume
@@ -5299,6 +5424,74 @@
                 }
 
                 return sendMessage(updateThreadInfoData, {
+                    onResult: function (result) {
+                        callback && callback(result);
+                    }
+                });
+            },
+
+            /**
+             * Update Thread Info
+             *
+             * This functions updates metadata of thread
+             *
+             * @access private
+             *
+             * @param {int}       threadId      Id of thread
+             * @param {string}    image         URL og thread image to be set
+             * @param {string}    description   Description for thread
+             * @param {string}    title         New Title for thread
+             * @param {object}    metadata      New Metadata to be set on thread
+             * @param {function}  callback      The callback function to call after
+             *
+             * @return {object} Instant sendMessage result
+             */
+            updateChatProfile = function (params, callback) {
+                var updateChatProfileData = {
+                    chatMessageVOType: chatMessageVOTypes.UPDATE_CHAT_PROFILE,
+                    content: {},
+                    pushMsgType: 4,
+                    token: token
+                };
+                if (params) {
+                    if (typeof params.bio == 'string') {
+                        updateChatProfileData.content.bio = params.bio;
+                    }
+                    if (typeof params.metadata == 'object') {
+                        updateChatProfileData.content.metadata = JSON.stringify(params.metadata);
+                    }
+                    else if (typeof params.metadata == 'string') {
+                        updateChatProfileData.content.metadata = params.metadata;
+                    }
+                }
+                return sendMessage(updateChatProfileData, {
+                    onResult: function (result) {
+                        callback && callback(result);
+                    }
+                });
+            },
+
+            /**
+             * Get Participant Roles
+             *
+             * This functions retrieves roles of an user if they are
+             * part of the thread
+             *
+             * @access private
+             *
+             * @param {int}       threadId      Id of thread
+             * @param {function}  callback      The callback function to call after
+             *
+             * @return {object} Instant sendMessage result
+             */
+            getParticipantRoles = function (params, callback) {
+                var updateChatProfileData = {
+                    chatMessageVOType: chatMessageVOTypes.GET_PARTICIPANT_ROLES,
+                    pushMsgType: 4,
+                    subjectId: params.threadId,
+                    token: token
+                };
+                return sendMessage(updateChatProfileData, {
                     onResult: function (result) {
                         callback && callback(result);
                     }
@@ -6650,7 +6843,7 @@
                                 var message = uploadQueue[i].message,
                                     callbacks = uploadQueue[i].callbacks;
 
-                                if (message.content.hasOwnProperty('message')) {
+                                if (message && typeof message.content === 'object' && typeof message.content.message === 'object') {
                                     message.content.message['metadata'] = metadata;
                                 }
 
@@ -6832,7 +7025,7 @@
 
         this.getHistory = getHistory;
 
-        this.getAllMentionedMessages = function(params, callback) {
+        this.getAllMentionedMessages = function (params, callback) {
             return getHistory({
                 threadId: params.threadId,
                 allMentioned: true,
@@ -6848,7 +7041,7 @@
             }, callback);
         };
 
-        this.getUnreadMentionedMessages = function(params, callback) {
+        this.getUnreadMentionedMessages = function (params, callback) {
             return getHistory({
                 threadId: params.threadId,
                 unreadMentioned: true,
@@ -7241,6 +7434,8 @@
             });
         };
 
+        this.getParticipantRoles = getParticipantRoles;
+
         this.leaveThread = function (params, callback) {
 
             /**
@@ -7438,7 +7633,7 @@
                 message: {
                     chatMessageVOType: chatMessageVOTypes.MESSAGE,
                     typeCode: params.typeCode,
-                    messageType: params.messageType,
+                    messageType: (params.messageType && params.messageType.toUpperCase() !== undefined && chatMessageTypes[params.messageType.toUpperCase()] > 0) ? chatMessageTypes[params.messageType.toUpperCase()] : chatMessageTypes.TEXT,
                     subjectId: params.threadId,
                     repliedTo: params.repliedTo,
                     content: params.content,
@@ -7748,7 +7943,7 @@
                     content.message = {};
                     content.message['uniqueId'] = Utility.generateUUID();
                     content.message['text'] = params.caption;
-                    content.message['messageType'] = params.messageType;
+                    content.message['messageType'] = (params.messageType && params.messageType.toUpperCase() !== undefined && chatMessageTypes[params.messageType.toUpperCase()] > 0) ? chatMessageTypes[params.messageType.toUpperCase()] : 2;
 
                     putInChatUploadQueue({
                         message: {
@@ -7768,8 +7963,10 @@
                                     metadata['file']['height'] = result.result.height;
                                     metadata['file']['width'] = result.result.width;
                                     metadata['file']['name'] = result.result.name;
+                                    metadata['name'] = result.result.name;
                                     metadata['file']['hashCode'] = result.result.hashCode;
                                     metadata['file']['id'] = result.result.id;
+                                    metadata['id'] = result.result.id;
                                     metadata['file']['link'] = SERVICE_ADDRESSES.FILESERVER_ADDRESS +
                                         SERVICES_PATH.GET_IMAGE + '?imageId=' +
                                         result.result.id + '&hashCode=' +
@@ -7788,8 +7985,10 @@
                             uploadFile(fileUploadParams, function (result) {
                                 if (!result.hasError) {
                                     metadata['file']['name'] = result.result.name;
+                                    metadata['name'] = result.result.name;
                                     metadata['file']['hashCode'] = result.result.hashCode;
                                     metadata['file']['id'] = result.result.id;
+                                    metadata['id'] = result.result.id;
                                     metadata['file']['link'] = SERVICE_ADDRESSES.FILESERVER_ADDRESS +
                                         SERVICES_PATH.GET_FILE + '?fileId=' +
                                         result.result.id + '&hashCode=' +
@@ -8224,7 +8423,7 @@
                 subjectId: params.messageId,
                 uniqueId: params.uniqueId,
                 content: JSON.stringify({
-                    'deleteForAll': params.deleteForAll
+                    'deleteForAll': (typeof params.deleteForAll === 'boolean') ? params.deleteForAll : false
                 }),
                 pushMsgType: 4
             }, {
@@ -8343,7 +8542,7 @@
                 content: {
                     uniqueIds: uniqueIdsList,
                     ids: messageIdsList,
-                    deleteForAll: params.deleteForAll
+                    deleteForAll: (typeof params.deleteForAll === 'boolean') ? params.deleteForAll : false
                 },
                 pushMsgType: 4
             });
@@ -8486,8 +8685,10 @@
                                     metadata['file']['height'] = result.result.height;
                                     metadata['file']['width'] = result.result.width;
                                     metadata['file']['name'] = result.result.name;
+                                    metadata['name'] = result.result.name;
                                     metadata['file']['hashCode'] = result.result.hashCode;
                                     metadata['file']['id'] = result.result.id;
+                                    metadata['id'] = result.result.id;
                                     metadata['file']['link'] = SERVICE_ADDRESSES.FILESERVER_ADDRESS +
                                         SERVICES_PATH.GET_IMAGE + '?imageId=' +
                                         result.result.id + '&hashCode=' +
@@ -8505,8 +8706,10 @@
                             uploadFile(fileUploadParams, function (result) {
                                 if (!result.hasError) {
                                     metadata['file']['name'] = result.result.name;
+                                    metadata['name'] = result.result.name;
                                     metadata['file']['hashCode'] = result.result.hashCode;
                                     metadata['file']['id'] = result.result.id;
+                                    metadata['id'] = result.result.id;
                                     metadata['file']['link'] = SERVICE_ADDRESSES.FILESERVER_ADDRESS +
                                         SERVICES_PATH.GET_FILE + '?fileId=' +
                                         result.result.id + '&hashCode=' +
@@ -8694,6 +8897,8 @@
 
         this.updateThreadInfo = updateThreadInfo;
 
+        this.updateChatProfile = updateChatProfile;
+
         this.muteThread = function (params, callback) {
             return sendMessage({
                 chatMessageVOType: chatMessageVOTypes.MUTE_THREAD,
@@ -8745,6 +8950,40 @@
                 typeCode: params.typeCode,
                 subjectId: params.subjectId,
                 content: {},
+                pushMsgType: 4,
+                token: token
+            }, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.pinMessage = function (params, callback) {
+            return sendMessage({
+                chatMessageVOType: chatMessageVOTypes.PIN_MESSAGE,
+                typeCode: params.typeCode,
+                subjectId: params.messageId,
+                content: JSON.stringify({
+                    'notifyAll': (typeof params.notifyAll === 'boolean') ? params.notifyAll : false
+                }),
+                pushMsgType: 4,
+                token: token
+            }, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.unPinMessage = function (params, callback) {
+            return sendMessage({
+                chatMessageVOType: chatMessageVOTypes.UNPIN_MESSAGE,
+                typeCode: params.typeCode,
+                subjectId: params.messageId,
+                content: JSON.stringify({
+                    'notifyAll': (typeof params.notifyAll === 'boolean') ? params.notifyAll : false
+                }),
                 pushMsgType: 4,
                 token: token
             }, {
@@ -8959,18 +9198,18 @@
                     data.firstName = '';
                 }
 
-                if (typeof params.typeCode === 'string') {
-                    data.typeCode = params.typeCode;
-                }
-                else if (generalTypeCode) {
-                    data.typeCode = generalTypeCode;
-                }
-
                 if (typeof params.lastName === 'string') {
                     data.lastName = params.lastName;
                 }
                 else {
                     data.lastName = '';
+                }
+
+                if (typeof params.typeCode === 'string') {
+                    data.typeCode = params.typeCode;
+                }
+                else if (generalTypeCode) {
+                    data.typeCode = generalTypeCode;
                 }
 
                 if (typeof params.cellphoneNumber === 'string') {
@@ -8985,6 +9224,10 @@
                 }
                 else {
                     data.email = '';
+                }
+
+                if (typeof params.username === 'string') {
+                    data.username = params.username;
                 }
 
                 data.uniqueId = Utility.generateUUID();
