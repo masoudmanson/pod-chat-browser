@@ -4377,8 +4377,8 @@
                             sendMessageParams.content.allMentioned = whereClause.allMentioned = params.allMentioned;
                         }
 
-                        if (params.unreadMentioed && typeof params.unreadMentioed == 'boolean') {
-                            sendMessageParams.content.unreadMentioed = whereClause.unreadMentioed = params.unreadMentioed;
+                        if (params.unreadMentioned && typeof params.unreadMentioned == 'boolean') {
+                            sendMessageParams.content.unreadMentioned = whereClause.unreadMentioned = params.unreadMentioned;
                         }
 
                         if (typeof params.metadataCriteria == 'object' && params.metadataCriteria.hasOwnProperty('field')) {

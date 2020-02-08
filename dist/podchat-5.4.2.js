@@ -12871,6 +12871,7 @@ module.exports = ws
                 threadEvents: {},
                 contactEvents: {},
                 botEvents: {},
+                userEvents: {},
                 fileUploadEvents: {},
                 systemEvents: {},
                 chatReady: {},
@@ -12916,9 +12917,21 @@ module.exports = ws
                 BOT_MESSAGE: 40,
                 SPAM_PV_THREAD: 41,
                 SET_ROLE_TO_USER: 42,
+                REMOVE_ROLE_FROM_USER: 43,
                 CLEAR_HISTORY: 44,
                 SYSTEM_MESSAGE: 46,
                 GET_NOT_SEEN_DURATION: 47,
+                PIN_THREAD: 48,
+                UNPIN_THREAD: 49,
+                PIN_MESSAGE: 50,
+                UNPIN_MESSAGE: 51,
+                UPDATE_CHAT_PROFILE: 52,
+                GET_PARTICIPANT_ROLES: 54,
+                GET_REPORT_REASONS: 56,
+                REPORT_THREAD: 57,
+                REPORT_USER: 58,
+                REPORT_MESSAGE: 59,
+                GET_CONTACT_NOT_SEEN_DURATION: 60,
                 LOGOUT: 100,
                 ERROR: 999
             },
@@ -12936,6 +12949,14 @@ module.exports = ws
                 CHANNEL_GROUP: 4,
                 CHANNEL: 8,
                 NOTIFICATION_CHANNEL: 16
+            },
+            chatMessageTypes = {
+                TEXT: '1',
+                VOICE: '2',
+                PICTURE: '3',
+                VIDEO: '4',
+                SOUND: '5',
+                FILE: '6'
             },
             systemMessageTypes = {
                 IS_TYPING: '1',
@@ -13551,7 +13572,7 @@ module.exports = ws
                 httpRequestObject[eval('fileUploadUniqueId')] = new XMLHttpRequest(),
                     settings = params.settings;
 
-                if(data && typeof data === 'object' && (data.hasOwnProperty('image') || data.hasOwnProperty('file'))) {
+                if (data && typeof data === 'object' && (data.hasOwnProperty('image') || data.hasOwnProperty('file'))) {
                     httpRequestObject[eval('fileUploadUniqueId')].timeout = (settings && typeof parseInt(settings.timeout) > 0 && settings.timeout > 0)
                         ? settings.timeout
                         : httpUploadRequestTimeout;
@@ -13728,58 +13749,58 @@ module.exports = ws
                 }
 
                 httpRequestObject[eval('fileUploadUniqueId')].onreadystatechange = function () {
-                        if (httpRequestObject[eval('fileUploadUniqueId')].readyState == 4) {
-                            if (httpRequestObject[eval('fileUploadUniqueId')].status == 200) {
-                                if (hasFile) {
-                                    hasError = false;
-                                    fireEvent('fileUploadEvents', {
-                                        threadId: threadId,
-                                        uniqueId: fileUniqueId,
-                                        state: 'UPLOADED',
-                                        progress: 100,
-                                        fileInfo: {
-                                            fileName: originalFileName,
-                                            fileSize: fileSize
-                                        },
-                                        fileObject: fileObject
-                                    });
-                                }
+                    if (httpRequestObject[eval('fileUploadUniqueId')].readyState == 4) {
+                        if (httpRequestObject[eval('fileUploadUniqueId')].status == 200) {
+                            if (hasFile) {
+                                hasError = false;
+                                fireEvent('fileUploadEvents', {
+                                    threadId: threadId,
+                                    uniqueId: fileUniqueId,
+                                    state: 'UPLOADED',
+                                    progress: 100,
+                                    fileInfo: {
+                                        fileName: originalFileName,
+                                        fileSize: fileSize
+                                    },
+                                    fileObject: fileObject
+                                });
+                            }
 
-                                callback && callback({
-                                    hasError: false,
-                                    cache: false,
-                                    result: {
-                                        responseText: httpRequestObject[eval('fileUploadUniqueId')].responseText,
-                                        responseHeaders: httpRequestObject[eval('fileUploadUniqueId')].getAllResponseHeaders()
-                                    }
-                                });
-                            }
-                            else {
-                                if (hasFile) {
-                                    hasError = true;
-                                    fireEvent('fileUploadEvents', {
-                                        threadId: threadId,
-                                        uniqueId: fileUniqueId,
-                                        state: 'UPLOAD_ERROR',
-                                        progress: 0,
-                                        fileInfo: {
-                                            fileName: originalFileName,
-                                            fileSize: fileSize
-                                        },
-                                        fileObject: fileObject,
-                                        errorCode: 6200,
-                                        errorMessage: CHAT_ERRORS[6200] + ' (Request Status != 200)',
-                                        statusCode: httpRequestObject[eval('fileUploadUniqueId')].status
-                                    });
+                            callback && callback({
+                                hasError: false,
+                                cache: false,
+                                result: {
+                                    responseText: httpRequestObject[eval('fileUploadUniqueId')].responseText,
+                                    responseHeaders: httpRequestObject[eval('fileUploadUniqueId')].getAllResponseHeaders()
                                 }
-                                callback && callback({
-                                    hasError: true,
-                                    errorMessage: httpRequestObject[eval('fileUploadUniqueId')].responseText,
-                                    errorCode: httpRequestObject[eval('fileUploadUniqueId')].status
+                            });
+                        }
+                        else {
+                            if (hasFile) {
+                                hasError = true;
+                                fireEvent('fileUploadEvents', {
+                                    threadId: threadId,
+                                    uniqueId: fileUniqueId,
+                                    state: 'UPLOAD_ERROR',
+                                    progress: 0,
+                                    fileInfo: {
+                                        fileName: originalFileName,
+                                        fileSize: fileSize
+                                    },
+                                    fileObject: fileObject,
+                                    errorCode: 6200,
+                                    errorMessage: CHAT_ERRORS[6200] + ' (Request Status != 200)',
+                                    statusCode: httpRequestObject[eval('fileUploadUniqueId')].status
                                 });
                             }
+                            callback && callback({
+                                hasError: true,
+                                errorMessage: httpRequestObject[eval('fileUploadUniqueId')].responseText,
+                                errorCode: httpRequestObject[eval('fileUploadUniqueId')].status
+                            });
                         }
-                    };
+                    }
+                };
             },
 
             /**
@@ -14247,7 +14268,8 @@ module.exports = ws
                         ? JSON.parse(chatMessage.content)
                         : {},
                     contentCount = chatMessage.contentCount,
-                    uniqueId = chatMessage.uniqueId;
+                    uniqueId = chatMessage.uniqueId,
+                    time = chatMessage.time;
 
                 switch (type) {
                     /**
@@ -14295,7 +14317,7 @@ module.exports = ws
                                 threadId: threadId,
                                 id: messageContent.messageId,
                                 cache: false
-                            }, function(result) {
+                            }, function (result) {
                                 if (!result.hasError) {
                                     fireEvent('messageEvents', {
                                         type: 'MESSAGE_DELIVERY',
@@ -14332,7 +14354,7 @@ module.exports = ws
                                 threadId: threadId,
                                 id: messageContent.messageId,
                                 cache: false
-                            }, function(result) {
+                            }, function (result) {
                                 if (!result.hasError) {
                                     fireEvent('messageEvents', {
                                         type: 'MESSAGE_SEEN',
@@ -14541,6 +14563,7 @@ module.exports = ws
                                         tempData.threadId = messageContent.id;
                                         tempData.notSeenDuration = messageContent.participants[i].notSeenDuration;
                                         tempData.admin = messageContent.participants[i].admin;
+                                        tempData.auditor = messageContent.participants[i].auditor;
                                         tempData.name = Utility.crypt(messageContent.participants[i].name, cacheSecret, salt);
                                         tempData.contactName = Utility.crypt(messageContent.participants[i].contactName, cacheSecret, salt);
                                         tempData.email = Utility.crypt(messageContent.participants[i].email, cacheSecret, salt);
@@ -14960,6 +14983,14 @@ module.exports = ws
                         if (messagesCallbacks[uniqueId]) {
                             messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
                         }
+
+                        fireEvent('systemEvents', {
+                            type: 'SERVER_TIME',
+                            result: {
+                                time: time
+                            }
+                        });
+
                         break;
 
                     /**
@@ -15182,12 +15213,109 @@ module.exports = ws
                         break;
 
                     /**
-                     * Type 42    Set Admin
+                     * Type 42    Set Role To User
                      */
                     case chatMessageVOTypes.SET_ROLE_TO_USER:
                         if (messagesCallbacks[uniqueId]) {
                             messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
                         }
+
+                        if (fullResponseObject) {
+                            getThreads({
+                                threadIds: [messageContent.id]
+                            }, function (threadsResult) {
+                                var threads = threadsResult.result.threads;
+
+                                if (!threadsResult.cache) {
+                                    fireEvent('threadEvents', {
+                                        type: 'THREAD_ADD_ADMIN',
+                                        result: {
+                                            thread: threads[0],
+                                            admin: messageContent
+                                        }
+                                    });
+
+                                    fireEvent('threadEvents', {
+                                        type: 'THREAD_LAST_ACTIVITY_TIME',
+                                        result: {
+                                            thread: threads[0],
+                                            admin: messageContent
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                        else {
+                            fireEvent('threadEvents', {
+                                type: 'THREAD_ADD_ADMIN',
+                                result: {
+                                    thread: threadId,
+                                    admin: messageContent
+                                }
+                            });
+
+                            fireEvent('threadEvents', {
+                                type: 'THREAD_LAST_ACTIVITY_TIME',
+                                result: {
+                                    thread: threadId,
+                                    admin: messageContent
+                                }
+                            });
+                        }
+
+                        break;
+
+                    /**
+                     * Type 43    Remove Role From User
+                     */
+                    case chatMessageVOTypes.REMOVE_ROLE_FROM_USER:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        if (fullResponseObject) {
+                            getThreads({
+                                threadIds: [messageContent.id]
+                            }, function (threadsResult) {
+                                var threads = threadsResult.result.threads;
+
+                                if (!threadsResult.cache) {
+                                    fireEvent('threadEvents', {
+                                        type: 'THREAD_REMOVE_ADMIN',
+                                        result: {
+                                            thread: threads[0],
+                                            admin: messageContent
+                                        }
+                                    });
+
+                                    fireEvent('threadEvents', {
+                                        type: 'THREAD_LAST_ACTIVITY_TIME',
+                                        result: {
+                                            thread: threads[0],
+                                            admin: messageContent
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                        else {
+                            fireEvent('threadEvents', {
+                                type: 'THREAD_REMOVE_ADMIN',
+                                result: {
+                                    thread: threadId,
+                                    admin: messageContent
+                                }
+                            });
+
+                            fireEvent('threadEvents', {
+                                type: 'THREAD_LAST_ACTIVITY_TIME',
+                                result: {
+                                    thread: threadId,
+                                    admin: messageContent
+                                }
+                            });
+                        }
+
                         break;
 
                     /**
@@ -15219,6 +15347,144 @@ module.exports = ws
                         if (messagesCallbacks[uniqueId]) {
                             messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
                         }
+                        break;
+
+                    /**
+                     * Type 48    Pin Thread
+                     */
+                    case chatMessageVOTypes.PIN_THREAD:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        if (fullResponseObject) {
+                            getThreads({
+                                threadIds: [threadId]
+                            }, function (threadsResult) {
+                                var thread = threadsResult.result.threads[0];
+
+                                fireEvent('threadEvents', {
+                                    type: 'THREAD_PIN',
+                                    result: {
+                                        thread: thread
+                                    }
+                                });
+                            });
+                        }
+                        else {
+                            fireEvent('threadEvents', {
+                                type: 'THREAD_PIN',
+                                result: {
+                                    thread: threadId
+                                }
+                            });
+                        }
+
+                        break;
+
+                    /**
+                     * Type 49    UnPin Thread
+                     */
+                    case chatMessageVOTypes.UNPIN_THREAD:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        if (fullResponseObject) {
+                            getThreads({
+                                threadIds: [threadId]
+                            }, function (threadsResult) {
+                                var thread = threadsResult.result.threads[0];
+
+                                fireEvent('threadEvents', {
+                                    type: 'THREAD_UNPIN',
+                                    result: {
+                                        thread: thread
+                                    }
+                                });
+                            });
+                        }
+                        else {
+                            fireEvent('threadEvents', {
+                                type: 'THREAD_UNPIN',
+                                result: {
+                                    thread: threadId
+                                }
+                            });
+                        }
+
+                        break;
+
+                    /**
+                     * Type 50    Pin Message
+                     */
+                    case chatMessageVOTypes.PIN_MESSAGE:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+                        fireEvent('threadEvents', {
+                            type: 'MESSAGE_PIN',
+                            result: {
+                                thread: threadId,
+                                pinMessage: formatDataToMakePinMessage(messageContent)
+                            }
+                        });
+                        break;
+
+                    /**
+                     * Type 51    UnPin Message
+                     */
+                    case chatMessageVOTypes.UNPIN_MESSAGE:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+                        fireEvent('threadEvents', {
+                            type: 'MESSAGE_UNPIN',
+                            result: {
+                                thread: threadId,
+                                pinMessage: formatDataToMakePinMessage(messageContent)
+                            }
+                        });
+                        break;
+
+                    /**
+                     * Type 52    Update Chat Profile
+                     */
+                    case chatMessageVOTypes.UPDATE_CHAT_PROFILE:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+                        fireEvent('userEvents', {
+                            type: 'CHAT_PROFILE_UPDATED',
+                            result: {
+                                user: messageContent
+                            }
+                        });
+                        break;
+
+                    /**
+                     * Type 54    Get Participant Roles
+                     */
+                    case chatMessageVOTypes.GET_PARTICIPANT_ROLES:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+                        fireEvent('userEvents', {
+                            type: 'GET_PARTICIPANT_ROLES',
+                            result: {
+                                roles: messageContent
+                            }
+                        });
+                        break;
+
+                    /**
+                     * Type 60    Get Contact Not Seen Duration
+                     */
+                    case chatMessageVOTypes.GET_CONTACT_NOT_SEEN_DURATION:
+                        fireEvent('contactEvents', {
+                            type: 'CONTACTS_LAST_SEEN',
+                            result: messageContent
+                        });
                         break;
 
                     /**
@@ -15734,6 +16000,7 @@ module.exports = ws
                  *    - lastSeen              {long}
                  *    - sendEnable            {boolean}
                  *    - receiveEnable         {boolean}
+                 *    - chatProfileVO         {object:chatProfileVO}
                  */
 
                 var user = {
@@ -15765,6 +16032,11 @@ module.exports = ws
 
                 if (messageContent.blocked) {
                     user.blocked = messageContent.blocked;
+                }
+
+                // Add chatProfileVO if exist
+                if (messageContent.chatProfileVO) {
+                    user.chatProfileVO = messageContent.chatProfileVO;
                 }
 
                 return user;
@@ -15862,8 +16134,10 @@ module.exports = ws
                  *    - contactLastName              {string}
                  *    - blocked                      {boolean}
                  *    - admin                        {boolean}
+                 *    - auditor                      {boolean}
                  *    - keyId                        {string}
-                 *    - roles                        {string}
+                 *    - roles                        {list:string}
+                 *    - username                     {string}
                  */
 
                 var participant = {
@@ -15887,8 +16161,10 @@ module.exports = ws
                     contactLastName: messageContent.contactLastName,
                     blocked: messageContent.blocked,
                     admin: messageContent.admin,
+                    auditor: messageContent.auditor,
                     keyId: messageContent.keyId,
-                    roles: messageContent.roles
+                    roles: messageContent.roles,
+                    username: messageContent.username
                 };
 
                 return participant;
@@ -15927,6 +16203,7 @@ module.exports = ws
                  *    - lastSeenMessageTime                 {long}
                  *    - lastSeenMessageNanos                {integer}
                  *    - lastMessageVO                       {object : ChatMessageVO}
+                 *    - pinMessageVO                        {object : pinMessageVO}
                  *    - partnerLastSeenMessageId            {long}
                  *    - partnerLastSeenMessageTime          {long}
                  *    - partnerLastSeenMessageNanos         {integer}
@@ -15940,6 +16217,8 @@ module.exports = ws
                  *    - canEditInfo                         {boolean}
                  *    - canSpam                             {boolean}
                  *    - admin                               {boolean}
+                 *    - mentioned                           {boolean}
+                 *    - pin                                 {boolean}
                  */
 
                 var conversation = {
@@ -15962,6 +16241,7 @@ module.exports = ws
                         ? (parseInt(parseInt(messageContent.lastSeenMessageTime) / 1000) * 1000000000) + parseInt(messageContent.lastSeenMessageNanos)
                         : (parseInt(messageContent.lastSeenMessageTime)),
                     lastMessageVO: undefined,
+                    pinMessageVO: undefined,
                     partnerLastSeenMessageId: messageContent.partnerLastSeenMessageId,
                     partnerLastSeenMessageTime: (messageContent.partnerLastSeenMessageNanos)
                         ? (parseInt(parseInt(messageContent.partnerLastSeenMessageTime) / 1000) * 1000000000) +
@@ -15978,7 +16258,9 @@ module.exports = ws
                     participantCount: messageContent.participantCount,
                     canEditInfo: messageContent.canEditInfo,
                     canSpam: messageContent.canSpam,
-                    admin: messageContent.admin
+                    admin: messageContent.admin,
+                    mentioned: messageContent.mentioned,
+                    pin: messageContent.pin
                 };
 
                 // Add inviter if exist
@@ -16001,6 +16283,11 @@ module.exports = ws
                 // Add lastMessageVO if exist
                 if (messageContent.lastMessageVO) {
                     conversation.lastMessageVO = formatDataToMakeMessage(messageContent.id, messageContent.lastMessageVO);
+                }
+
+                // Add pinMessageVO if exist
+                if (messageContent.pinMessageVO) {
+                    conversation.pinMessageVO = formatDataToMakePinMessage(messageContent.pinMessageVO);
                 }
 
                 return conversation;
@@ -16114,6 +16401,7 @@ module.exports = ws
                  *    - deletable                    {boolean}
                  *    - delivered                    {boolean}
                  *    - seen                         {boolean}
+                 *    - mentioned                    {boolean}
                  *    - participant                  {object : ParticipantVO}
                  *    - conversation                 {object : ConversationVO}
                  *    - replyInfo                    {object : replyInfoVO}
@@ -16150,6 +16438,7 @@ module.exports = ws
                     deletable: pushMessageVO.deletable,
                     delivered: pushMessageVO.delivered,
                     seen: pushMessageVO.seen,
+                    mentioned: pushMessageVO.mentioned,
                     participant: undefined,
                     conversation: undefined,
                     replyInfo: undefined,
@@ -16185,6 +16474,34 @@ module.exports = ws
                 }
 
                 return message;
+            },
+
+            /**
+             * Format Data To Make Pin Message
+             *
+             * This functions reformats given JSON to proper Object
+             *
+             * @access private
+             *
+             * @param {object}  messageContent    Json object of thread taken from chat server
+             *
+             * @return {object} pin message Object
+             */
+            formatDataToMakePinMessage = function (pushMessageVO) {
+                /**
+                 * + PinMessageVO                    {object}
+                 *    - messageId                    {long}
+                 *    - text                         {string}
+                 *    - notifyAll                    {boolean}
+                 */
+                var pinMessage = {
+                    messageId: pushMessageVO.messageId,
+                    text: pushMessageVO.text
+                };
+                if (typeof pushMessageVO.notifyAll === 'boolean') {
+                    pinMessage.notifyAll = pushMessageVO.notifyAll
+                }
+                return pinMessage;
             },
 
             /**
@@ -16396,7 +16713,8 @@ module.exports = ws
                                 thenAble = db.threads.where('owner')
                                     .equals(parseInt(userInfo.id))
                                     .filter(function (thread) {
-                                        return parseInt(thread.inviter.id) == parseInt(whereClause.creatorCoreUserId);
+                                        var threadObject = JSON.parse(chatDecrypt(thread.data, cacheSecret, thread.salt), false);
+                                        return parseInt(threadObject.inviter.coreUserId) == parseInt(whereClause.creatorCoreUserId);
                                     });
                             }
                         }
@@ -16716,8 +17034,6 @@ module.exports = ws
              * @return {object} Instant result of sendMessage
              */
             getHistory = function (params, callback) {
-                var startTime = Date.now();
-
                 if (parseInt(params.threadId) > 0) {
                     var sendMessageParams = {
                             chatMessageVOType: chatMessageVOTypes.GET_HISTORY,
@@ -16736,6 +17052,7 @@ module.exports = ws
                         cacheLastMessage,
                         messages,
                         returnCache,
+                        cacheReady = false,
                         dynamicHistoryCount = (params.dynamicHistoryCount && typeof params.dynamicHistoryCount === 'boolean')
                             ? params.dynamicHistoryCount
                             : false,
@@ -16868,6 +17185,14 @@ module.exports = ws
                             sendMessageParams.content.query = whereClause.query = params.query;
                         }
 
+                        if (params.allMentioned && typeof params.allMentioned == 'boolean') {
+                            sendMessageParams.content.allMentioned = whereClause.allMentioned = params.allMentioned;
+                        }
+
+                        if (params.unreadMentioned && typeof params.unreadMentioned == 'boolean') {
+                            sendMessageParams.content.unreadMentioned = whereClause.unreadMentioned = params.unreadMentioned;
+                        }
+
                         if (typeof params.metadataCriteria == 'object' && params.metadataCriteria.hasOwnProperty('field')) {
                             sendMessageParams.content.metadataCriteria = whereClause.metadataCriteria = params.metadataCriteria;
                         }
@@ -16970,8 +17295,9 @@ module.exports = ws
                                              */
                                             if (cacheFirstMessage && cacheFirstMessage.time > 0) {
                                                 db.messageGaps
-                                                    .where('time')
-                                                    .above(cacheFirstMessage.time)
+                                                    .where('[threadId+owner+time]')
+                                                    .between([parseInt(params.threadId), parseInt(userInfo.id), cacheFirstMessage.time],
+                                                        [parseInt(params.threadId), parseInt(userInfo.id), maxIntegerValue * 1000], true, true)
                                                     .toArray()
                                                     .then(function (gaps) {
                                                         // TODO fill these gaps in a worker
@@ -17080,6 +17406,8 @@ module.exports = ws
                                                                     if (failedQueue) {
                                                                         returnData.result.failed = failedQueueMessages;
                                                                     }
+
+                                                                    cacheReady = true;
 
                                                                     callback && callback(returnData);
                                                                     callback = undefined;
@@ -17732,13 +18060,13 @@ module.exports = ws
                                              * other conditions applied on getHistory that
                                              * count and offset
                                              */
-                                            if((Object.keys(whereClause).length === 0)) {
+                                            if ((Object.keys(whereClause).length === 0)) {
                                                 db.contentCount
                                                     .put({
                                                         threadId: parseInt(params.threadId),
                                                         contentCount: result.contentCount
                                                     })
-                                                    .catch(function(error) {
+                                                    .catch(function (error) {
                                                         fireEvent('error', {
                                                             code: error.code,
                                                             message: error.message,
@@ -17780,7 +18108,7 @@ module.exports = ws
                                     /**
                                      * Check Differences between Cache and Server response
                                      */
-                                    if (returnCache) {
+                                    if (returnCache && cacheReady) {
                                         /**
                                          * If there are some messages in cache but they
                                          * are not in server's response, we can assume
@@ -17908,6 +18236,74 @@ module.exports = ws
                 }
 
                 return sendMessage(updateThreadInfoData, {
+                    onResult: function (result) {
+                        callback && callback(result);
+                    }
+                });
+            },
+
+            /**
+             * Update Thread Info
+             *
+             * This functions updates metadata of thread
+             *
+             * @access private
+             *
+             * @param {int}       threadId      Id of thread
+             * @param {string}    image         URL og thread image to be set
+             * @param {string}    description   Description for thread
+             * @param {string}    title         New Title for thread
+             * @param {object}    metadata      New Metadata to be set on thread
+             * @param {function}  callback      The callback function to call after
+             *
+             * @return {object} Instant sendMessage result
+             */
+            updateChatProfile = function (params, callback) {
+                var updateChatProfileData = {
+                    chatMessageVOType: chatMessageVOTypes.UPDATE_CHAT_PROFILE,
+                    content: {},
+                    pushMsgType: 4,
+                    token: token
+                };
+                if (params) {
+                    if (typeof params.bio == 'string') {
+                        updateChatProfileData.content.bio = params.bio;
+                    }
+                    if (typeof params.metadata == 'object') {
+                        updateChatProfileData.content.metadata = JSON.stringify(params.metadata);
+                    }
+                    else if (typeof params.metadata == 'string') {
+                        updateChatProfileData.content.metadata = params.metadata;
+                    }
+                }
+                return sendMessage(updateChatProfileData, {
+                    onResult: function (result) {
+                        callback && callback(result);
+                    }
+                });
+            },
+
+            /**
+             * Get Participant Roles
+             *
+             * This functions retrieves roles of an user if they are
+             * part of the thread
+             *
+             * @access private
+             *
+             * @param {int}       threadId      Id of thread
+             * @param {function}  callback      The callback function to call after
+             *
+             * @return {object} Instant sendMessage result
+             */
+            getParticipantRoles = function (params, callback) {
+                var updateChatProfileData = {
+                    chatMessageVOType: chatMessageVOTypes.GET_PARTICIPANT_ROLES,
+                    pushMsgType: 4,
+                    subjectId: params.threadId,
+                    token: token
+                };
+                return sendMessage(updateChatProfileData, {
                     onResult: function (result) {
                         callback && callback(result);
                     }
@@ -18110,6 +18506,7 @@ module.exports = ws
                                             tempData.threadId = parseInt(resultData.participants[i].threadId);
                                             tempData.notSeenDuration = resultData.participants[i].notSeenDuration;
                                             tempData.admin = resultData.participants[i].admin;
+                                            tempData.auditor = resultData.participants[i].auditor;
                                             tempData.name = Utility.crypt(resultData.participants[i].name, cacheSecret, salt);
                                             tempData.contactName = Utility.crypt(resultData.participants[i].contactName, cacheSecret, salt);
                                             tempData.email = Utility.crypt(resultData.participants[i].email, cacheSecret, salt);
@@ -18873,7 +19270,7 @@ module.exports = ws
                                 users: '&id, name, cellphoneNumber, keyId',
                                 contacts: '[owner+id], id, owner, uniqueId, userId, cellphoneNumber, email, firstName, lastName, expireTime',
                                 threads: '[owner+id] ,id, owner, title, time, [owner+time]',
-                                participants: '[owner+id], id, owner, threadId, notSeenDuration, admin, name, contactName, email, expireTime',
+                                participants: '[owner+id], id, owner, threadId, notSeenDuration, admin, auditor, name, contactName, email, expireTime',
                                 messages: '[owner+id], id, owner, threadId, time, [threadId+id], [threadId+owner+time]',
                                 messageGaps: '[owner+id], [owner+waitsFor], id, waitsFor, owner, threadId, time, [threadId+owner+time]',
                                 contentCount: 'threadId, contentCount'
@@ -19258,6 +19655,10 @@ module.exports = ws
                                 var message = uploadQueue[i].message,
                                     callbacks = uploadQueue[i].callbacks;
 
+                                if (message && typeof message.content === 'object' && typeof message.content.message === 'object') {
+                                    message.content.message['metadata'] = metadata;
+                                }
+
                                 message.metadata = metadata;
                             }
                             catch (e) {
@@ -19328,6 +19729,84 @@ module.exports = ws
 
                     return '{}';
                 }
+            },
+
+            setRoleToUser = function (params, callback) {
+                var setRoleData = {
+                    chatMessageVOType: chatMessageVOTypes.SET_ROLE_TO_USER,
+                    typeCode: params.typeCode,
+                    content: [],
+                    pushMsgType: 4,
+                    token: token
+                };
+
+                if (params) {
+                    if (parseInt(params.threadId) > 0) {
+                        setRoleData.subjectId = params.threadId;
+                    }
+
+                    if (params.admins && Array.isArray(params.admins)) {
+                        for (var i = 0; i < params.admins.length; i++) {
+                            var temp = {};
+                            if (parseInt(params.admins[i].userId) > 0) {
+                                temp.userId = params.admins[i].userId;
+                            }
+
+                            if (Array.isArray(params.admins[i].roles)) {
+                                temp.roles = params.admins[i].roles;
+                            }
+
+                            setRoleData.content.push(temp);
+                        }
+
+                        setRoleData.content = JSON.stringify(setRoleData.content);
+                    }
+                }
+
+                return sendMessage(setRoleData, {
+                    onResult: function (result) {
+                        callback && callback(result);
+                    }
+                });
+            },
+
+            removeRoleFromUser = function (params, callback) {
+                var setAdminData = {
+                    chatMessageVOType: chatMessageVOTypes.REMOVE_ROLE_FROM_USER,
+                    typeCode: params.typeCode,
+                    content: [],
+                    pushMsgType: 4,
+                    token: token
+                };
+
+                if (params) {
+                    if (parseInt(params.threadId) > 0) {
+                        setAdminData.subjectId = params.threadId;
+                    }
+
+                    if (params.admins && Array.isArray(params.admins)) {
+                        for (var i = 0; i < params.admins.length; i++) {
+                            var temp = {};
+                            if (parseInt(params.admins[i].userId) > 0) {
+                                temp.userId = params.admins[i].userId;
+                            }
+
+                            if (Array.isArray(params.admins[i].roles)) {
+                                temp.roles = params.admins[i].roles;
+                            }
+
+                            setAdminData.content.push(temp);
+                        }
+
+                        setAdminData.content = JSON.stringify(setAdminData.content);
+                    }
+                }
+
+                return sendMessage(setAdminData, {
+                    onResult: function (result) {
+                        callback && callback(result);
+                    }
+                });
             };
 
         /******************************************************
@@ -19357,6 +19836,38 @@ module.exports = ws
         this.getAllThreadList = getAllThreadList;
 
         this.getHistory = getHistory;
+
+        this.getAllMentionedMessages = function (params, callback) {
+            return getHistory({
+                threadId: params.threadId,
+                allMentioned: true,
+                typeCode: params.typeCode,
+                count: params.count || 50,
+                offset: params.offset || 0,
+                cache: false,
+                queues: {
+                    uploading: false,
+                    sending: false,
+                    uploading: false
+                }
+            }, callback);
+        };
+
+        this.getUnreadMentionedMessages = function (params, callback) {
+            return getHistory({
+                threadId: params.threadId,
+                unreadMentioned: true,
+                typeCode: params.typeCode,
+                count: params.count || 50,
+                offset: params.offset || 0,
+                cache: false,
+                queues: {
+                    uploading: false,
+                    sending: false,
+                    uploading: false
+                }
+            }, callback);
+        };
 
         /**
          * Get Contacts
@@ -19735,6 +20246,8 @@ module.exports = ws
             });
         };
 
+        this.getParticipantRoles = getParticipantRoles;
+
         this.leaveThread = function (params, callback) {
 
             /**
@@ -19932,7 +20445,7 @@ module.exports = ws
                 message: {
                     chatMessageVOType: chatMessageVOTypes.MESSAGE,
                     typeCode: params.typeCode,
-                    messageType: params.messageType,
+                    messageType: (params.messageType && params.messageType.toUpperCase() !== undefined && chatMessageTypes[params.messageType.toUpperCase()] > 0) ? chatMessageTypes[params.messageType.toUpperCase()] : chatMessageTypes.TEXT,
                     subjectId: params.threadId,
                     repliedTo: params.repliedTo,
                     content: params.content,
@@ -19961,12 +20474,8 @@ module.exports = ws
                 chatMessageVOType: chatMessageVOTypes.BOT_MESSAGE,
                 typeCode: params.typeCode,
                 subjectId: params.messageId,
-                repliedTo: params.repliedTo,
                 content: params.content,
                 uniqueId: params.uniqueId,
-                receiver: params.receiver,
-                systemMetadata: JSON.stringify(params.systemMetadata),
-                metadata: JSON.stringify(metadata),
                 pushMsgType: 4
             }, callbacks);
         };
@@ -20127,6 +20636,213 @@ module.exports = ws
             return {
                 uniqueId: fileUniqueId,
                 threadId: params.threadId,
+                participant: userInfo,
+                content: params.content
+            };
+        };
+
+        this.createThreadWithFile = function (params, callbacks) {
+            var metadata = {},
+                fileUploadParams = {},
+                fileUniqueId = Utility.generateUUID(),
+                content = {};
+
+            if (params) {
+                if (typeof params.title === 'string') {
+                    content.title = params.title;
+                }
+
+                if (typeof params.type === 'string') {
+                    var threadType = params.type;
+                    content.type = createThreadTypes[threadType];
+                }
+
+                if (Array.isArray(params.invitees)) {
+                    var tempInvitee;
+                    content.invitees = [];
+                    for (var i = 0; i < params.invitees.length; i++) {
+                        var tempInvitee = formatDataToMakeInvitee(params.invitees[i]);
+                        if (tempInvitee) {
+                            content.invitees.push(tempInvitee);
+                        }
+                    }
+                }
+
+                if (typeof params.image === 'string') {
+                    content.image = params.image;
+                }
+
+                if (typeof params.description === 'string') {
+                    content.description = params.description;
+                }
+
+                if (typeof params.metadata === 'string') {
+                    content.metadata = params.metadata;
+                }
+                else if (typeof params.metadata === 'object') {
+                    try {
+                        content.metadata = JSON.stringify(params.metadata);
+                    }
+                    catch (e) {
+                        console.log(e);
+                    }
+                }
+
+                if (typeof params.file != 'undefined') {
+
+                    var fileName,
+                        fileType,
+                        fileSize,
+                        fileExtension;
+
+                    fileName = params.file.name;
+                    fileType = params.file.type;
+                    fileSize = params.file.size;
+                    fileExtension = params.file.name.split('.')
+                        .pop();
+
+
+                    fireEvent('fileUploadEvents', {
+                        threadId: 0,
+                        uniqueId: fileUniqueId,
+                        state: 'NOT_STARTED',
+                        progress: 0,
+                        fileInfo: {
+                            fileName: fileName,
+                            fileSize: fileSize
+                        },
+                        fileObject: params.file
+                    });
+
+                    /**
+                     * File is a valid Image
+                     * Should upload to image server
+                     */
+                    if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
+                        fileUploadParams.image = params.file;
+
+                        if (typeof params.xC == 'string') {
+                            fileUploadParams.xC = params.xC;
+                        }
+
+                        if (typeof params.yC == 'string') {
+                            fileUploadParams.yC = params.yC;
+                        }
+
+                        if (typeof params.hC == 'string') {
+                            fileUploadParams.hC = params.hC;
+                        }
+
+                        if (typeof params.wC == 'string') {
+                            fileUploadParams.wC = params.wC;
+                        }
+                    }
+                    else {
+                        fileUploadParams.file = params.file;
+                    }
+
+                    metadata['file'] = {};
+
+                    metadata['file']['originalName'] = fileName;
+                    metadata['file']['mimeType'] = fileType;
+                    metadata['file']['size'] = fileSize;
+
+                    fileUploadParams.threadId = 0;
+                    fileUploadParams.uniqueId = fileUniqueId;
+                    fileUploadParams.fileObject = params.file;
+                    fileUploadParams.originalFileName = fileName;
+
+                    content.message = {};
+                    content.message['uniqueId'] = Utility.generateUUID();
+                    content.message['text'] = params.caption;
+                    content.message['messageType'] = (params.messageType && params.messageType.toUpperCase() !== undefined && chatMessageTypes[params.messageType.toUpperCase()] > 0) ? chatMessageTypes[params.messageType.toUpperCase()] : 2;
+
+                    putInChatUploadQueue({
+                        message: {
+                            chatMessageVOType: chatMessageVOTypes.CREATE_THREAD,
+                            content: content,
+                            subjectId: 0,
+                            uniqueId: fileUniqueId,
+                            pushMsgType: 4
+                        },
+                        callbacks: callbacks
+                    }, function () {
+                        if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
+                            uploadImage(fileUploadParams, function (result) {
+                                if (!result.hasError) {
+                                    metadata['file']['actualHeight'] = result.result.actualHeight;
+                                    metadata['file']['actualWidth'] = result.result.actualWidth;
+                                    metadata['file']['height'] = result.result.height;
+                                    metadata['file']['width'] = result.result.width;
+                                    metadata['file']['name'] = result.result.name;
+                                    metadata['name'] = result.result.name;
+                                    metadata['file']['hashCode'] = result.result.hashCode;
+                                    metadata['file']['id'] = result.result.id;
+                                    metadata['id'] = result.result.id;
+                                    metadata['file']['link'] = SERVICE_ADDRESSES.FILESERVER_ADDRESS +
+                                        SERVICES_PATH.GET_IMAGE + '?imageId=' +
+                                        result.result.id + '&hashCode=' +
+                                        result.result.hashCode;
+
+                                    transferFromUploadQToSendQ(0, fileUniqueId, JSON.stringify(metadata), function () {
+                                        chatSendQueueHandler();
+                                    });
+                                }
+                                else {
+                                    deleteFromChatUploadQueue({message: {uniqueId: fileUniqueId}});
+                                }
+                            });
+                        }
+                        else {
+                            uploadFile(fileUploadParams, function (result) {
+                                if (!result.hasError) {
+                                    metadata['file']['name'] = result.result.name;
+                                    metadata['name'] = result.result.name;
+                                    metadata['file']['hashCode'] = result.result.hashCode;
+                                    metadata['file']['id'] = result.result.id;
+                                    metadata['id'] = result.result.id;
+                                    metadata['file']['link'] = SERVICE_ADDRESSES.FILESERVER_ADDRESS +
+                                        SERVICES_PATH.GET_FILE + '?fileId=' +
+                                        result.result.id + '&hashCode=' +
+                                        result.result.hashCode;
+
+                                    transferFromUploadQToSendQ(0, fileUniqueId, JSON.stringify(metadata), function () {
+                                        chatSendQueueHandler();
+                                    });
+                                }
+                                else {
+                                    deleteFromChatUploadQueue({message: {uniqueId: fileUniqueId}});
+                                }
+                            });
+                        }
+                    });
+
+                    return {
+                        uniqueId: fileUniqueId,
+                        threadId: 0,
+                        participant: userInfo,
+                        content: {
+                            caption: params.content,
+                            file: {
+                                uniqueId: fileUniqueId,
+                                fileName: fileName,
+                                fileSize: fileSize,
+                                fileObject: params.file
+                            }
+                        }
+                    };
+                }
+                else {
+                    fireEvent('error', {
+                        code: 6302,
+                        message: CHAT_ERRORS[6302]
+                    });
+                }
+            }
+
+            return {
+                uniqueId: fileUniqueId,
+                threadId: 0,
                 participant: userInfo,
                 content: params.content
             };
@@ -20519,7 +21235,7 @@ module.exports = ws
                 subjectId: params.messageId,
                 uniqueId: params.uniqueId,
                 content: JSON.stringify({
-                    'deleteForAll': params.deleteForAll
+                    'deleteForAll': (typeof params.deleteForAll === 'boolean') ? params.deleteForAll : false
                 }),
                 pushMsgType: 4
             }, {
@@ -20638,7 +21354,7 @@ module.exports = ws
                 content: {
                     uniqueIds: uniqueIdsList,
                     ids: messageIdsList,
-                    deleteForAll: params.deleteForAll
+                    deleteForAll: (typeof params.deleteForAll === 'boolean') ? params.deleteForAll : false
                 },
                 pushMsgType: 4
             });
@@ -20781,8 +21497,10 @@ module.exports = ws
                                     metadata['file']['height'] = result.result.height;
                                     metadata['file']['width'] = result.result.width;
                                     metadata['file']['name'] = result.result.name;
+                                    metadata['name'] = result.result.name;
                                     metadata['file']['hashCode'] = result.result.hashCode;
                                     metadata['file']['id'] = result.result.id;
+                                    metadata['id'] = result.result.id;
                                     metadata['file']['link'] = SERVICE_ADDRESSES.FILESERVER_ADDRESS +
                                         SERVICES_PATH.GET_IMAGE + '?imageId=' +
                                         result.result.id + '&hashCode=' +
@@ -20800,8 +21518,10 @@ module.exports = ws
                             uploadFile(fileUploadParams, function (result) {
                                 if (!result.hasError) {
                                     metadata['file']['name'] = result.result.name;
+                                    metadata['name'] = result.result.name;
                                     metadata['file']['hashCode'] = result.result.hashCode;
                                     metadata['file']['id'] = result.result.id;
+                                    metadata['id'] = result.result.id;
                                     metadata['file']['link'] = SERVICE_ADDRESSES.FILESERVER_ADDRESS +
                                         SERVICES_PATH.GET_FILE + '?fileId=' +
                                         result.result.id + '&hashCode=' +
@@ -20989,6 +21709,8 @@ module.exports = ws
 
         this.updateThreadInfo = updateThreadInfo;
 
+        this.updateChatProfile = updateChatProfile;
+
         this.muteThread = function (params, callback) {
             return sendMessage({
                 chatMessageVOType: chatMessageVOTypes.MUTE_THREAD,
@@ -20996,8 +21718,7 @@ module.exports = ws
                 subjectId: params.subjectId,
                 content: {},
                 pushMsgType: 4,
-                token: token,
-                timeout: params.timeout
+                token: token
             }, {
                 onResult: function (result) {
                     callback && callback(result);
@@ -21012,8 +21733,71 @@ module.exports = ws
                 subjectId: params.subjectId,
                 content: {},
                 pushMsgType: 4,
-                token: token,
-                timeout: params.timeout
+                token: token
+            }, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.pinThread = function (params, callback) {
+            return sendMessage({
+                chatMessageVOType: chatMessageVOTypes.PIN_THREAD,
+                typeCode: params.typeCode,
+                subjectId: params.subjectId,
+                content: {},
+                pushMsgType: 4,
+                token: token
+            }, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.unPinThread = function (params, callback) {
+            return sendMessage({
+                chatMessageVOType: chatMessageVOTypes.UNPIN_THREAD,
+                typeCode: params.typeCode,
+                subjectId: params.subjectId,
+                content: {},
+                pushMsgType: 4,
+                token: token
+            }, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.pinMessage = function (params, callback) {
+            return sendMessage({
+                chatMessageVOType: chatMessageVOTypes.PIN_MESSAGE,
+                typeCode: params.typeCode,
+                subjectId: params.messageId,
+                content: JSON.stringify({
+                    'notifyAll': (typeof params.notifyAll === 'boolean') ? params.notifyAll : false
+                }),
+                pushMsgType: 4,
+                token: token
+            }, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.unPinMessage = function (params, callback) {
+            return sendMessage({
+                chatMessageVOType: chatMessageVOTypes.UNPIN_MESSAGE,
+                typeCode: params.typeCode,
+                subjectId: params.messageId,
+                content: JSON.stringify({
+                    'notifyAll': (typeof params.notifyAll === 'boolean') ? params.notifyAll : false
+                }),
+                pushMsgType: 4,
+                token: token
             }, {
                 onResult: function (result) {
                     callback && callback(result);
@@ -21226,18 +22010,18 @@ module.exports = ws
                     data.firstName = '';
                 }
 
-                if (typeof params.typeCode === 'string') {
-                    data.typeCode = params.typeCode;
-                }
-                else if (generalTypeCode) {
-                    data.typeCode = generalTypeCode;
-                }
-
                 if (typeof params.lastName === 'string') {
                     data.lastName = params.lastName;
                 }
                 else {
                     data.lastName = '';
+                }
+
+                if (typeof params.typeCode === 'string') {
+                    data.typeCode = params.typeCode;
+                }
+                else if (generalTypeCode) {
+                    data.typeCode = generalTypeCode;
                 }
 
                 if (typeof params.cellphoneNumber === 'string') {
@@ -21252,6 +22036,10 @@ module.exports = ws
                 }
                 else {
                     data.email = '';
+                }
+
+                if (typeof params.username === 'string') {
+                    data.username = params.username;
                 }
 
                 data.uniqueId = Utility.generateUUID();
@@ -22195,52 +22983,19 @@ module.exports = ws
         };
 
         this.setAdmin = function (params, callback) {
-            var setAdminData = {
-                chatMessageVOType: chatMessageVOTypes.SET_ROLE_TO_USER,
-                typeCode: params.typeCode,
-                content: [],
-                pushMsgType: 4,
-                token: token,
-                timeout: params.timeout
-            };
+            setRoleToUser(params, callback);
+        };
 
-            if (params) {
-                if (parseInt(params.threadId) > 0) {
-                    setAdminData.subjectId = params.threadId;
-                }
+        this.removeAdmin = function (params, callback) {
+            removeRoleFromUser(params, callback);
+        };
 
-                if (params.admins && Array.isArray(params.admins)) {
-                    for (var i = 0; i < params.admins.length; i++) {
-                        var temp = {};
-                        if (parseInt(params.admins[i].userId) > 0) {
-                            temp.userId = params.admins[i].userId;
-                        }
+        this.setAuditor = function (params, callback) {
+            setRoleToUser(params, callback);
+        };
 
-                        if (params.admins[i].roleOperation == 'add' || params.admins[i].roleOperation == 'remove') {
-                            temp.roleOperation = params.admins[i].roleOperation;
-                        }
-                        else {
-                            temp.roleOperation = 'add';
-                        }
-
-                        temp.checkThreadMembership = true;
-
-                        if (Array.isArray(params.admins[i].roles)) {
-                            temp.roles = params.admins[i].roles;
-                        }
-
-                        setAdminData.content.push(temp);
-                    }
-
-                    setAdminData.content = JSON.stringify(setAdminData.content);
-                }
-            }
-
-            return sendMessage(setAdminData, {
-                onResult: function (result) {
-                    callback && callback(result);
-                }
-            });
+        this.removeAuditor = function (params, callback) {
+            removeRoleFromUser(params, callback);
         };
 
         this.generateUUID = Utility.generateUUID;
