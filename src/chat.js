@@ -102,6 +102,7 @@
                 LAST_SEEN_UPDATED: 31,
                 GET_MESSAGE_DELEVERY_PARTICIPANTS: 32,
                 GET_MESSAGE_SEEN_PARTICIPANTS: 33,
+                JOIN_THREAD: 39,
                 BOT_MESSAGE: 40,
                 SPAM_PV_THREAD: 41,
                 SET_ROLE_TO_USER: 42,
@@ -465,6 +466,9 @@
                         case 2: // CLOSING
                         case 3: // CLOSED
                             chatState = false;
+
+                            // TODO: Check if this is OK or not?!
+                            sendPingTimeout && clearTimeout(sendPingTimeout);
                             break;
                     }
                 });
@@ -2217,6 +2221,12 @@
                             messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
                         }
 
+                        if (messageContent.pinned) {
+                            unPinMessage({
+                                messageId: messageContent.id,
+                                notifyAll: true
+                            });
+                        }
                         /**
                          * Remove Message from cache
                          */
@@ -2245,65 +2255,107 @@
                             }
                         }
 
-                        fireEvent('messageEvents', {
-                            type: 'MESSAGE_DELETE',
-                            result: {
-                                message: {
-                                    id: messageContent,
-                                    threadId: threadId
+                        if (fullResponseObject) {
+                            getThreads({
+                                threadIds: [threadId]
+                            }, function (threadsResult) {
+                                var threads = threadsResult.result.threads;
+                                if (!threadsResult.cache) {
+                                    fireEvent('messageEvents', {
+                                        type: 'MESSAGE_DELETE',
+                                        result: {
+                                            message: {
+                                                id: messageContent.id,
+                                                pinned: messageContent.pinned,
+                                                threadId: threadId
+                                            }
+                                        }
+                                    });
+                                    if (messageContent.pinned) {
+                                        fireEvent('threadEvents', {
+                                            type: 'THREAD_LAST_ACTIVITY_TIME',
+                                            result: {
+                                                thread: threads[0]
+                                            }
+                                        });
+                                    }
                                 }
+                            });
+                        }
+                        else {
+                            fireEvent('messageEvents', {
+                                type: 'MESSAGE_DELETE',
+                                result: {
+                                    message: {
+                                        id: messageContent.id,
+                                        pinned: messageContent.pinned,
+                                        threadId: threadId
+                                    }
+                                }
+                            });
+                            if (messageContent.pinned) {
+                                fireEvent('threadEvents', {
+                                    type: 'THREAD_LAST_ACTIVITY_TIME',
+                                    result: {
+                                        thread: threadId
+                                    }
+                                });
                             }
-                        });
+                        }
+
                         break;
 
                     /**
                      * Type 30    Thread Info Updated
                      */
                     case chatMessageVOTypes.THREAD_INFO_UPDATED:
-                        var thread = formatDataToMakeConversation(messageContent);
+                        if (!messageContent.conversation && !messageContent.conversation.id) {
+                            messageContent.conversation.id = threadId;
+                        }
+                        var thread = formatDataToMakeConversation(messageContent.conversation);
+
                         /**
                          * Add Updated Thread into cache database #cache
                          */
-                        if (canUseCache && cacheSecret.length > 0) {
-                            if (db) {
-                                var tempData = {};
-
-                                try {
-                                    var salt = Utility.generateUUID();
-
-                                    tempData.id = thread.id;
-                                    tempData.owner = userInfo.id;
-                                    tempData.title = Utility.crypt(thread.title, cacheSecret, salt);
-                                    tempData.time = thread.time;
-                                    tempData.data = Utility.crypt(JSON.stringify(unsetNotSeenDuration(thread)), cacheSecret, salt);
-                                    tempData.salt = salt;
-                                }
-                                catch (error) {
-                                    fireEvent('error', {
-                                        code: error.code,
-                                        message: error.message,
-                                        error: error
-                                    });
-                                }
-
-                                db.threads.put(tempData)
-                                    .catch(function (error) {
-                                        fireEvent('error', {
-                                            code: error.code,
-                                            message: error.message,
-                                            error: error
-                                        });
-                                    });
-                            }
-                            else {
-                                fireEvent('error', {
-                                    code: 6601,
-                                    message: CHAT_ERRORS[6601],
-                                    error: null
-                                });
-                            }
-                        }
-
+                        // if (canUseCache && cacheSecret.length > 0) {
+                        //     if (db) {
+                        //         var tempData = {};
+                        //
+                        //         try {
+                        //             var salt = Utility.generateUUID();
+                        //
+                        //             tempData.id = thread.id;
+                        //             tempData.owner = userInfo.id;
+                        //             tempData.title = Utility.crypt(thread.title, cacheSecret, salt);
+                        //             tempData.time = thread.time;
+                        //             tempData.data = Utility.crypt(JSON.stringify(unsetNotSeenDuration(thread)), cacheSecret, salt);
+                        //             tempData.salt = salt;
+                        //         }
+                        //         catch (error) {
+                        //             fireEvent('error', {
+                        //                 code: error.code,
+                        //                 message: error.message,
+                        //                 error: error
+                        //             });
+                        //         }
+                        //
+                        //         db.threads.put(tempData)
+                        //             .catch(function (error) {
+                        //                 fireEvent('error', {
+                        //                     code: error.code,
+                        //                     message: error.message,
+                        //                     error: error
+                        //                 });
+                        //             });
+                        //     }
+                        //     else {
+                        //         fireEvent('error', {
+                        //             code: 6601,
+                        //             message: CHAT_ERRORS[6601],
+                        //             error: null
+                        //         });
+                        //     }
+                        // }
                         fireEvent('threadEvents', {
                             type: 'THREAD_INFO_UPDATED',
                             result: {
@@ -2318,7 +2370,7 @@
                     case chatMessageVOTypes.LAST_SEEN_UPDATED:
                         if (fullResponseObject) {
                             getThreads({
-                                threadIds: [messageContent.conversationId]
+                                threadIds: [messageContent.id]
                             }, function (threadsResult) {
                                 var threads = threadsResult.result.threads;
 
@@ -2327,8 +2379,7 @@
                                         type: 'THREAD_UNREAD_COUNT_UPDATED',
                                         result: {
                                             thread: threads[0],
-                                            messageId: messageContent.messageId,
-                                            senderId: messageContent.participantId
+                                            unreadCount: messageContent.unreadCount
                                         }
                                     });
 
@@ -2346,8 +2397,7 @@
                                 type: 'THREAD_UNREAD_COUNT_UPDATED',
                                 result: {
                                     thread: threadId,
-                                    messageId: messageContent.messageId,
-                                    senderId: messageContent.participantId
+                                    unreadCount: messageContent.unreadCount
                                 }
                             });
 
@@ -2374,6 +2424,15 @@
                      * Type 33    Get Message Seen List
                      */
                     case chatMessageVOTypes.GET_MESSAGE_SEEN_PARTICIPANTS:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+                        break;
+
+                    /**
+                     * Type 39    Join Public Group or Channel
+                     */
+                    case chatMessageVOTypes.JOIN_THREAD:
                         if (messagesCallbacks[uniqueId]) {
                             messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
                         }
@@ -2614,7 +2673,7 @@
                             type: 'MESSAGE_PIN',
                             result: {
                                 thread: threadId,
-                                pinMessage: formatDataToMakePinMessage(messageContent)
+                                pinMessage: formatDataToMakePinMessage(threadId, messageContent)
                             }
                         });
                         break;
@@ -2630,7 +2689,7 @@
                             type: 'MESSAGE_UNPIN',
                             result: {
                                 thread: threadId,
-                                pinMessage: formatDataToMakePinMessage(messageContent)
+                                pinMessage: formatDataToMakePinMessage(threadId, messageContent)
                             }
                         });
                         break;
@@ -2880,8 +2939,7 @@
                             type: 'THREAD_UNREAD_COUNT_UPDATED',
                             result: {
                                 thread: threads[0],
-                                messageId: messageContent.id,
-                                senderId: messageContent.participant.id
+                                unreadCount: threads[0].unreadCount
                             }
                         });
                         // }
@@ -2907,7 +2965,8 @@
                     fireEvent('threadEvents', {
                         type: 'THREAD_UNREAD_COUNT_UPDATED',
                         result: {
-                            thread: threadId
+                            thread: messageContent.id,
+                            unreadCount: messageContent.conversation.unreadCount
                         }
                     });
                 }
@@ -2999,12 +3058,46 @@
                     }
                 }
 
-                fireEvent('messageEvents', {
-                    type: 'MESSAGE_EDIT',
-                    result: {
-                        message: message
+                if (fullResponseObject) {
+                    getThreads({
+                        threadIds: [threadId]
+                    }, function (threadsResult) {
+                        var threads = threadsResult.result.threads;
+                        if (!threadsResult.cache) {
+                            fireEvent('messageEvents', {
+                                type: 'MESSAGE_EDIT',
+                                result: {
+                                    message: message
+                                }
+                            });
+                            if (message.pinned) {
+                                fireEvent('threadEvents', {
+                                    type: 'THREAD_LAST_ACTIVITY_TIME',
+                                    result: {
+                                        thread: threads[0]
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
+                else {
+                    fireEvent('messageEvents', {
+                        type: 'MESSAGE_EDIT',
+                        result: {
+                            message: message
+                        }
+                    });
+                    if (message.pinned) {
+                        fireEvent('threadEvents', {
+                            type: 'THREAD_LAST_ACTIVITY_TIME',
+                            result: {
+                                thread: threadId
+                            }
+                        });
                     }
-                });
+                }
+
             },
 
             /**
@@ -3111,7 +3204,8 @@
                     image: messageContent.image
                 };
 
-                return linkedUser;
+                // return linkedUser;
+                return JSON.parse(JSON.stringify(linkedUser));
             },
 
             /**
@@ -3163,7 +3257,8 @@
                     contact.linkedUser = formatDataToMakeLinkedUser(messageContent.linkedUser);
                 }
 
-                return contact;
+                // return contact;
+                return JSON.parse(JSON.stringify(contact));
             },
 
             /**
@@ -3227,7 +3322,8 @@
                     user.chatProfileVO = messageContent.chatProfileVO;
                 }
 
-                return user;
+                // return user;
+                return JSON.parse(JSON.stringify(user));
             },
 
             /**
@@ -3245,21 +3341,29 @@
                 /**
                  * + BlockedUser              {object}
                  *    - id                    {long}
+                 *    - coreUserId            {long}
                  *    - firstName             {string}
                  *    - lastName              {string}
                  *    - nickName              {string}
                  *    - profileImage          {string}
+                 *    - contact               {object: contactVO}
                  */
 
                 var blockedUser = {
                     blockId: messageContent.id,
+                    coreUserId: messageContent.coreUserId,
                     firstName: messageContent.firstName,
                     lastName: messageContent.lastName,
                     nickName: messageContent.nickName,
                     profileImage: messageContent.profileImage
                 };
 
-                return blockedUser;
+                // Add contactVO if exist
+                if (messageContent.contactVO) {
+                    blockedUser.contact = messageContent.contactVO;
+                }
+                // return blockedUser;
+                return JSON.parse(JSON.stringify(blockedUser));
             },
 
             /**
@@ -3355,7 +3459,8 @@
                     username: messageContent.username
                 };
 
-                return participant;
+                // return participant;
+                return JSON.parse(JSON.stringify(participant));
             },
 
             /**
@@ -3407,6 +3512,7 @@
                  *    - admin                               {boolean}
                  *    - mentioned                           {boolean}
                  *    - pin                                 {boolean}
+                 *    - uniqueName                          {string}
                  */
 
                 var conversation = {
@@ -3448,7 +3554,8 @@
                     canSpam: messageContent.canSpam,
                     admin: messageContent.admin,
                     mentioned: messageContent.mentioned,
-                    pin: messageContent.pin
+                    pin: messageContent.pin,
+                    uniqueName: messageContent.uniqueName
                 };
 
                 // Add inviter if exist
@@ -3475,8 +3582,10 @@
 
                 // Add pinMessageVO if exist
                 if (messageContent.pinMessageVO) {
-                    conversation.pinMessageVO = formatDataToMakePinMessage(messageContent.pinMessageVO);
+                    conversation.pinMessageVO = formatDataToMakePinMessage(messageContent.id, messageContent.pinMessageVO);
                 }
+                // return conversation;
+                return JSON.parse(JSON.stringify(conversation));
 
                 return conversation;
             },
@@ -3526,7 +3635,8 @@
                     replyInfo.participant = formatDataToMakeParticipant(messageContent.participant, threadId);
                 }
 
-                return replyInfo;
+                // return replyInfo;
+                return JSON.parse(JSON.stringify(replyInfo));
             },
 
             /**
@@ -3560,7 +3670,8 @@
                     forwardInfo.participant = formatDataToMakeParticipant(messageContent.participant, threadId);
                 }
 
-                return forwardInfo;
+                // return forwardInfo;
+                return JSON.parse(JSON.stringify(forwardInfo));
             },
 
             /**
@@ -3590,6 +3701,7 @@
                  *    - delivered                    {boolean}
                  *    - seen                         {boolean}
                  *    - mentioned                    {boolean}
+                 *    - pinned                       {boolean}
                  *    - participant                  {object : ParticipantVO}
                  *    - conversation                 {object : ConversationVO}
                  *    - replyInfo                    {object : replyInfoVO}
@@ -3627,6 +3739,7 @@
                     delivered: pushMessageVO.delivered,
                     seen: pushMessageVO.seen,
                     mentioned: pushMessageVO.mentioned,
+                    pinned: pushMessageVO.pinned,
                     participant: undefined,
                     conversation: undefined,
                     replyInfo: undefined,
@@ -3661,7 +3774,8 @@
                     message.participant = formatDataToMakeParticipant(pushMessageVO.participant, threadId);
                 }
 
-                return message;
+                // return message;
+                return JSON.parse(JSON.stringify(message));
             },
 
             /**
@@ -3675,7 +3789,7 @@
              *
              * @return {object} pin message Object
              */
-            formatDataToMakePinMessage = function (pushMessageVO) {
+            formatDataToMakePinMessage = function (threadId, pushMessageVO) {
                 /**
                  * + PinMessageVO                    {object}
                  *    - messageId                    {long}
@@ -3689,7 +3803,9 @@
                 if (typeof pushMessageVO.notifyAll === 'boolean') {
                     pinMessage.notifyAll = pushMessageVO.notifyAll
                 }
-                return pinMessage;
+
+                // return pinMessage;
+                return JSON.parse(JSON.stringify(pinMessage));
             },
 
             /**
@@ -5310,6 +5426,7 @@
                                                     result: {
                                                         message: {
                                                             id: cacheResult[key].messageId,
+                                                            pinned: cacheResult[key].pinned,
                                                             threadId: cacheResult[key].threadId
                                                         }
                                                     }
@@ -5363,7 +5480,13 @@
                     });
                 }
 
-                return;
+                else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'Thread ID is required for Getting history!'
+                    });
+                    return;
+                }
             },
 
             /**
@@ -6995,8 +7118,24 @@
                         callback && callback(result);
                     }
                 });
-            };
+            },
 
+            unPinMessage = function (params, callback) {
+                return sendMessage({
+                    chatMessageVOType: chatMessageVOTypes.UNPIN_MESSAGE,
+                    typeCode: params.typeCode,
+                    subjectId: params.messageId,
+                    content: JSON.stringify({
+                        'notifyAll': (typeof params.notifyAll === 'boolean') ? params.notifyAll : false
+                    }),
+                    pushMsgType: 4,
+                    token: token
+                }, {
+                    onResult: function (result) {
+                        callback && callback(result);
+                    }
+                });
+            };
         /******************************************************
          *             P U B L I C   M E T H O D S            *
          ******************************************************/
@@ -7232,8 +7371,7 @@
                             resultData = {
                                 contacts: [],
                                 contentCount: result.contentCount,
-                                hasNext: (offset + count <
-                                    result.contentCount && messageLength > 0),
+                                hasNext: (offset + count < result.contentCount && messageLength > 0),
                                 nextOffset: offset + messageLength
                             },
                             contactData;
@@ -7339,30 +7477,34 @@
         };
 
         this.addParticipants = function (params, callback) {
-
             /**
              * + AddParticipantsRequest   {object}
              *    - subjectId             {long}
-             *    + content               {list} List of CONTACT IDs
-             *       -id                  {long}
+             *    + content               {list} List of CONTACT IDs or inviteeVO Objects
              *    - uniqueId              {string}
              */
-
             var sendMessageParams = {
                 chatMessageVOType: chatMessageVOTypes.ADD_PARTICIPANT,
-                typeCode: params.typeCode
+                typeCode: params.typeCode,
+                content: []
             };
-
             if (params) {
                 if (parseInt(params.threadId) > 0) {
                     sendMessageParams.subjectId = params.threadId;
                 }
-
                 if (Array.isArray(params.contacts)) {
                     sendMessageParams.content = params.contacts;
                 }
+                if (Array.isArray(params.usernames)) {
+                    sendMessageParams.content = [];
+                    for (var i = 0; i < params.usernames.length; i++) {
+                        sendMessageParams.content.push({
+                            id: params.usernames[i],
+                            idType: inviteeVOidTypes.TO_BE_USER_USERNAME
+                        });
+                    }
+                }
             }
-
             return sendMessage(sendMessageParams, {
                 onResult: function (result) {
                     var returnData = {
@@ -7371,16 +7513,13 @@
                         errorMessage: result.errorMessage,
                         errorCode: result.errorCode
                     };
-
                     if (!returnData.hasError) {
                         var messageContent = result.result,
                             resultData = {
                                 thread: createThread(messageContent)
                             };
-
                         returnData.result = resultData;
                     }
-
                     callback && callback(returnData);
                 }
             });
@@ -7491,6 +7630,7 @@
              *    - image                 {string}
              *    - description           {string}
              *    - metadata              {string}
+             *    - uniqueName            {string}
              *    + message               {object}
              *       -text                {string}
              *       -type                {int}
@@ -7512,6 +7652,10 @@
                 if (typeof params.type === 'string') {
                     var threadType = params.type;
                     content.type = createThreadTypes[threadType];
+                }
+
+                if (typeof params.uniqueName === 'string') {
+                    content.uniqueName = params.uniqueName;
                 }
 
                 if (Array.isArray(params.invitees)) {
@@ -7741,7 +7885,7 @@
                         message: {
                             chatMessageVOType: chatMessageVOTypes.MESSAGE,
                             typeCode: params.typeCode,
-                            messageType: params.messageType,
+                            messageType: (params.messageType && params.messageType.toUpperCase() !== undefined && chatMessageTypes[params.messageType.toUpperCase()] > 0) ? chatMessageTypes[params.messageType.toUpperCase()] : 1,
                             subjectId: params.threadId,
                             repliedTo: params.repliedTo,
                             content: params.content,
@@ -7760,8 +7904,10 @@
                                     metadata['file']['height'] = result.result.height;
                                     metadata['file']['width'] = result.result.width;
                                     metadata['file']['name'] = result.result.name;
+                                    metadata['name'] = result.result.name;
                                     metadata['file']['hashCode'] = result.result.hashCode;
                                     metadata['file']['id'] = result.result.id;
+                                    metadata['id'] = result.result.id;
                                     metadata['file']['link'] = SERVICE_ADDRESSES.FILESERVER_ADDRESS +
                                         SERVICES_PATH.GET_IMAGE + '?imageId=' +
                                         result.result.id + '&hashCode=' +
@@ -7780,8 +7926,10 @@
                             uploadFile(fileUploadParams, function (result) {
                                 if (!result.hasError) {
                                     metadata['file']['name'] = result.result.name;
+                                    metadata['name'] = result.result.name;
                                     metadata['file']['hashCode'] = result.result.hashCode;
                                     metadata['file']['id'] = result.result.id;
+                                    metadata['id'] = result.result.id;
                                     metadata['file']['link'] = SERVICE_ADDRESSES.FILESERVER_ADDRESS +
                                         SERVICES_PATH.GET_FILE + '?fileId=' +
                                         result.result.id + '&hashCode=' +
@@ -8439,7 +8587,13 @@
                         var messageContent = result.result,
                             resultData = {
                                 deletedMessage: {
-                                    id: result.result
+                                    id: result.result.id,
+                                    pinned: result.result.pinned,
+                                    mentioned: result.result.mentioned,
+                                    messageType: result.result.messageType,
+                                    edited: result.result.edited,
+                                    editable: result.result.editable,
+                                    deletable: result.result.deletable
                                 }
                             };
 
@@ -8499,7 +8653,13 @@
                         var messageContent = result.result,
                             resultData = {
                                 deletedMessage: {
-                                    id: result.result
+                                    id: result.result.id,
+                                    pinned: result.result.pinned,
+                                    mentioned: result.result.mentioned,
+                                    messageType: result.result.messageType,
+                                    edited: result.result.edited,
+                                    editable: result.result.editable,
+                                    deletable: result.result.deletable
                                 }
                             };
 
@@ -8929,6 +9089,26 @@
             });
         };
 
+        this.joinThread = function (params, callback) {
+            var joinThreadData = {
+                chatMessageVOType: chatMessageVOTypes.JOIN_THREAD,
+                typeCode: params.typeCode,
+                content: '',
+                pushMsgType: 4,
+                token: token
+            };
+            if (params) {
+                if (typeof params.uniqueName === 'string' && params.uniqueName.length > 0) {
+                    joinThreadData.content = params.uniqueName;
+                }
+            }
+            return sendMessage(joinThreadData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
         this.pinThread = function (params, callback) {
             return sendMessage({
                 chatMessageVOType: chatMessageVOTypes.PIN_THREAD,
@@ -8976,22 +9156,7 @@
             });
         };
 
-        this.unPinMessage = function (params, callback) {
-            return sendMessage({
-                chatMessageVOType: chatMessageVOTypes.UNPIN_MESSAGE,
-                typeCode: params.typeCode,
-                subjectId: params.messageId,
-                content: JSON.stringify({
-                    'notifyAll': (typeof params.notifyAll === 'boolean') ? params.notifyAll : false
-                }),
-                pushMsgType: 4,
-                token: token
-            }, {
-                onResult: function (result) {
-                    callback && callback(result);
-                }
-            });
-        };
+        this.unPinMessage = unPinMessage;
 
         this.spamPvThread = function (params, callback) {
             var spamData = {
