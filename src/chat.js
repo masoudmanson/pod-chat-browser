@@ -10387,6 +10387,15 @@
 
         this.logout = function () {
             clearChatServerCaches();
+
+            // Delete all event callbacks
+            for (var i in eventCallbacks) {
+                delete eventCallbacks[i];
+            }
+            messagesCallbacks = {};
+            sendMessageCallbacks = {};
+            threadCallbacks = {};
+
             asyncClient.logout();
         };
 
