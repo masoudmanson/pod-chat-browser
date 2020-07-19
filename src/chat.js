@@ -121,6 +121,7 @@
                 REPORT_USER: 58,
                 REPORT_MESSAGE: 59,
                 GET_CONTACT_NOT_SEEN_DURATION: 60,
+                ALL_UNREAD_MESSAGE_COUNT: 61,
                 LOGOUT: 100,
                 ERROR: 999
             },
@@ -2732,6 +2733,21 @@
                             type: 'CONTACTS_LAST_SEEN',
                             result: messageContent
                         });
+                        break;
+
+                    /**
+                     * Type 61      Get All Unread Message Count
+                     */
+                    case chatMessageVOTypes.ALL_UNREAD_MESSAGE_COUNT:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        fireEvent('systemEvents', {
+                            type: 'ALL_UNREAD_MESSAGES_COUNT',
+                            result: messageContent
+                        });
+
                         break;
 
                     /**
@@ -7194,6 +7210,22 @@
                     uploading: false
                 }
             }, callback);
+        };
+
+        this.getAllUnreadMessagesCount = function (params, callback) {
+            return sendMessage({
+                chatMessageVOType: chatMessageVOTypes.ALL_UNREAD_MESSAGE_COUNT,
+                typeCode: params.typeCode,
+                content: JSON.stringify({
+                    'mute': (typeof params.countMuteThreads === 'boolean') ? params.countMuteThreads : false
+                }),
+                pushMsgType: 4,
+                token: token
+            }, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
         };
 
         /**
