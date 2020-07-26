@@ -4517,6 +4517,12 @@
                             sendMessageParams.content.metadataCriteria = whereClause.metadataCriteria = params.metadataCriteria;
                         }
 
+                        if (params.messageType && params.messageType.toUpperCase() !== undefined && chatMessageTypes[params.messageType.toUpperCase()] > 0) {
+                            sendMessageParams.content.messageType = whereClause.messageType = chatMessageTypes[params.messageType.toUpperCase()];
+                        } else {
+                            console.log(params.messageType + " is not a valid type, falling back to default! \nValid types are: \n", chatMessageTypes);
+                        }
+
                         /**
                          * Get Thread Messages from cache
                          *

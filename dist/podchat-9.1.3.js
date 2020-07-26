@@ -1,190 +1,4 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
-// shim for using process in browser
-var process = module.exports = {};
-
-// cached from whatever global is present so that test runners that stub it
-// don't break things.  But we need to wrap it in a try catch in case it is
-// wrapped in strict mode code which doesn't define any globals.  It's inside a
-// function because try/catches deoptimize in certain engines.
-
-var cachedSetTimeout;
-var cachedClearTimeout;
-
-function defaultSetTimout() {
-    throw new Error('setTimeout has not been defined');
-}
-function defaultClearTimeout () {
-    throw new Error('clearTimeout has not been defined');
-}
-(function () {
-    try {
-        if (typeof setTimeout === 'function') {
-            cachedSetTimeout = setTimeout;
-        } else {
-            cachedSetTimeout = defaultSetTimout;
-        }
-    } catch (e) {
-        cachedSetTimeout = defaultSetTimout;
-    }
-    try {
-        if (typeof clearTimeout === 'function') {
-            cachedClearTimeout = clearTimeout;
-        } else {
-            cachedClearTimeout = defaultClearTimeout;
-        }
-    } catch (e) {
-        cachedClearTimeout = defaultClearTimeout;
-    }
-} ())
-function runTimeout(fun) {
-    if (cachedSetTimeout === setTimeout) {
-        //normal enviroments in sane situations
-        return setTimeout(fun, 0);
-    }
-    // if setTimeout wasn't available but was latter defined
-    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
-        cachedSetTimeout = setTimeout;
-        return setTimeout(fun, 0);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedSetTimeout(fun, 0);
-    } catch(e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
-            return cachedSetTimeout.call(null, fun, 0);
-        } catch(e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
-            return cachedSetTimeout.call(this, fun, 0);
-        }
-    }
-
-
-}
-function runClearTimeout(marker) {
-    if (cachedClearTimeout === clearTimeout) {
-        //normal enviroments in sane situations
-        return clearTimeout(marker);
-    }
-    // if clearTimeout wasn't available but was latter defined
-    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
-        cachedClearTimeout = clearTimeout;
-        return clearTimeout(marker);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedClearTimeout(marker);
-    } catch (e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
-            return cachedClearTimeout.call(null, marker);
-        } catch (e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
-            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
-            return cachedClearTimeout.call(this, marker);
-        }
-    }
-
-
-
-}
-var queue = [];
-var draining = false;
-var currentQueue;
-var queueIndex = -1;
-
-function cleanUpNextTick() {
-    if (!draining || !currentQueue) {
-        return;
-    }
-    draining = false;
-    if (currentQueue.length) {
-        queue = currentQueue.concat(queue);
-    } else {
-        queueIndex = -1;
-    }
-    if (queue.length) {
-        drainQueue();
-    }
-}
-
-function drainQueue() {
-    if (draining) {
-        return;
-    }
-    var timeout = runTimeout(cleanUpNextTick);
-    draining = true;
-
-    var len = queue.length;
-    while(len) {
-        currentQueue = queue;
-        queue = [];
-        while (++queueIndex < len) {
-            if (currentQueue) {
-                currentQueue[queueIndex].run();
-            }
-        }
-        queueIndex = -1;
-        len = queue.length;
-    }
-    currentQueue = null;
-    draining = false;
-    runClearTimeout(timeout);
-}
-
-process.nextTick = function (fun) {
-    var args = new Array(arguments.length - 1);
-    if (arguments.length > 1) {
-        for (var i = 1; i < arguments.length; i++) {
-            args[i - 1] = arguments[i];
-        }
-    }
-    queue.push(new Item(fun, args));
-    if (queue.length === 1 && !draining) {
-        runTimeout(drainQueue);
-    }
-};
-
-// v8 likes predictible objects
-function Item(fun, array) {
-    this.fun = fun;
-    this.array = array;
-}
-Item.prototype.run = function () {
-    this.fun.apply(null, this.array);
-};
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-process.version = ''; // empty string to avoid regexp issues
-process.versions = {};
-
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-process.prependListener = noop;
-process.prependOnceListener = noop;
-
-process.listeners = function (name) { return [] }
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-};
-
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-process.umask = function() { return 0; };
-
-},{}],2:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -270,7 +84,7 @@ var isArray = Array.isArray || function (xs) {
   return Object.prototype.toString.call(xs) === '[object Array]';
 };
 
-},{}],3:[function(require,module,exports){
+},{}],2:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -357,95 +171,16 @@ var objectKeys = Object.keys || function (obj) {
   return res;
 };
 
-},{}],4:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 'use strict';
 
 exports.decode = exports.parse = require('./decode');
 exports.encode = exports.stringify = require('./encode');
 
-},{"./decode":2,"./encode":3}],5:[function(require,module,exports){
-(function (setImmediate,clearImmediate){
-var nextTick = require('process/browser.js').nextTick;
-var apply = Function.prototype.apply;
-var slice = Array.prototype.slice;
-var immediateIds = {};
-var nextImmediateId = 0;
-
-// DOM APIs, for completeness
-
-exports.setTimeout = function() {
-  return new Timeout(apply.call(setTimeout, window, arguments), clearTimeout);
-};
-exports.setInterval = function() {
-  return new Timeout(apply.call(setInterval, window, arguments), clearInterval);
-};
-exports.clearTimeout =
-exports.clearInterval = function(timeout) { timeout.close(); };
-
-function Timeout(id, clearFn) {
-  this._id = id;
-  this._clearFn = clearFn;
-}
-Timeout.prototype.unref = Timeout.prototype.ref = function() {};
-Timeout.prototype.close = function() {
-  this._clearFn.call(window, this._id);
-};
-
-// Does not start the time, just sets up the members needed.
-exports.enroll = function(item, msecs) {
-  clearTimeout(item._idleTimeoutId);
-  item._idleTimeout = msecs;
-};
-
-exports.unenroll = function(item) {
-  clearTimeout(item._idleTimeoutId);
-  item._idleTimeout = -1;
-};
-
-exports._unrefActive = exports.active = function(item) {
-  clearTimeout(item._idleTimeoutId);
-
-  var msecs = item._idleTimeout;
-  if (msecs >= 0) {
-    item._idleTimeoutId = setTimeout(function onTimeout() {
-      if (item._onTimeout)
-        item._onTimeout();
-    }, msecs);
-  }
-};
-
-// That's not how node.js implements it but the exposed api is the same.
-exports.setImmediate = typeof setImmediate === "function" ? setImmediate : function(fn) {
-  var id = nextImmediateId++;
-  var args = arguments.length < 2 ? false : slice.call(arguments, 1);
-
-  immediateIds[id] = true;
-
-  nextTick(function onNextTick() {
-    if (immediateIds[id]) {
-      // fn.call() is faster so we optimize for the common use-case
-      // @see http://jsperf.com/call-apply-segu
-      if (args) {
-        fn.apply(null, args);
-      } else {
-        fn.call(null);
-      }
-      // Prevent ids from leaking
-      exports.clearImmediate(id);
-    }
-  });
-
-  return id;
-};
-
-exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate : function(id) {
-  delete immediateIds[id];
-};
-}).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":1,"timers":5}],6:[function(require,module,exports){
+},{"./decode":1,"./encode":2}],4:[function(require,module,exports){
 window.PodChat = require('./src/chat.js');
 
-},{"./src/chat.js":46}],7:[function(require,module,exports){
+},{"./src/chat.js":44}],5:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -678,7 +413,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.AES;
 
 }));
-},{"./cipher-core":8,"./core":9,"./enc-base64":10,"./evpkdf":12,"./md5":17}],8:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7,"./enc-base64":8,"./evpkdf":10,"./md5":15}],6:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -1559,7 +1294,7 @@ window.PodChat = require('./src/chat.js');
 
 
 }));
-},{"./core":9,"./evpkdf":12}],9:[function(require,module,exports){
+},{"./core":7,"./evpkdf":10}],7:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2320,7 +2055,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS;
 
 }));
-},{}],10:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2456,7 +2191,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.enc.Base64;
 
 }));
-},{"./core":9}],11:[function(require,module,exports){
+},{"./core":7}],9:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2606,7 +2341,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.enc.Utf16;
 
 }));
-},{"./core":9}],12:[function(require,module,exports){
+},{"./core":7}],10:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2739,7 +2474,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.EvpKDF;
 
 }));
-},{"./core":9,"./hmac":14,"./sha1":33}],13:[function(require,module,exports){
+},{"./core":7,"./hmac":12,"./sha1":31}],11:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2806,7 +2541,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.format.Hex;
 
 }));
-},{"./cipher-core":8,"./core":9}],14:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],12:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2950,7 +2685,7 @@ window.PodChat = require('./src/chat.js');
 
 
 }));
-},{"./core":9}],15:[function(require,module,exports){
+},{"./core":7}],13:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2969,7 +2704,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS;
 
 }));
-},{"./aes":7,"./cipher-core":8,"./core":9,"./enc-base64":10,"./enc-utf16":11,"./evpkdf":12,"./format-hex":13,"./hmac":14,"./lib-typedarrays":16,"./md5":17,"./mode-cfb":18,"./mode-ctr":20,"./mode-ctr-gladman":19,"./mode-ecb":21,"./mode-ofb":22,"./pad-ansix923":23,"./pad-iso10126":24,"./pad-iso97971":25,"./pad-nopadding":26,"./pad-zeropadding":27,"./pbkdf2":28,"./rabbit":30,"./rabbit-legacy":29,"./rc4":31,"./ripemd160":32,"./sha1":33,"./sha224":34,"./sha256":35,"./sha3":36,"./sha384":37,"./sha512":38,"./tripledes":39,"./x64-core":40}],16:[function(require,module,exports){
+},{"./aes":5,"./cipher-core":6,"./core":7,"./enc-base64":8,"./enc-utf16":9,"./evpkdf":10,"./format-hex":11,"./hmac":12,"./lib-typedarrays":14,"./md5":15,"./mode-cfb":16,"./mode-ctr":18,"./mode-ctr-gladman":17,"./mode-ecb":19,"./mode-ofb":20,"./pad-ansix923":21,"./pad-iso10126":22,"./pad-iso97971":23,"./pad-nopadding":24,"./pad-zeropadding":25,"./pbkdf2":26,"./rabbit":28,"./rabbit-legacy":27,"./rc4":29,"./ripemd160":30,"./sha1":31,"./sha224":32,"./sha256":33,"./sha3":34,"./sha384":35,"./sha512":36,"./tripledes":37,"./x64-core":38}],14:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3046,7 +2781,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.lib.WordArray;
 
 }));
-},{"./core":9}],17:[function(require,module,exports){
+},{"./core":7}],15:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3315,7 +3050,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.MD5;
 
 }));
-},{"./core":9}],18:[function(require,module,exports){
+},{"./core":7}],16:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3394,7 +3129,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.mode.CFB;
 
 }));
-},{"./cipher-core":8,"./core":9}],19:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],17:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3511,7 +3246,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.mode.CTRGladman;
 
 }));
-},{"./cipher-core":8,"./core":9}],20:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],18:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3570,7 +3305,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.mode.CTR;
 
 }));
-},{"./cipher-core":8,"./core":9}],21:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],19:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3611,7 +3346,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.mode.ECB;
 
 }));
-},{"./cipher-core":8,"./core":9}],22:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],20:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3666,7 +3401,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.mode.OFB;
 
 }));
-},{"./cipher-core":8,"./core":9}],23:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],21:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3716,7 +3451,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.pad.Ansix923;
 
 }));
-},{"./cipher-core":8,"./core":9}],24:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],22:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3761,7 +3496,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.pad.Iso10126;
 
 }));
-},{"./cipher-core":8,"./core":9}],25:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],23:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3802,7 +3537,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.pad.Iso97971;
 
 }));
-},{"./cipher-core":8,"./core":9}],26:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],24:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3833,7 +3568,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.pad.NoPadding;
 
 }));
-},{"./cipher-core":8,"./core":9}],27:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],25:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3879,7 +3614,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.pad.ZeroPadding;
 
 }));
-},{"./cipher-core":8,"./core":9}],28:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],26:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -4025,7 +3760,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.PBKDF2;
 
 }));
-},{"./core":9,"./hmac":14,"./sha1":33}],29:[function(require,module,exports){
+},{"./core":7,"./hmac":12,"./sha1":31}],27:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -4216,7 +3951,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.RabbitLegacy;
 
 }));
-},{"./cipher-core":8,"./core":9,"./enc-base64":10,"./evpkdf":12,"./md5":17}],30:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7,"./enc-base64":8,"./evpkdf":10,"./md5":15}],28:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -4409,7 +4144,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.Rabbit;
 
 }));
-},{"./cipher-core":8,"./core":9,"./enc-base64":10,"./evpkdf":12,"./md5":17}],31:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7,"./enc-base64":8,"./evpkdf":10,"./md5":15}],29:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -4549,7 +4284,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.RC4;
 
 }));
-},{"./cipher-core":8,"./core":9,"./enc-base64":10,"./evpkdf":12,"./md5":17}],32:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7,"./enc-base64":8,"./evpkdf":10,"./md5":15}],30:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -4817,7 +4552,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.RIPEMD160;
 
 }));
-},{"./core":9}],33:[function(require,module,exports){
+},{"./core":7}],31:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -4968,7 +4703,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.SHA1;
 
 }));
-},{"./core":9}],34:[function(require,module,exports){
+},{"./core":7}],32:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -5049,7 +4784,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.SHA224;
 
 }));
-},{"./core":9,"./sha256":35}],35:[function(require,module,exports){
+},{"./core":7,"./sha256":33}],33:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -5249,7 +4984,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.SHA256;
 
 }));
-},{"./core":9}],36:[function(require,module,exports){
+},{"./core":7}],34:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -5573,7 +5308,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.SHA3;
 
 }));
-},{"./core":9,"./x64-core":40}],37:[function(require,module,exports){
+},{"./core":7,"./x64-core":38}],35:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -5657,7 +5392,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.SHA384;
 
 }));
-},{"./core":9,"./sha512":38,"./x64-core":40}],38:[function(require,module,exports){
+},{"./core":7,"./sha512":36,"./x64-core":38}],36:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -5981,7 +5716,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.SHA512;
 
 }));
-},{"./core":9,"./x64-core":40}],39:[function(require,module,exports){
+},{"./core":7,"./x64-core":38}],37:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -6752,7 +6487,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.TripleDES;
 
 }));
-},{"./cipher-core":8,"./core":9,"./enc-base64":10,"./evpkdf":12,"./md5":17}],40:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7,"./enc-base64":8,"./evpkdf":10,"./md5":15}],38:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -7057,8 +6792,8 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS;
 
 }));
-},{"./core":9}],41:[function(require,module,exports){
-(function (global,setImmediate){
+},{"./core":7}],39:[function(require,module,exports){
+(function (global){
 /*
  * Dexie.js - a minimalistic wrapper for IndexedDB
  * ===============================================
@@ -11534,8 +11269,8 @@ return Dexie;
 })));
 
 
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("timers").setImmediate)
-},{"timers":5}],42:[function(require,module,exports){
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],40:[function(require,module,exports){
 (function (global){
 // https://github.com/maxogden/websocket-stream/blob/48dc3ddf943e5ada668c31ccd94e9186f02fafbd/ws-fallback.js
 
@@ -11556,7 +11291,7 @@ if (typeof WebSocket !== 'undefined') {
 module.exports = ws
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],43:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 (function () {
     /*
      * Async module to handle async messaging
@@ -12269,7 +12004,7 @@ module.exports = ws
     }
 })();
 
-},{"../utility/utility.js":45,"./socket.js":44}],44:[function(require,module,exports){
+},{"../utility/utility.js":43,"./socket.js":42}],42:[function(require,module,exports){
 (function() {
   /*
    * Socket Module to connect and handle Socket functionalities
@@ -12490,7 +12225,7 @@ module.exports = ws
 
 })();
 
-},{"isomorphic-ws":42}],45:[function(require,module,exports){
+},{"isomorphic-ws":40}],43:[function(require,module,exports){
 (function (global){
 (function() {
   /**
@@ -12809,7 +12544,7 @@ module.exports = ws
 })();
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],46:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 (function () {
     /*
      * Pod Chat Module
@@ -12914,6 +12649,7 @@ module.exports = ws
                 LAST_SEEN_UPDATED: 31,
                 GET_MESSAGE_DELEVERY_PARTICIPANTS: 32,
                 GET_MESSAGE_SEEN_PARTICIPANTS: 33,
+                JOIN_THREAD: 39,
                 BOT_MESSAGE: 40,
                 SPAM_PV_THREAD: 41,
                 SET_ROLE_TO_USER: 42,
@@ -12932,6 +12668,7 @@ module.exports = ws
                 REPORT_USER: 58,
                 REPORT_MESSAGE: 59,
                 GET_CONTACT_NOT_SEEN_DURATION: 60,
+                ALL_UNREAD_MESSAGE_COUNT: 61,
                 LOGOUT: 100,
                 ERROR: 999
             },
@@ -13277,6 +13014,9 @@ module.exports = ws
                         case 2: // CLOSING
                         case 3: // CLOSED
                             chatState = false;
+
+                            // TODO: Check if this is OK or not?!
+                            sendPingTimeout && clearTimeout(sendPingTimeout);
                             break;
                     }
                 });
@@ -15029,6 +14769,12 @@ module.exports = ws
                             messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
                         }
 
+                        if (messageContent.pinned) {
+                            unPinMessage({
+                                messageId: messageContent.id,
+                                notifyAll: true
+                            });
+                        }
                         /**
                          * Remove Message from cache
                          */
@@ -15057,65 +14803,107 @@ module.exports = ws
                             }
                         }
 
-                        fireEvent('messageEvents', {
-                            type: 'MESSAGE_DELETE',
-                            result: {
-                                message: {
-                                    id: messageContent,
-                                    threadId: threadId
+                        if (fullResponseObject) {
+                            getThreads({
+                                threadIds: [threadId]
+                            }, function (threadsResult) {
+                                var threads = threadsResult.result.threads;
+                                if (!threadsResult.cache) {
+                                    fireEvent('messageEvents', {
+                                        type: 'MESSAGE_DELETE',
+                                        result: {
+                                            message: {
+                                                id: messageContent.id,
+                                                pinned: messageContent.pinned,
+                                                threadId: threadId
+                                            }
+                                        }
+                                    });
+                                    if (messageContent.pinned) {
+                                        fireEvent('threadEvents', {
+                                            type: 'THREAD_LAST_ACTIVITY_TIME',
+                                            result: {
+                                                thread: threads[0]
+                                            }
+                                        });
+                                    }
                                 }
+                            });
+                        }
+                        else {
+                            fireEvent('messageEvents', {
+                                type: 'MESSAGE_DELETE',
+                                result: {
+                                    message: {
+                                        id: messageContent.id,
+                                        pinned: messageContent.pinned,
+                                        threadId: threadId
+                                    }
+                                }
+                            });
+                            if (messageContent.pinned) {
+                                fireEvent('threadEvents', {
+                                    type: 'THREAD_LAST_ACTIVITY_TIME',
+                                    result: {
+                                        thread: threadId
+                                    }
+                                });
                             }
-                        });
+                        }
+
                         break;
 
                     /**
                      * Type 30    Thread Info Updated
                      */
                     case chatMessageVOTypes.THREAD_INFO_UPDATED:
-                        var thread = formatDataToMakeConversation(messageContent);
+                        if (!messageContent.conversation && !messageContent.conversation.id) {
+                            messageContent.conversation.id = threadId;
+                        }
+                        var thread = formatDataToMakeConversation(messageContent.conversation);
+
                         /**
                          * Add Updated Thread into cache database #cache
                          */
-                        if (canUseCache && cacheSecret.length > 0) {
-                            if (db) {
-                                var tempData = {};
-
-                                try {
-                                    var salt = Utility.generateUUID();
-
-                                    tempData.id = thread.id;
-                                    tempData.owner = userInfo.id;
-                                    tempData.title = Utility.crypt(thread.title, cacheSecret, salt);
-                                    tempData.time = thread.time;
-                                    tempData.data = Utility.crypt(JSON.stringify(unsetNotSeenDuration(thread)), cacheSecret, salt);
-                                    tempData.salt = salt;
-                                }
-                                catch (error) {
-                                    fireEvent('error', {
-                                        code: error.code,
-                                        message: error.message,
-                                        error: error
-                                    });
-                                }
-
-                                db.threads.put(tempData)
-                                    .catch(function (error) {
-                                        fireEvent('error', {
-                                            code: error.code,
-                                            message: error.message,
-                                            error: error
-                                        });
-                                    });
-                            }
-                            else {
-                                fireEvent('error', {
-                                    code: 6601,
-                                    message: CHAT_ERRORS[6601],
-                                    error: null
-                                });
-                            }
-                        }
-
+                        // if (canUseCache && cacheSecret.length > 0) {
+                        //     if (db) {
+                        //         var tempData = {};
+                        //
+                        //         try {
+                        //             var salt = Utility.generateUUID();
+                        //
+                        //             tempData.id = thread.id;
+                        //             tempData.owner = userInfo.id;
+                        //             tempData.title = Utility.crypt(thread.title, cacheSecret, salt);
+                        //             tempData.time = thread.time;
+                        //             tempData.data = Utility.crypt(JSON.stringify(unsetNotSeenDuration(thread)), cacheSecret, salt);
+                        //             tempData.salt = salt;
+                        //         }
+                        //         catch (error) {
+                        //             fireEvent('error', {
+                        //                 code: error.code,
+                        //                 message: error.message,
+                        //                 error: error
+                        //             });
+                        //         }
+                        //
+                        //         db.threads.put(tempData)
+                        //             .catch(function (error) {
+                        //                 fireEvent('error', {
+                        //                     code: error.code,
+                        //                     message: error.message,
+                        //                     error: error
+                        //                 });
+                        //             });
+                        //     }
+                        //     else {
+                        //         fireEvent('error', {
+                        //             code: 6601,
+                        //             message: CHAT_ERRORS[6601],
+                        //             error: null
+                        //         });
+                        //     }
+                        // }
                         fireEvent('threadEvents', {
                             type: 'THREAD_INFO_UPDATED',
                             result: {
@@ -15130,7 +14918,7 @@ module.exports = ws
                     case chatMessageVOTypes.LAST_SEEN_UPDATED:
                         if (fullResponseObject) {
                             getThreads({
-                                threadIds: [messageContent.conversationId]
+                                threadIds: [messageContent.id]
                             }, function (threadsResult) {
                                 var threads = threadsResult.result.threads;
 
@@ -15139,8 +14927,7 @@ module.exports = ws
                                         type: 'THREAD_UNREAD_COUNT_UPDATED',
                                         result: {
                                             thread: threads[0],
-                                            messageId: messageContent.messageId,
-                                            senderId: messageContent.participantId
+                                            unreadCount: messageContent.unreadCount
                                         }
                                     });
 
@@ -15158,8 +14945,7 @@ module.exports = ws
                                 type: 'THREAD_UNREAD_COUNT_UPDATED',
                                 result: {
                                     thread: threadId,
-                                    messageId: messageContent.messageId,
-                                    senderId: messageContent.participantId
+                                    unreadCount: messageContent.unreadCount
                                 }
                             });
 
@@ -15186,6 +14972,15 @@ module.exports = ws
                      * Type 33    Get Message Seen List
                      */
                     case chatMessageVOTypes.GET_MESSAGE_SEEN_PARTICIPANTS:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+                        break;
+
+                    /**
+                     * Type 39    Join Public Group or Channel
+                     */
+                    case chatMessageVOTypes.JOIN_THREAD:
                         if (messagesCallbacks[uniqueId]) {
                             messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
                         }
@@ -15426,7 +15221,7 @@ module.exports = ws
                             type: 'MESSAGE_PIN',
                             result: {
                                 thread: threadId,
-                                pinMessage: formatDataToMakePinMessage(messageContent)
+                                pinMessage: formatDataToMakePinMessage(threadId, messageContent)
                             }
                         });
                         break;
@@ -15442,7 +15237,7 @@ module.exports = ws
                             type: 'MESSAGE_UNPIN',
                             result: {
                                 thread: threadId,
-                                pinMessage: formatDataToMakePinMessage(messageContent)
+                                pinMessage: formatDataToMakePinMessage(threadId, messageContent)
                             }
                         });
                         break;
@@ -15485,6 +15280,21 @@ module.exports = ws
                             type: 'CONTACTS_LAST_SEEN',
                             result: messageContent
                         });
+                        break;
+
+                    /**
+                     * Type 61      Get All Unread Message Count
+                     */
+                    case chatMessageVOTypes.ALL_UNREAD_MESSAGE_COUNT:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        fireEvent('systemEvents', {
+                            type: 'ALL_UNREAD_MESSAGES_COUNT',
+                            result: messageContent
+                        });
+
                         break;
 
                     /**
@@ -15692,8 +15502,7 @@ module.exports = ws
                             type: 'THREAD_UNREAD_COUNT_UPDATED',
                             result: {
                                 thread: threads[0],
-                                messageId: messageContent.id,
-                                senderId: messageContent.participant.id
+                                unreadCount: threads[0].unreadCount
                             }
                         });
                         // }
@@ -15719,7 +15528,8 @@ module.exports = ws
                     fireEvent('threadEvents', {
                         type: 'THREAD_UNREAD_COUNT_UPDATED',
                         result: {
-                            thread: threadId
+                            thread: messageContent.id,
+                            unreadCount: messageContent.conversation.unreadCount
                         }
                     });
                 }
@@ -15811,12 +15621,46 @@ module.exports = ws
                     }
                 }
 
-                fireEvent('messageEvents', {
-                    type: 'MESSAGE_EDIT',
-                    result: {
-                        message: message
+                if (fullResponseObject) {
+                    getThreads({
+                        threadIds: [threadId]
+                    }, function (threadsResult) {
+                        var threads = threadsResult.result.threads;
+                        if (!threadsResult.cache) {
+                            fireEvent('messageEvents', {
+                                type: 'MESSAGE_EDIT',
+                                result: {
+                                    message: message
+                                }
+                            });
+                            if (message.pinned) {
+                                fireEvent('threadEvents', {
+                                    type: 'THREAD_LAST_ACTIVITY_TIME',
+                                    result: {
+                                        thread: threads[0]
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
+                else {
+                    fireEvent('messageEvents', {
+                        type: 'MESSAGE_EDIT',
+                        result: {
+                            message: message
+                        }
+                    });
+                    if (message.pinned) {
+                        fireEvent('threadEvents', {
+                            type: 'THREAD_LAST_ACTIVITY_TIME',
+                            result: {
+                                thread: threadId
+                            }
+                        });
                     }
-                });
+                }
+
             },
 
             /**
@@ -15923,7 +15767,8 @@ module.exports = ws
                     image: messageContent.image
                 };
 
-                return linkedUser;
+                // return linkedUser;
+                return JSON.parse(JSON.stringify(linkedUser));
             },
 
             /**
@@ -15975,7 +15820,8 @@ module.exports = ws
                     contact.linkedUser = formatDataToMakeLinkedUser(messageContent.linkedUser);
                 }
 
-                return contact;
+                // return contact;
+                return JSON.parse(JSON.stringify(contact));
             },
 
             /**
@@ -16039,7 +15885,8 @@ module.exports = ws
                     user.chatProfileVO = messageContent.chatProfileVO;
                 }
 
-                return user;
+                // return user;
+                return JSON.parse(JSON.stringify(user));
             },
 
             /**
@@ -16057,21 +15904,29 @@ module.exports = ws
                 /**
                  * + BlockedUser              {object}
                  *    - id                    {long}
+                 *    - coreUserId            {long}
                  *    - firstName             {string}
                  *    - lastName              {string}
                  *    - nickName              {string}
                  *    - profileImage          {string}
+                 *    - contact               {object: contactVO}
                  */
 
                 var blockedUser = {
                     blockId: messageContent.id,
+                    coreUserId: messageContent.coreUserId,
                     firstName: messageContent.firstName,
                     lastName: messageContent.lastName,
                     nickName: messageContent.nickName,
                     profileImage: messageContent.profileImage
                 };
 
-                return blockedUser;
+                // Add contactVO if exist
+                if (messageContent.contactVO) {
+                    blockedUser.contact = messageContent.contactVO;
+                }
+                // return blockedUser;
+                return JSON.parse(JSON.stringify(blockedUser));
             },
 
             /**
@@ -16167,7 +16022,8 @@ module.exports = ws
                     username: messageContent.username
                 };
 
-                return participant;
+                // return participant;
+                return JSON.parse(JSON.stringify(participant));
             },
 
             /**
@@ -16219,6 +16075,7 @@ module.exports = ws
                  *    - admin                               {boolean}
                  *    - mentioned                           {boolean}
                  *    - pin                                 {boolean}
+                 *    - uniqueName                          {string}
                  */
 
                 var conversation = {
@@ -16260,7 +16117,8 @@ module.exports = ws
                     canSpam: messageContent.canSpam,
                     admin: messageContent.admin,
                     mentioned: messageContent.mentioned,
-                    pin: messageContent.pin
+                    pin: messageContent.pin,
+                    uniqueName: messageContent.uniqueName
                 };
 
                 // Add inviter if exist
@@ -16287,8 +16145,10 @@ module.exports = ws
 
                 // Add pinMessageVO if exist
                 if (messageContent.pinMessageVO) {
-                    conversation.pinMessageVO = formatDataToMakePinMessage(messageContent.pinMessageVO);
+                    conversation.pinMessageVO = formatDataToMakePinMessage(messageContent.id, messageContent.pinMessageVO);
                 }
+                // return conversation;
+                return JSON.parse(JSON.stringify(conversation));
 
                 return conversation;
             },
@@ -16338,7 +16198,8 @@ module.exports = ws
                     replyInfo.participant = formatDataToMakeParticipant(messageContent.participant, threadId);
                 }
 
-                return replyInfo;
+                // return replyInfo;
+                return JSON.parse(JSON.stringify(replyInfo));
             },
 
             /**
@@ -16372,7 +16233,8 @@ module.exports = ws
                     forwardInfo.participant = formatDataToMakeParticipant(messageContent.participant, threadId);
                 }
 
-                return forwardInfo;
+                // return forwardInfo;
+                return JSON.parse(JSON.stringify(forwardInfo));
             },
 
             /**
@@ -16402,6 +16264,7 @@ module.exports = ws
                  *    - delivered                    {boolean}
                  *    - seen                         {boolean}
                  *    - mentioned                    {boolean}
+                 *    - pinned                       {boolean}
                  *    - participant                  {object : ParticipantVO}
                  *    - conversation                 {object : ConversationVO}
                  *    - replyInfo                    {object : replyInfoVO}
@@ -16439,6 +16302,7 @@ module.exports = ws
                     delivered: pushMessageVO.delivered,
                     seen: pushMessageVO.seen,
                     mentioned: pushMessageVO.mentioned,
+                    pinned: pushMessageVO.pinned,
                     participant: undefined,
                     conversation: undefined,
                     replyInfo: undefined,
@@ -16473,7 +16337,8 @@ module.exports = ws
                     message.participant = formatDataToMakeParticipant(pushMessageVO.participant, threadId);
                 }
 
-                return message;
+                // return message;
+                return JSON.parse(JSON.stringify(message));
             },
 
             /**
@@ -16487,7 +16352,7 @@ module.exports = ws
              *
              * @return {object} pin message Object
              */
-            formatDataToMakePinMessage = function (pushMessageVO) {
+            formatDataToMakePinMessage = function (threadId, pushMessageVO) {
                 /**
                  * + PinMessageVO                    {object}
                  *    - messageId                    {long}
@@ -16501,7 +16366,9 @@ module.exports = ws
                 if (typeof pushMessageVO.notifyAll === 'boolean') {
                     pinMessage.notifyAll = pushMessageVO.notifyAll
                 }
-                return pinMessage;
+
+                // return pinMessage;
+                return JSON.parse(JSON.stringify(pinMessage));
             },
 
             /**
@@ -17195,6 +17062,12 @@ module.exports = ws
 
                         if (typeof params.metadataCriteria == 'object' && params.metadataCriteria.hasOwnProperty('field')) {
                             sendMessageParams.content.metadataCriteria = whereClause.metadataCriteria = params.metadataCriteria;
+                        }
+
+                        if (params.messageType && params.messageType.toUpperCase() !== undefined && chatMessageTypes[params.messageType.toUpperCase()] > 0) {
+                            sendMessageParams.content.messageType = whereClause.messageType = chatMessageTypes[params.messageType.toUpperCase()];
+                        } else {
+                            console.log(params.messageType + " is not a valid type, falling back to default! \nValid types are: \n", chatMessageTypes);
                         }
 
                         /**
@@ -18122,6 +17995,7 @@ module.exports = ws
                                                     result: {
                                                         message: {
                                                             id: cacheResult[key].messageId,
+                                                            pinned: cacheResult[key].pinned,
                                                             threadId: cacheResult[key].threadId
                                                         }
                                                     }
@@ -18175,7 +18049,13 @@ module.exports = ws
                     });
                 }
 
-                return;
+                else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'Thread ID is required for Getting history!'
+                    });
+                    return;
+                }
             },
 
             /**
@@ -19807,8 +19687,24 @@ module.exports = ws
                         callback && callback(result);
                     }
                 });
-            };
+            },
 
+            unPinMessage = function (params, callback) {
+                return sendMessage({
+                    chatMessageVOType: chatMessageVOTypes.UNPIN_MESSAGE,
+                    typeCode: params.typeCode,
+                    subjectId: params.messageId,
+                    content: JSON.stringify({
+                        'notifyAll': (typeof params.notifyAll === 'boolean') ? params.notifyAll : false
+                    }),
+                    pushMsgType: 4,
+                    token: token
+                }, {
+                    onResult: function (result) {
+                        callback && callback(result);
+                    }
+                });
+            };
         /******************************************************
          *             P U B L I C   M E T H O D S            *
          ******************************************************/
@@ -19867,6 +19763,22 @@ module.exports = ws
                     uploading: false
                 }
             }, callback);
+        };
+
+        this.getAllUnreadMessagesCount = function (params, callback) {
+            return sendMessage({
+                chatMessageVOType: chatMessageVOTypes.ALL_UNREAD_MESSAGE_COUNT,
+                typeCode: params.typeCode,
+                content: JSON.stringify({
+                    'mute': (typeof params.countMuteThreads === 'boolean') ? params.countMuteThreads : false
+                }),
+                pushMsgType: 4,
+                token: token
+            }, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
         };
 
         /**
@@ -20044,8 +19956,7 @@ module.exports = ws
                             resultData = {
                                 contacts: [],
                                 contentCount: result.contentCount,
-                                hasNext: (offset + count <
-                                    result.contentCount && messageLength > 0),
+                                hasNext: (offset + count < result.contentCount && messageLength > 0),
                                 nextOffset: offset + messageLength
                             },
                             contactData;
@@ -20151,30 +20062,34 @@ module.exports = ws
         };
 
         this.addParticipants = function (params, callback) {
-
             /**
              * + AddParticipantsRequest   {object}
              *    - subjectId             {long}
-             *    + content               {list} List of CONTACT IDs
-             *       -id                  {long}
+             *    + content               {list} List of CONTACT IDs or inviteeVO Objects
              *    - uniqueId              {string}
              */
-
             var sendMessageParams = {
                 chatMessageVOType: chatMessageVOTypes.ADD_PARTICIPANT,
-                typeCode: params.typeCode
+                typeCode: params.typeCode,
+                content: []
             };
-
             if (params) {
                 if (parseInt(params.threadId) > 0) {
                     sendMessageParams.subjectId = params.threadId;
                 }
-
                 if (Array.isArray(params.contacts)) {
                     sendMessageParams.content = params.contacts;
                 }
+                if (Array.isArray(params.usernames)) {
+                    sendMessageParams.content = [];
+                    for (var i = 0; i < params.usernames.length; i++) {
+                        sendMessageParams.content.push({
+                            id: params.usernames[i],
+                            idType: inviteeVOidTypes.TO_BE_USER_USERNAME
+                        });
+                    }
+                }
             }
-
             return sendMessage(sendMessageParams, {
                 onResult: function (result) {
                     var returnData = {
@@ -20183,16 +20098,13 @@ module.exports = ws
                         errorMessage: result.errorMessage,
                         errorCode: result.errorCode
                     };
-
                     if (!returnData.hasError) {
                         var messageContent = result.result,
                             resultData = {
                                 thread: createThread(messageContent)
                             };
-
                         returnData.result = resultData;
                     }
-
                     callback && callback(returnData);
                 }
             });
@@ -20303,6 +20215,7 @@ module.exports = ws
              *    - image                 {string}
              *    - description           {string}
              *    - metadata              {string}
+             *    - uniqueName            {string}
              *    + message               {object}
              *       -text                {string}
              *       -type                {int}
@@ -20324,6 +20237,10 @@ module.exports = ws
                 if (typeof params.type === 'string') {
                     var threadType = params.type;
                     content.type = createThreadTypes[threadType];
+                }
+
+                if (typeof params.uniqueName === 'string') {
+                    content.uniqueName = params.uniqueName;
                 }
 
                 if (Array.isArray(params.invitees)) {
@@ -20553,7 +20470,7 @@ module.exports = ws
                         message: {
                             chatMessageVOType: chatMessageVOTypes.MESSAGE,
                             typeCode: params.typeCode,
-                            messageType: params.messageType,
+                            messageType: (params.messageType && params.messageType.toUpperCase() !== undefined && chatMessageTypes[params.messageType.toUpperCase()] > 0) ? chatMessageTypes[params.messageType.toUpperCase()] : 1,
                             subjectId: params.threadId,
                             repliedTo: params.repliedTo,
                             content: params.content,
@@ -20572,8 +20489,10 @@ module.exports = ws
                                     metadata['file']['height'] = result.result.height;
                                     metadata['file']['width'] = result.result.width;
                                     metadata['file']['name'] = result.result.name;
+                                    metadata['name'] = result.result.name;
                                     metadata['file']['hashCode'] = result.result.hashCode;
                                     metadata['file']['id'] = result.result.id;
+                                    metadata['id'] = result.result.id;
                                     metadata['file']['link'] = SERVICE_ADDRESSES.FILESERVER_ADDRESS +
                                         SERVICES_PATH.GET_IMAGE + '?imageId=' +
                                         result.result.id + '&hashCode=' +
@@ -20592,8 +20511,10 @@ module.exports = ws
                             uploadFile(fileUploadParams, function (result) {
                                 if (!result.hasError) {
                                     metadata['file']['name'] = result.result.name;
+                                    metadata['name'] = result.result.name;
                                     metadata['file']['hashCode'] = result.result.hashCode;
                                     metadata['file']['id'] = result.result.id;
+                                    metadata['id'] = result.result.id;
                                     metadata['file']['link'] = SERVICE_ADDRESSES.FILESERVER_ADDRESS +
                                         SERVICES_PATH.GET_FILE + '?fileId=' +
                                         result.result.id + '&hashCode=' +
@@ -21251,7 +21172,13 @@ module.exports = ws
                         var messageContent = result.result,
                             resultData = {
                                 deletedMessage: {
-                                    id: result.result
+                                    id: result.result.id,
+                                    pinned: result.result.pinned,
+                                    mentioned: result.result.mentioned,
+                                    messageType: result.result.messageType,
+                                    edited: result.result.edited,
+                                    editable: result.result.editable,
+                                    deletable: result.result.deletable
                                 }
                             };
 
@@ -21311,7 +21238,13 @@ module.exports = ws
                         var messageContent = result.result,
                             resultData = {
                                 deletedMessage: {
-                                    id: result.result
+                                    id: result.result.id,
+                                    pinned: result.result.pinned,
+                                    mentioned: result.result.mentioned,
+                                    messageType: result.result.messageType,
+                                    edited: result.result.edited,
+                                    editable: result.result.editable,
+                                    deletable: result.result.deletable
                                 }
                             };
 
@@ -21741,6 +21674,26 @@ module.exports = ws
             });
         };
 
+        this.joinThread = function (params, callback) {
+            var joinThreadData = {
+                chatMessageVOType: chatMessageVOTypes.JOIN_THREAD,
+                typeCode: params.typeCode,
+                content: '',
+                pushMsgType: 4,
+                token: token
+            };
+            if (params) {
+                if (typeof params.uniqueName === 'string' && params.uniqueName.length > 0) {
+                    joinThreadData.content = params.uniqueName;
+                }
+            }
+            return sendMessage(joinThreadData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
         this.pinThread = function (params, callback) {
             return sendMessage({
                 chatMessageVOType: chatMessageVOTypes.PIN_THREAD,
@@ -21788,22 +21741,7 @@ module.exports = ws
             });
         };
 
-        this.unPinMessage = function (params, callback) {
-            return sendMessage({
-                chatMessageVOType: chatMessageVOTypes.UNPIN_MESSAGE,
-                typeCode: params.typeCode,
-                subjectId: params.messageId,
-                content: JSON.stringify({
-                    'notifyAll': (typeof params.notifyAll === 'boolean') ? params.notifyAll : false
-                }),
-                pushMsgType: 4,
-                token: token
-            }, {
-                onResult: function (result) {
-                    callback && callback(result);
-                }
-            });
-        };
+        this.unPinMessage = unPinMessage;
 
         this.spamPvThread = function (params, callback) {
             var spamData = {
@@ -23002,6 +22940,15 @@ module.exports = ws
 
         this.logout = function () {
             clearChatServerCaches();
+
+            // Delete all event callbacks
+            for (var i in eventCallbacks) {
+                delete eventCallbacks[i];
+            }
+            messagesCallbacks = {};
+            sendMessageCallbacks = {};
+            threadCallbacks = {};
+
             asyncClient.logout();
         };
 
@@ -23039,7 +22986,7 @@ module.exports = ws
     }
 })();
 
-},{"./utility/utility.js":47,"dexie":41,"podasync-ws-only":43,"querystring":4}],47:[function(require,module,exports){
+},{"./utility/utility.js":45,"dexie":39,"podasync-ws-only":41,"querystring":3}],45:[function(require,module,exports){
 (function (global){
 (function() {
 
@@ -23581,4 +23528,4 @@ module.exports = ws
 })();
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"crypto-js":15}]},{},[6]);
+},{"crypto-js":13}]},{},[4]);
