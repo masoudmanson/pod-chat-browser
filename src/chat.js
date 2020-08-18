@@ -1,6 +1,6 @@
 (function () {
     /*
-     * Pod Chat Module
+     * Pod Chat Browser Module
      * @module chat
      *
      * @param {Object} params
@@ -102,6 +102,7 @@
                 LAST_SEEN_UPDATED: 31,
                 GET_MESSAGE_DELEVERY_PARTICIPANTS: 32,
                 GET_MESSAGE_SEEN_PARTICIPANTS: 33,
+                IS_NAME_AVAILABLE: 34,
                 JOIN_THREAD: 39,
                 BOT_MESSAGE: 40,
                 SPAM_PV_THREAD: 41,
@@ -122,6 +123,11 @@
                 REPORT_MESSAGE: 59,
                 GET_CONTACT_NOT_SEEN_DURATION: 60,
                 ALL_UNREAD_MESSAGE_COUNT: 61,
+                CREATE_BOT: 62,
+                DEFINE_BOT_COMMAND: 63,
+                START_BOT: 64,
+                STOP_BOT: 65,
+                CONTACT_SYNCED: 90,
                 LOGOUT: 100,
                 ERROR: 999
             },
@@ -146,7 +152,13 @@
                 PICTURE: '3',
                 VIDEO: '4',
                 SOUND: '5',
-                FILE: '6'
+                FILE: '6',
+                POD_SPACE_PICTURE: '7',
+                POD_SPACE_VIDEO: '8',
+                POD_SPACE_SOUND: '9',
+                POD_SPACE_VOICE: '10',
+                POD_SPACE_FILE: '11',
+                LINK: '12'
             },
             systemMessageTypes = {
                 IS_TYPING: '1',
@@ -183,11 +195,11 @@
                 getHistoryCount: 50
             },
             SERVICE_ADDRESSES = {
-                SSO_ADDRESS: params.ssoHost || 'http://172.16.110.76',
-                PLATFORM_ADDRESS: params.platformHost || 'http://172.16.106.26:8080/hamsam',
-                FILESERVER_ADDRESS: params.fileServer || 'http://172.16.106.26:8080/hamsam',
-                POD_DRIVE_ADDRESS: params.podDrive || 'http://172.16.106.26:8080/hamsam',
-                MAP_ADDRESS: params.mapServer || 'https://api.neshan.org/v1'
+                SSO_ADDRESS: params.ssoHost || 'https://accounts.pod.ir',
+                PLATFORM_ADDRESS: params.platformHost || 'https://api.pod.ir/srv/core',
+                FILESERVER_ADDRESS: params.fileServer || 'https://core.pod.ir',
+                PODSPACE_FILESERVER_ADDRESS: params.podSpaceFileServer || 'https://podspace.pod.ir',
+                MAP_ADDRESS: params.mapServer || 'https://api.neshan.org/v2'
             },
             SERVICES_PATH = {
                 // Grant Devices
@@ -205,11 +217,13 @@
                 UPLOAD_FILE: '/nzh/uploadFile',
                 GET_FILE: '/nzh/file/',
                 // POD Drive Services
-                DRIVE_UPLOAD_FILE: '/nzh/drive/uploadFile',
-                DRIVE_UPLOAD_FILE_FROM_URL: '/nzh/drive/uploadFileFromUrl',
-                DRIVE_UPLOAD_IMAGE: '/nzh/drive/uploadImage',
-                DRIVE_DOWNLOAD_FILE: '/nzh/drive/downloadFile',
-                DRIVE_DOWNLOAD_IMAGE: '/nzh/drive/downloadImage',
+                PODSPACE_UPLOAD_FILE_TO_USERGROUP: '/userGroup/uploadFile',
+                PODSPACE_UPLOAD_IMAGE_TO_USERGROUP: '/userGroup/uploadImage',
+                PODSPACE_UPLOAD_FILE: '/nzh/drive/uploadFile',
+                PODSPACE_UPLOAD_FILE_FROM_URL: '/nzh/drive/uploadFileFromUrl',
+                PODSPACE_UPLOAD_IMAGE: '/nzh/drive/uploadImage',
+                PODSPACE_DOWNLOAD_FILE: '/nzh/drive/downloadFile',
+                PODSPACE_DOWNLOAD_IMAGE: '/nzh/drive/downloadImage',
                 // Neshan Map
                 REVERSE: '/reverse',
                 SEARCH: '/search',
@@ -253,6 +267,7 @@
                 6301: 'Not an image!',
                 6302: 'No file has been selected!',
                 6303: 'File upload has been canceled!',
+                6304: 'User Group Hash is needed for file sharing!',
                 // Cache Database Errors
                 6600: 'Your Environment doesn\'t have Databse compatibility',
                 6601: 'Database is not defined! (missing db)',
@@ -364,7 +379,7 @@
                             if (!userInfoResult.hasError) {
                                 userInfo = userInfoResult.result.user;
 
-                                getAllThreadList({
+                                getAllThreads({
                                     summary: true,
                                     cache: false
                                 });
@@ -737,6 +752,7 @@
              */
             httpRequest = function (params, callback) {
                 var url = params.url,
+                    xhrResponseType = params.responseType || 'text',
                     fileSize,
                     originalFileName,
                     threadId,
@@ -764,6 +780,8 @@
 
                 httpRequestObject[eval('fileUploadUniqueId')] = new XMLHttpRequest(),
                     settings = params.settings;
+
+                httpRequestObject[eval('fileUploadUniqueId')].responseType = xhrResponseType;
 
                 if (data && typeof data === 'object' && (data.hasOwnProperty('image') || data.hasOwnProperty('file'))) {
                     httpRequestObject[eval('fileUploadUniqueId')].timeout = (settings && typeof parseInt(settings.timeout) > 0 && settings.timeout > 0)
@@ -963,7 +981,8 @@
                                 hasError: false,
                                 cache: false,
                                 result: {
-                                    responseText: httpRequestObject[eval('fileUploadUniqueId')].responseText,
+                                    response: httpRequestObject[eval('fileUploadUniqueId')].response,
+                                    responseText: (xhrResponseType === 'text') ? httpRequestObject[eval('fileUploadUniqueId')].responseText : '',
                                     responseHeaders: httpRequestObject[eval('fileUploadUniqueId')].getAllResponseHeaders()
                                 }
                             });
@@ -1317,7 +1336,7 @@
             sendSystemMessage = function (params) {
                 return sendMessage({
                     chatMessageVOType: chatMessageVOTypes.SYSTEM_MESSAGE,
-                    subjectId: params.subjectId,
+                    subjectId: params.threadId,
                     content: params.content,
                     uniqueId: params.uniqueId,
                     pushMsgType: 4
@@ -1444,6 +1463,26 @@
             },
 
             /**
+             * is Valid Json
+             *
+             * This functions checks if a string is valid json or not?
+             *
+             * @access private
+             *
+             * @param {string}  jsonString   Json String to be checked
+             *
+             * @return {boolean}
+             */
+            isValidJson = function (jsonString) {
+                try {
+                    JSON.parse(jsonString);
+                } catch (e) {
+                    return false;
+                }
+                return true;
+            },
+
+            /**
              * Chat Message Handler
              *
              * Manages received chat messages and do the job
@@ -1457,9 +1496,10 @@
             chatMessageHandler = function (chatMessage) {
                 var threadId = chatMessage.subjectId,
                     type = chatMessage.type,
-                    messageContent = (typeof chatMessage.content === 'string')
+                    // TODO Check this again
+                    messageContent = (typeof chatMessage.content === 'string' && isValidJson(chatMessage.content))
                         ? JSON.parse(chatMessage.content)
-                        : {},
+                        : chatMessage.content,
                     contentCount = chatMessage.contentCount,
                     uniqueId = chatMessage.uniqueId,
                     time = chatMessage.time;
@@ -1495,7 +1535,7 @@
                             sendMessageCallbacks[uniqueId].onSent({
                                 uniqueId: uniqueId
                             });
-                            delete(sendMessageCallbacks[uniqueId].onSent);
+                            delete (sendMessageCallbacks[uniqueId].onSent);
                             threadCallbacks[threadId][uniqueId].onSent = true;
                         }
                         break;
@@ -2156,7 +2196,7 @@
                             fireEvent('threadEvents', {
                                 type: 'THREAD_INFO_UPDATED',
                                 result: {
-                                    thread: messageContent.id
+                                    thread: messageContent
                                 }
                             });
                         }
@@ -2310,10 +2350,13 @@
                      * Type 30    Thread Info Updated
                      */
                     case chatMessageVOTypes.THREAD_INFO_UPDATED:
-                        if (!messageContent.conversation && !messageContent.conversation.id) {
-                            messageContent.conversation.id = threadId;
-                        }
-                        var thread = formatDataToMakeConversation(messageContent.conversation);
+                        // TODO: Check this line again
+                        // if (!messageContent.conversation && !messageContent.conversation.id) {
+                        //     messageContent.conversation.id = threadId;
+                        // }
+                        //
+                        // var thread = formatDataToMakeConversation(messageContent.conversation);
+                        var thread = formatDataToMakeConversation(messageContent);
 
                         /**
                          * Add Updated Thread into cache database #cache
@@ -2425,6 +2468,15 @@
                      * Type 33    Get Message Seen List
                      */
                     case chatMessageVOTypes.GET_MESSAGE_SEEN_PARTICIPANTS:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+                        break;
+
+                    /**
+                     * Type 34    Is Public Group Name Available?
+                     */
+                    case chatMessageVOTypes.IS_NAME_AVAILABLE:
                         if (messagesCallbacks[uniqueId]) {
                             messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
                         }
@@ -2751,6 +2803,52 @@
                         break;
 
                     /**
+                     * Type 62    Create Bot
+                     */
+                    case chatMessageVOTypes.CREATE_BOT:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+                        break;
+
+                    /**
+                     * Type 63    Define Bot Commands
+                     */
+                    case chatMessageVOTypes.DEFINE_BOT_COMMAND:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+                        break;
+
+                    /**
+                     * Type 64    Start Bot
+                     */
+                    case chatMessageVOTypes.START_BOT:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+                        break;
+
+                    /**
+                     * Type 65    Stop Bot
+                     */
+                    case chatMessageVOTypes.STOP_BOT:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+                        break;
+
+                    /**
+                     * Type 90    Contacts Synced
+                     */
+                    case chatMessageVOTypes.CONTACT_SYNCED:
+                        fireEvent('contactEvents', {
+                            type: 'CONTACTS_SYNCED',
+                            result: messageContent
+                        });
+                        break;
+
+                    /**
                      * Type 999   All unknown errors
                      */
                     case chatMessageVOTypes.ERROR:
@@ -2759,11 +2857,11 @@
                         }
 
                         /**
-                         * If error code is 21 therefore Token is invalid &
-                         * user should be logged put
+                         * If error code is 21, Token is invalid &
+                         * user should logged out
                          */
                         if (messageContent.code == 21) {
-                            // TODO: Temporarily removed due to unknown activity
+                            // TODO: Temporarily removed due to unknown side-effects
                             // chatState = false;
                             // asyncClient.logout();
                             // clearChatServerCaches();
@@ -2810,7 +2908,7 @@
                                                 {
                                                     uniqueId: tempUniqueId
                                                 });
-                                            delete(sendMessageCallbacks[tempUniqueId].onDeliver);
+                                            delete (sendMessageCallbacks[tempUniqueId].onDeliver);
                                             threadCallbacks[threadId][tempUniqueId].onDeliver = true;
                                         }
                                     }
@@ -2836,7 +2934,7 @@
                                                     {
                                                         uniqueId: tempUniqueId
                                                     });
-                                                delete(sendMessageCallbacks[tempUniqueId].onDeliver);
+                                                delete (sendMessageCallbacks[tempUniqueId].onDeliver);
                                                 threadCallbacks[threadId][tempUniqueId].onDeliver = true;
                                             }
 
@@ -2845,7 +2943,7 @@
                                                     uniqueId: tempUniqueId
                                                 });
 
-                                            delete(sendMessageCallbacks[tempUniqueId].onSeen);
+                                            delete (sendMessageCallbacks[tempUniqueId].onSeen);
                                             threadCallbacks[threadId][tempUniqueId].onSeen = true;
 
                                             if (threadCallbacks[threadId][tempUniqueId].onSent &&
@@ -2950,7 +3048,6 @@
                         threadIds: [threadId]
                     }, function (threadsResult) {
                         var threads = threadsResult.result.threads;
-                        // if (messageContent.participant.id !== userInfo.id && !threadsResult.cache) {
                         fireEvent('threadEvents', {
                             type: 'THREAD_UNREAD_COUNT_UPDATED',
                             result: {
@@ -2958,16 +3055,14 @@
                                 unreadCount: threads[0].unreadCount
                             }
                         });
-                        // }
 
-                        // if (!threadsResult.cache) {
                         fireEvent('threadEvents', {
                             type: 'THREAD_LAST_ACTIVITY_TIME',
                             result: {
                                 thread: threads[0]
                             }
                         });
-                        // }
+
                     });
                 }
                 else {
@@ -3299,6 +3394,7 @@
                  *    - lastSeen              {long}
                  *    - sendEnable            {boolean}
                  *    - receiveEnable         {boolean}
+                 *    - contactSynced         {boolean}
                  *    - chatProfileVO         {object:chatProfileVO}
                  */
 
@@ -3310,7 +3406,8 @@
                     image: messageContent.image,
                     lastSeen: messageContent.lastSeen,
                     sendEnable: messageContent.sendEnable,
-                    receiveEnable: messageContent.receiveEnable
+                    receiveEnable: messageContent.receiveEnable,
+                    contactSynced: messageContent.contactSynced
                 };
 
                 if (messageContent.contactId) {
@@ -3433,6 +3530,7 @@
                  *    - cellphoneNumber              {string}
                  *    - email                        {string}
                  *    - image                        {string}
+                 *    - chatProfileVO                {object}
                  *    - myFriend                     {boolean}
                  *    - online                       {boolean}
                  *    - notSeenDuration              {long}
@@ -3474,6 +3572,11 @@
                     roles: messageContent.roles,
                     username: messageContent.username
                 };
+
+                // Add chatProfileVO if exist
+                if (messageContent.chatProfileVO) {
+                    participant.chatProfileVO = messageContent.chatProfileVO;
+                }
 
                 // return participant;
                 return JSON.parse(JSON.stringify(participant));
@@ -3529,6 +3632,7 @@
                  *    - mentioned                           {boolean}
                  *    - pin                                 {boolean}
                  *    - uniqueName                          {string}
+                 *    - userGroupHash                       {string}
                  */
 
                 var conversation = {
@@ -3571,7 +3675,8 @@
                     admin: messageContent.admin,
                     mentioned: messageContent.mentioned,
                     pin: messageContent.pin,
-                    uniqueName: messageContent.uniqueName
+                    uniqueName: messageContent.uniqueName,
+                    userGroupHash: messageContent.userGroupHash
                 };
 
                 // Add inviter if exist
@@ -3809,13 +3914,19 @@
                 /**
                  * + PinMessageVO                    {object}
                  *    - messageId                    {long}
+                 *    - time                         {long}
+                 *    - sender                       {long}
                  *    - text                         {string}
                  *    - notifyAll                    {boolean}
                  */
                 var pinMessage = {
+                    threadId: threadId,
+                    time: pushMessageVO.time,
+                    sender: pushMessageVO.sender,
                     messageId: pushMessageVO.messageId,
                     text: pushMessageVO.text
                 };
+
                 if (typeof pushMessageVO.notifyAll === 'boolean') {
                     pinMessage.notifyAll = pushMessageVO.notifyAll
                 }
@@ -3963,8 +4074,8 @@
                         offset = params.offset;
                     }
 
-                    if (typeof params.name === 'string') {
-                        content.name = whereClause.name = params.name;
+                    if (typeof params.threadName === 'string') {
+                        content.name = whereClause.name = params.threadName;
                     }
 
                     if (Array.isArray(params.threadIds)) {
@@ -4073,7 +4184,7 @@
                                             result: {
                                                 threads: cacheData,
                                                 contentCount: threadsCount,
-                                                hasNext: !(threads.length < count),//(offset + count < threadsCount && threads.length > 0),
+                                                hasNext: !(threads.length < count),
                                                 nextOffset: offset + threads.length
                                             }
                                         };
@@ -4151,7 +4262,7 @@
                                             .stores({
                                                 users: '&id, name, cellphoneNumber, keyId',
                                                 contacts: '[owner+id], id, owner, uniqueId, userId, cellphoneNumber, email, firstName, lastName, expireTime',
-                                                threads: '[owner+id] ,id, owner, title, time, [owner+time]',
+                                                threads: '[owner+id] ,id, owner, title, time, pin, [owner+time]',
                                                 participants: '[owner+id], id, owner, threadId, notSeenDuration, admin, name, contactName, email, expireTime',
                                                 messages: '[owner+id], id, owner, threadId, time, [threadId+id], [threadId+owner+time]',
                                                 messageGaps: '[owner+id], [owner+waitsFor], id, waitsFor, owner, threadId, time, [threadId+owner+time]',
@@ -4215,6 +4326,14 @@
                                 if (db) {
                                     var cacheData = [];
 
+                                    /*
+                                     * There will be only 5 pinned threads
+                                     * So we multiply thread time by pin
+                                     * order to have them ordered on cache
+                                     * by the same order of server
+                                     */
+                                    var pinnedThreadsOrderTime = 5;
+
                                     for (var i = 0; i < resultData.threads.length; i++) {
                                         try {
                                             var tempData = {},
@@ -4223,11 +4342,13 @@
                                             tempData.id = resultData.threads[i].id;
                                             tempData.owner = userInfo.id;
                                             tempData.title = Utility.crypt(resultData.threads[i].title, cacheSecret, salt);
-                                            tempData.time = resultData.threads[i].time;
+                                            tempData.pin = resultData.threads[i].pin;
+                                            tempData.time = (resultData.threads[i].pin) ? resultData.threads[i].time * pinnedThreadsOrderTime : resultData.threads[i].time;
                                             tempData.data = Utility.crypt(JSON.stringify(unsetNotSeenDuration(resultData.threads[i])), cacheSecret, salt);
                                             tempData.salt = salt;
 
                                             cacheData.push(tempData);
+                                            pinnedThreadsOrderTime--;
                                         }
                                         catch (error) {
                                             fireEvent('error', {
@@ -4274,7 +4395,7 @@
                 });
             },
 
-            getAllThreadList = function (params, callback) {
+            getAllThreads = function (params, callback) {
                 var sendMessageParams = {
                     chatMessageVOType: chatMessageVOTypes.GET_THREADS,
                     typeCode: params.typeCode,
@@ -4422,7 +4543,6 @@
                         });
                     }
 
-
                     getChatWaitQueue(parseInt(params.threadId), failedQueue, function (waitQueueMessages) {
                         if (cacheSecret.length > 0) {
                             for (var i = 0; i < waitQueueMessages.length; i++) {
@@ -4461,8 +4581,8 @@
                         sendMessageParams.content.offset = offset;
                         sendMessageParams.content.order = order;
 
-                        if (parseInt(params.id) > 0) {
-                            sendMessageParams.content.id = whereClause.id = params.id;
+                        if (parseInt(params.messageId) > 0) {
+                            sendMessageParams.content.id = whereClause.id = params.messageId;
                         }
 
                         if (Array.isArray(params.uniqueIds)) {
@@ -4513,14 +4633,12 @@
                             sendMessageParams.content.unreadMentioned = whereClause.unreadMentioned = params.unreadMentioned;
                         }
 
-                        if (typeof params.metadataCriteria == 'object' && params.metadataCriteria.hasOwnProperty('field')) {
-                            sendMessageParams.content.metadataCriteria = whereClause.metadataCriteria = params.metadataCriteria;
-                        }
-
                         if (params.messageType && params.messageType.toUpperCase() !== undefined && chatMessageTypes[params.messageType.toUpperCase()] > 0) {
                             sendMessageParams.content.messageType = whereClause.messageType = chatMessageTypes[params.messageType.toUpperCase()];
-                        } else {
-                            console.log(params.messageType + " is not a valid type, falling back to default! \nValid types are: \n", chatMessageTypes);
+                        }
+
+                        if (typeof params.metadataCriteria == 'object' && params.metadataCriteria.hasOwnProperty('field')) {
+                            sendMessageParams.content.metadataCriteria = whereClause.metadataCriteria = params.metadataCriteria;
                         }
 
                         /**
@@ -5234,9 +5352,6 @@
                                                     data: Utility.MD5(JSON.stringify([
                                                         history[i].id,
                                                         history[i].message,
-                                                        // history[i].edited,
-                                                        // history[i].delivered,
-                                                        // history[i].seen,
                                                         history[i].metadata,
                                                         history[i].systemMetadata]))
                                                 };
@@ -5441,19 +5556,38 @@
                                          * that they have been removed from server, so
                                          * we should call MESSAGE_DELETE event for them
                                          */
+
+                                        var batchDeleteMessage = [],
+                                            batchEditMessage = [],
+                                            batchNewMessage = [];
+
                                         for (var key in cacheResult) {
                                             if (!serverResult.hasOwnProperty(key)) {
-                                                fireEvent('messageEvents', {
-                                                    type: 'MESSAGE_DELETE',
-                                                    result: {
-                                                        message: {
-                                                            id: cacheResult[key].messageId,
-                                                            pinned: cacheResult[key].pinned,
-                                                            threadId: cacheResult[key].threadId
-                                                        }
-                                                    }
+                                                batchDeleteMessage.push({
+                                                    id: cacheResult[key].messageId,
+                                                    pinned: cacheResult[key].pinned,
+                                                    threadId: cacheResult[key].threadId
                                                 });
+
+                                                // fireEvent('messageEvents', {
+                                                //     type: 'MESSAGE_DELETE',
+                                                //     result: {
+                                                //         message: {
+                                                //             id: cacheResult[key].messageId,
+                                                //             pinned: cacheResult[key].pinned,
+                                                //             threadId: cacheResult[key].threadId
+                                                //         }
+                                                //     }
+                                                // });
                                             }
+                                        }
+
+                                        if (batchDeleteMessage.length) {
+                                            fireEvent('messageEvents', {
+                                                type: 'MESSAGE_DELETE_BATCH',
+                                                cache: true,
+                                                result: batchDeleteMessage
+                                            });
                                         }
 
                                         for (var key in serverResult) {
@@ -5468,12 +5602,15 @@
                                                      * content has been changed, so we emit a
                                                      * message edit event to inform client
                                                      */
-                                                    fireEvent('messageEvents', {
-                                                        type: 'MESSAGE_EDIT',
-                                                        result: {
-                                                            message: history[serverResult[key].index]
-                                                        }
-                                                    });
+
+                                                    batchEditMessage.push(history[serverResult[key].index]);
+
+                                                    // fireEvent('messageEvents', {
+                                                    //     type: 'MESSAGE_EDIT',
+                                                    //     result: {
+                                                    //         message: history[serverResult[key].index]
+                                                    //     }
+                                                    // });
                                                 }
                                             }
                                             else {
@@ -5481,16 +5618,34 @@
                                                  * This Message has not found on cache but it has
                                                  * came from server, so we emit it as a new message
                                                  */
-                                                fireEvent('messageEvents', {
-                                                    type: 'MESSAGE_NEW',
-                                                    cache: true,
-                                                    result: {
-                                                        message: history[serverResult[key].index]
-                                                    }
-                                                });
+
+                                                batchNewMessage.push(history[serverResult[key].index]);
+
+                                                // fireEvent('messageEvents', {
+                                                //     type: 'MESSAGE_NEW',
+                                                //     cache: true,
+                                                //     result: {
+                                                //         message: history[serverResult[key].index]
+                                                //     }
+                                                // });
                                             }
                                         }
 
+                                        if (batchEditMessage.length) {
+                                            fireEvent('messageEvents', {
+                                                type: 'MESSAGE_EDIT_BATCH',
+                                                cache: true,
+                                                result: batchEditMessage
+                                            });
+                                        }
+
+                                        if (batchNewMessage.length) {
+                                            fireEvent('messageEvents', {
+                                                type: 'MESSAGE_NEW_BATCH',
+                                                cache: true,
+                                                result: batchNewMessage
+                                            });
+                                        }
                                     }
                                     else {
                                         callback && callback(returnData);
@@ -5529,17 +5684,21 @@
              */
             updateThreadInfo = function (params, callback) {
                 var updateThreadInfoData = {
-                    chatMessageVOType: chatMessageVOTypes.UPDATE_THREAD_INFO,
-                    typeCode: params.typeCode,
-                    subjectId: params.threadId,
-                    content: {},
-                    pushMsgType: 4,
-                    token: token
-                };
-
+                        chatMessageVOType: chatMessageVOTypes.UPDATE_THREAD_INFO,
+                        typeCode: params.typeCode,
+                        subjectId: params.threadId,
+                        content: {},
+                        pushMsgType: 4,
+                        token: token
+                    },
+                    threadInfoContent = {},
+                    fileUploadParams = {},
+                    metadata = {},
+                    threadId,
+                    fileUniqueId = Utility.generateUUID();
                 if (params) {
                     if (parseInt(params.threadId) > 0) {
-                        updateThreadInfoData.subjectId = params.threadId;
+                        threadId = parseInt(params.threadId);
                     }
                     else {
                         fireEvent('error', {
@@ -5547,36 +5706,69 @@
                             message: 'Thread ID is required for Updating thread info!'
                         });
                     }
-
-                    if (typeof params.image == 'string') {
-                        updateThreadInfoData.content.image = params.image;
-                    }
-
                     if (typeof params.description == 'string') {
-                        updateThreadInfoData.content.description = params.description;
+                        threadInfoContent.description = params.description;
                     }
-
                     if (typeof params.title == 'string') {
-                        updateThreadInfoData.content.name = params.title;
+                        threadInfoContent.name = params.title;
                     }
-
                     if (typeof params.metadata == 'object') {
-                        updateThreadInfoData.content.metadata = JSON.stringify(params.metadata);
+                        threadInfoContent.metadata = params.metadata;
                     }
                     else if (typeof params.metadata == 'string') {
-                        updateThreadInfoData.content.metadata = params.metadata;
+                        try {
+                            threadInfoContent.metadata = JSON.parse(params.metadata);
+                        } catch (e) {
+                            threadInfoContent.metadata = {};
+                        }
                     }
+                    return chatUploadHandler({
+                        threadId: threadId,
+                        file: params.image,
+                        fileUniqueId: fileUniqueId
+                    }, function (uploadHandlerResult, uploadHandlerMetadata, fileType, fileExtension) {
+                        fileUploadParams = Object.assign(fileUploadParams, uploadHandlerResult);
+                        threadInfoContent.metadata = JSON.stringify(Object.assign(threadInfoContent.metadata, uploadHandlerMetadata));
+                        putInChatUploadQueue({
+                            message: {
+                                chatMessageVOType: chatMessageVOTypes.UPDATE_THREAD_INFO,
+                                typeCode: params.typeCode,
+                                subjectId: threadId,
+                                content: threadInfoContent,
+                                metadata: threadInfoContent.metadata,
+                                systemMetadata: JSON.stringify(params.systemMetadata),
+                                uniqueId: fileUniqueId,
+                                pushMsgType: 4,
+                                token: token
+                            },
+                            callbacks: callback
+                        }, function () {
+                            if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
+                                uploadImageToPodspace(fileUploadParams, function (result) {
+                                    if (!result.hasError) {
+                                        metadata['fileHash'] = result.result.hashCode;
+                                        transferFromUploadQToSendQ(parseInt(params.threadId), fileUniqueId, JSON.stringify(metadata), function () {
+                                            chatSendQueueHandler();
+                                        });
+                                    }
+                                    else {
+                                        deleteFromChatUploadQueue({message: {uniqueId: fileUniqueId}});
+                                    }
+                                });
+                            }
+                            else {
+                                fireEvent('error', {
+                                    code: 999,
+                                    message: 'Thread picture can be a image type only!'
+                                });
+                            }
+                        });
+                    });
                 }
-
-                return sendMessage(updateThreadInfoData, {
-                    onResult: function (result) {
-                        callback && callback(result);
-                    }
-                });
             },
 
             /**
-             * Update Thread Info
+             * Update Chat Profile
              *
              * This functions updates metadata of thread
              *
@@ -5629,7 +5821,7 @@
              *
              * @return {object} Instant sendMessage result
              */
-            getParticipantRoles = function (params, callback) {
+            getCurrentUserRoles = function (params, callback) {
                 var updateChatProfileData = {
                     chatMessageVOType: chatMessageVOTypes.GET_PARTICIPANT_ROLES,
                     pushMsgType: 4,
@@ -5763,7 +5955,7 @@
                                                     result: {
                                                         participants: cacheData,
                                                         contentCount: participantsCount,
-                                                        hasNext: !(participants.length < count),//(offset + count < participantsCount && participants.length > 0),
+                                                        hasNext: !(participants.length < count),
                                                         nextOffset: offset + participants.length
                                                     }
                                                 };
@@ -6047,6 +6239,174 @@
             },
 
             /**
+             * Get File From PodSpace
+             *
+             * This functions gets an uploaded file from Pod Space File Server.
+             *
+             * @since 3.9.9
+             * @access private
+             *
+             * @param {string}  hashCode        HashCode of uploaded file
+             *
+             * @return {object} File Object
+             */
+            getFileFromPodspace = function (params, callback) {
+                getFileData = {};
+                if (params) {
+                    if (params.hashCode && typeof params.hashCode == 'string') {
+                        getFileData.hash = params.hashCode;
+                    } else {
+                        callback({
+                            hasError: true,
+                            error: 'Enter a file hash to get'
+                        });
+                        return;
+                    }
+                }
+
+                httpRequest({
+                    url: SERVICE_ADDRESSES.PODSPACE_FILESERVER_ADDRESS + SERVICES_PATH.PODSPACE_DOWNLOAD_FILE,
+                    method: 'GET',
+                    responseType: 'blob',
+                    headers: {
+                        '_token_': token,
+                        '_token_issuer_': 1
+                    },
+                    data: getFileData
+                }, function (result) {
+                    if (!result.hasError) {
+                        callback({
+                            hasError: result.hasError,
+                            result: result.result.response
+                        });
+                    }
+                    else {
+                        callback({
+                            hasError: true
+                        });
+                    }
+                });
+            },
+
+            /**
+             * Get Image From PodSpace
+             *
+             * This functions gets an uploaded image from Pod Space File Server.
+             *
+             * @since 3.9.9
+             * @access private
+             *
+             * @param {string}  hashCode        HashCode of uploaded file
+             * @param {string}  size            (1: 100×75, 2: 200×150, 3: 400×300)
+             * @param {string}  quality         Image quality betwenn 0.0 anf 1.0
+             * @param {bolean}  crop            Crop image based on uploaded xC, yC, hC and wC parameters
+             *
+             * @return {object} File Object
+             */
+            getImageFromPodspace = function (params, callback) {
+                getImageData = {
+                    size: params.size,
+                    quality: params.quality,
+                    crop: params.crop
+                };
+                if (params) {
+                    if (params.hashCode && typeof params.hashCode == 'string') {
+                        getImageData.hash = params.hashCode;
+                    } else {
+                        callback({
+                            hasError: true,
+                            error: 'Enter a file hash to get'
+                        });
+                        return;
+                    }
+                    httpRequest({
+                        url: SERVICE_ADDRESSES.PODSPACE_FILESERVER_ADDRESS + SERVICES_PATH.PODSPACE_DOWNLOAD_IMAGE,
+                        method: 'GET',
+                        responseType: 'blob',
+                        headers: {
+                            '_token_': token,
+                            '_token_issuer_': 1
+                        },
+                        data: getImageData
+                    }, function (result) {
+                        if (!result.hasError) {
+                            callback({
+                                hasError: result.hasError,
+                                result: result.result.response
+                            });
+                        }
+                        else {
+                            callback({
+                                hasError: true
+                            });
+                        }
+                    });
+                }
+            },
+
+            /**
+             * Get Image Download Link From PodSpace
+             *
+             * This functions gets an uploaded image download link from Pod Space File Server.
+             *
+             * @since 9.1.3
+             * @access private
+             *
+             * @param {string}  hashCode        HashCode of uploaded file
+             *
+             * @return {string} Image Link
+             */
+            getImageDownloadLinkFromPodspace = function (params, callback) {
+                if (params) {
+                    if (params.hashCode && typeof params.hashCode == 'string') {
+                        var downloadUrl = SERVICE_ADDRESSES.PODSPACE_FILESERVER_ADDRESS + SERVICES_PATH.PODSPACE_DOWNLOAD_IMAGE + '?hash=' + params.hashCode;
+                        callback && callback({
+                            hasError: false,
+                            downloadUrl: downloadUrl
+                        });
+                        return downloadUrl;
+                    } else {
+                        callback && callback({
+                            hasError: true,
+                            error: 'Enter a image hash to get download link!'
+                        });
+                        return;
+                    }
+                }
+            },
+
+            /**
+             * Get File Download Link From PodSpace
+             *
+             * This functions gets an uploaded file download link from Pod Space File Server.
+             *
+             * @since 9.1.3
+             * @access private
+             *
+             * @param {string}  hashCode        HashCode of uploaded file
+             *
+             * @return {string} File Link
+             */
+            getFileDownloadLinkFromPodspace = function (params, callback) {
+                if (params) {
+                    if (params.hashCode && typeof params.hashCode == 'string') {
+                        var downloadUrl = SERVICE_ADDRESSES.PODSPACE_FILESERVER_ADDRESS + SERVICES_PATH.PODSPACE_DOWNLOAD_FILE + '?hash=' + params.hashCode;
+                        callback && callback({
+                            hasError: false,
+                            downloadUrl: downloadUrl
+                        });
+                        return downloadUrl;
+                    } else {
+                        callback && callback({
+                            hasError: true,
+                            error: 'Enter a file hash to get download link!'
+                        });
+                        return;
+                    }
+                }
+            },
+
+            /**
              * Upload File
              *
              * Upload files to File Server
@@ -6155,6 +6515,136 @@
                     }
                 });
 
+                return {
+                    uniqueId: uploadUniqueId,
+                    threadId: uploadThreadId,
+                    participant: userInfo,
+                    content: {
+                        caption: params.content,
+                        file: {
+                            uniqueId: uploadUniqueId,
+                            fileName: fileName,
+                            fileSize: fileSize,
+                            fileObject: params.file
+                        }
+                    }
+                };
+            },
+
+            /**
+             * Upload File To Pod Space
+             *
+             * Upload files to Pod Space Server
+             *
+             * @since 3.9.9
+             * @access private
+             *
+             * @param {string}  fileName        A name for the file
+             * @param {file}    file            FILE: the file
+             * @param {string}  userGroupHash   Unique identifier of threads on podspace
+             * @param {string}  token           User Token
+             * @param {string}  _token_issuer_  Token Issuer
+             *
+             * @link
+                *
+                * @return {object} Uploaded File Object
+             */
+            uploadFileToPodspace = function (params, callback) {
+                var fileName,
+                    fileType,
+                    fileSize,
+                    fileExtension,
+                    uploadUniqueId,
+                    uploadThreadId;
+
+                fileName = params.file.name;
+                fileType = params.file.type;
+                fileSize = params.file.size;
+                fileExtension = params.file.name.split('.').pop();
+
+                var uploadFileData = {};
+                if (params) {
+                    if (typeof params.file !== 'undefined') {
+                        uploadFileData.file = params.file;
+                    }
+                    if (params.randomFileName) {
+                        uploadFileData.filename = Utility.generateUUID() + '.' + fileExtension;
+                    }
+                    else {
+                        uploadFileData.filename = fileName;
+                    }
+                    uploadFileData.fileSize = fileSize;
+                    if (parseInt(params.threadId) > 0) {
+                        uploadThreadId = params.threadId;
+                        uploadFileData.threadId = params.threadId;
+                    }
+                    else {
+                        uploadThreadId = 0;
+                        uploadFileData.threadId = 0;
+                    }
+                    if (typeof params.uniqueId == 'string') {
+                        uploadUniqueId = params.uniqueId;
+                        uploadFileData.uniqueId = params.uniqueId;
+                    }
+                    else {
+                        uploadUniqueId = Utility.generateUUID();
+                        uploadFileData.uniqueId = uploadUniqueId;
+                    }
+                    if (typeof params.userGroupHash == 'string') {
+                        userGroupHash = params.userGroupHash;
+                        uploadFileData.userGroupHash = params.userGroupHash;
+                    }
+                    else {
+                        callback({
+                            hasError: true,
+                            errorCode: 999,
+                            errorMessage: 'You need to enter a userGroupHash to be able to upload on PodSpace!'
+                        });
+                        return;
+                    }
+                    if (typeof params.originalFileName == 'string') {
+                        uploadFileData.originalFileName = params.originalFileName;
+                    }
+                    else {
+                        uploadFileData.originalFileName = fileName;
+                    }
+                }
+                httpRequest({
+                    url: SERVICE_ADDRESSES.PODSPACE_FILESERVER_ADDRESS + SERVICES_PATH.PODSPACE_UPLOAD_FILE_TO_USERGROUP,
+                    method: 'POST',
+                    headers: {
+                        '_token_': token,
+                        '_token_issuer_': 1
+                    },
+                    data: uploadFileData,
+                    uniqueId: uploadUniqueId
+                }, function (result) {
+                    if (!result.hasError) {
+                        try {
+                            var response = (typeof result.result.responseText == 'string')
+                                ? JSON.parse(result.result.responseText)
+                                : result.result.responseText;
+                            callback({
+                                hasError: response.hasError,
+                                result: response.result
+                            });
+                        }
+                        catch (e) {
+                            callback({
+                                hasError: true,
+                                errorCode: 999,
+                                errorMessage: 'Problem in Parsing result'
+                            });
+                        }
+                    }
+                    else {
+                        callback({
+                            hasError: true,
+                            errorCode: result.errorCode,
+                            errorMessage: result.errorMessage
+                        });
+                    }
+                });
                 return {
                     uniqueId: uploadUniqueId,
                     threadId: uploadThreadId,
@@ -6445,6 +6935,435 @@
             },
 
             /**
+             * Upload Image To Pod Space Publically
+             *
+             * Upload images to Pod Space Image Server
+             *
+             * @since 3.9.9
+             * @access private
+             *
+             * @param {string}  fileName        A name for the file
+             * @param {file}    image           FILE: the image file  (if its an image file)
+             * @param {float}   xC              Crop Start point x    (if its an image file)
+             * @param {float}   yC              Crop Start point Y    (if its an image file)
+             * @param {float}   hC              Crop size Height      (if its an image file)
+             * @param {float}   wC              Crop size Weight      (if its an image file)
+             * @param {string}  token           User Token
+             * @param {string}  _token_issuer_  Token Issuer
+             *
+             * @link https://podspace.pod.ir/apidocs/?srv=/nzh/drive/uploadImage
+             *
+             * @return {object} Uploaded Image Object
+             */
+            uploadImageToPodspace = function (params, callback) {
+                var fileName,
+                    fileType,
+                    fileSize,
+                    fileWidth = 0,
+                    fileHeight = 0,
+                    fileExtension,
+                    uploadUniqueId,
+                    uploadThreadId;
+
+                fileName = params.image.name;
+                fileType = params.image.type;
+                fileSize = params.image.size;
+                fileExtension = params.image.name.split('.')
+                    .pop();
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    var image = new Image();
+                    image.onload = function () {
+                        fileWidth = this.width;
+                        fileHeight = this.height;
+                        continueImageUpload(params);
+                    };
+                    image.src = e.target.result;
+                };
+                reader.readAsDataURL(params.image);
+
+                continueImageUpload = function (params) {
+                    if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
+                        uploadImageData = {};
+                        if (params) {
+                            if (typeof params.image !== 'undefined') {
+                                uploadImageData.file = params.image;
+                            } else {
+                                callback({
+                                    hasError: true,
+                                    errorCode: 999,
+                                    errorMessage: 'You need to send a image file!'
+                                });
+                                return;
+                            }
+                            if (params.randomFileName) {
+                                uploadImageData.fileName = Utility.generateUUID() + '.' + fileExtension;
+                            }
+                            else {
+                                uploadImageData.filename = fileName;
+                            }
+                            uploadImageData.fileSize = fileSize;
+                            if (parseInt(params.threadId) > 0) {
+                                uploadThreadId = params.threadId;
+                                uploadImageData.threadId = params.threadId;
+                            }
+                            else {
+                                uploadThreadId = 0;
+                                uploadImageData.threadId = 0;
+                            }
+                            if (typeof params.uniqueId == 'string') {
+                                uploadUniqueId = params.uniqueId;
+                                uploadImageData.uniqueId = params.uniqueId;
+                            }
+                            else {
+                                uploadUniqueId = Utility.generateUUID();
+                                uploadImageData.uniqueId = uploadUniqueId;
+                            }
+                            if (typeof params.originalFileName == 'string') {
+                                uploadImageData.originalFileName = params.originalFileName;
+                            }
+                            else {
+                                uploadImageData.originalFileName = fileName;
+                            }
+                            uploadImageData.xC = parseInt(params.xC) || 0;
+                            uploadImageData.yC = parseInt(params.yC) || 0;
+                            uploadImageData.hC = parseInt(params.hC) || fileHeight;
+                            uploadImageData.wC = parseInt(params.wC) || fileWidth;
+                        }
+                        httpRequest({
+                            url: SERVICE_ADDRESSES.PODSPACE_FILESERVER_ADDRESS + SERVICES_PATH.PODSPACE_UPLOAD_IMAGE,
+                            method: 'POST',
+                            headers: {
+                                '_token_': token,
+                                '_token_issuer_': 1
+                            },
+                            data: uploadImageData,
+                            uniqueId: uploadUniqueId
+                        }, function (result) {
+                            if (!result.hasError) {
+                                try {
+                                    var response = (typeof result.result.responseText == 'string')
+                                        ? JSON.parse(result.result.responseText)
+                                        : result.result.responseText;
+                                    if (typeof response.hasError !== 'undefined' && !response.hasError) {
+                                        callback({
+                                            hasError: response.hasError,
+                                            result: response.result
+                                        });
+                                    }
+                                    else {
+                                        callback({
+                                            hasError: true,
+                                            errorCode: response.errorCode,
+                                            errorMessage: response.message
+                                        });
+                                    }
+                                }
+                                catch (e) {
+                                    console.log(e)
+                                    callback({
+                                        hasError: true,
+                                        errorCode: 6300,
+                                        errorMessage: CHAT_ERRORS[6300]
+                                    });
+                                }
+                            }
+                            else {
+                                callback({
+                                    hasError: true,
+                                    errorCode: result.errorCode,
+                                    errorMessage: result.errorMessage
+                                });
+                            }
+                        });
+                        return {
+                            uniqueId: uploadUniqueId,
+                            threadId: uploadThreadId,
+                            participant: userInfo,
+                            content: {
+                                caption: params.content,
+                                file: {
+                                    uniqueId: uploadUniqueId,
+                                    fileName: fileName,
+                                    fileSize: fileSize,
+                                    fileObject: params.file
+                                }
+                            }
+                        };
+                    }
+                    else {
+                        callback({
+                            hasError: true,
+                            errorCode: 6301,
+                            errorMessage: CHAT_ERRORS[6301]
+                        });
+                    }
+                }
+            },
+
+            /**
+             * Upload Image To Pod Space
+             *
+             * Upload images to Pod Space Image Server
+             *
+             * @since 3.9.9
+             * @access private
+             *
+             * @param {string}  fileName        A name for the file
+             * @param {file}    image           FILE: the image file  (if its an image file)
+             * @param {float}   xC              Crop Start point x    (if its an image file)
+             * @param {float}   yC              Crop Start point Y    (if its an image file)
+             * @param {float}   hC              Crop size Height      (if its an image file)
+             * @param {float}   wC              Crop size Weight      (if its an image file)
+             * @param {string}  userGroupHash   Unique identifier of threads on podspace
+             * @param {string}  token           User Token
+             * @param {string}  _token_issuer_  Token Issuer
+             *
+             * @link https://podspace.pod.ir/apidocs/?srv=/userGroup/uploadImage/
+             *
+             * @return {object} Uploaded Image Object
+             */
+            uploadImageToPodspaceUserGroup = function (params, callback) {
+                var fileName,
+                    fileType,
+                    fileSize,
+                    fileWidth = 0,
+                    fileHeight = 0,
+                    fileExtension,
+                    uploadUniqueId,
+                    uploadThreadId;
+                var continueImageUpload = function (params) {
+                    if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
+                        uploadImageData = {};
+                        if (params) {
+                            if (typeof params.image !== 'undefined') {
+                                uploadImageData.file = params.image;
+                            } else {
+                                callback({
+                                    hasError: true,
+                                    errorCode: 999,
+                                    errorMessage: 'You need to send a image file!'
+                                });
+                                return;
+                            }
+                            if (typeof params.userGroupHash == 'string') {
+                                userGroupHash = params.userGroupHash;
+                                uploadImageData.userGroupHash = params.userGroupHash;
+                            }
+                            else {
+                                callback({
+                                    hasError: true,
+                                    errorCode: 999,
+                                    errorMessage: 'You need to enter a userGroupHash to be able to upload on PodSpace!'
+                                });
+                                return;
+                            }
+                            if (params.randomFileName) {
+                                uploadImageData.fileName = Utility.generateUUID() + '.' + fileExtension;
+                            }
+                            else {
+                                uploadImageData.filename = fileName;
+                            }
+                            uploadImageData.fileSize = fileSize;
+                            if (parseInt(params.threadId) > 0) {
+                                uploadThreadId = params.threadId;
+                                uploadImageData.threadId = params.threadId;
+                            }
+                            else {
+                                uploadThreadId = 0;
+                                uploadImageData.threadId = 0;
+                            }
+                            if (typeof params.uniqueId == 'string') {
+                                uploadUniqueId = params.uniqueId;
+                                uploadImageData.uniqueId = params.uniqueId;
+                            }
+                            else {
+                                uploadUniqueId = Utility.generateUUID();
+                                uploadImageData.uniqueId = uploadUniqueId;
+                            }
+                            if (typeof params.originalFileName == 'string') {
+                                uploadImageData.originalFileName = params.originalFileName;
+                            }
+                            else {
+                                uploadImageData.originalFileName = fileName;
+                            }
+                            uploadImageData.xC = parseInt(params.xC) || 0;
+                            uploadImageData.yC = parseInt(params.yC) || 0;
+                            uploadImageData.hC = parseInt(params.hC) || fileHeight;
+                            uploadImageData.wC = parseInt(params.wC) || fileWidth;
+                        }
+                        httpRequest({
+                            url: SERVICE_ADDRESSES.PODSPACE_FILESERVER_ADDRESS + SERVICES_PATH.PODSPACE_UPLOAD_IMAGE_TO_USERGROUP,
+                            method: 'POST',
+                            headers: {
+                                '_token_': token,
+                                '_token_issuer_': 1
+                            },
+                            data: uploadImageData,
+                            uniqueId: uploadUniqueId
+                        }, function (result) {
+                            if (!result.hasError) {
+                                try {
+                                    var response = (typeof result.result.responseText == 'string')
+                                        ? JSON.parse(result.result.responseText)
+                                        : result.result.responseText;
+                                    if (typeof response.hasError !== 'undefined' && !response.hasError) {
+                                        response.result.actualHeight = fileHeight;
+                                        response.result.actualWidth = fileWidth;
+                                        callback({
+                                            hasError: response.hasError,
+                                            result: response.result
+                                        });
+                                    }
+                                    else {
+                                        callback({
+                                            hasError: true,
+                                            errorCode: response.errorCode,
+                                            errorMessage: response.message
+                                        });
+                                    }
+                                }
+                                catch (e) {
+                                    console.log(e)
+                                    callback({
+                                        hasError: true,
+                                        errorCode: 6300,
+                                        errorMessage: CHAT_ERRORS[6300]
+                                    });
+                                }
+                            }
+                            else {
+                                callback({
+                                    hasError: true,
+                                    errorCode: result.errorCode,
+                                    errorMessage: result.errorMessage
+                                });
+                            }
+                        });
+                        return {
+                            uniqueId: uploadUniqueId,
+                            threadId: uploadThreadId,
+                            participant: userInfo,
+                            content: {
+                                caption: params.content,
+                                file: {
+                                    uniqueId: uploadUniqueId,
+                                    fileName: fileName,
+                                    fileSize: fileSize,
+                                    fileObject: params.file
+                                }
+                            }
+                        };
+                    }
+                    else {
+                        callback({
+                            hasError: true,
+                            errorCode: 6301,
+                            errorMessage: CHAT_ERRORS[6301]
+                        });
+                    }
+                }
+
+                fileName = params.image.name;
+                fileType = params.image.type;
+                fileSize = params.image.size;
+                fileExtension = params.image.name.split('.')
+                    .pop();
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    var image = new Image();
+                    image.onload = function () {
+                        fileWidth = this.width;
+                        fileHeight = this.height;
+                        continueImageUpload(params);
+                    };
+                    image.src = e.target.result;
+                };
+                reader.readAsDataURL(params.image);
+            },
+
+            sendFileMessage = function (params, callbacks) {
+                var metadata = {file: {}},
+                    fileUploadParams = {},
+                    fileUniqueId = (typeof params.fileUniqueId == 'string' && params.fileUniqueId.length > 0) ? params.fileUniqueId : Utility.generateUUID();
+                if (params) {
+                    if (!params.userGroupHash || params.userGroupHash.length == 0 || typeof (params.userGroupHash) != 'string') {
+                        fireEvent('error', {
+                            code: 6304,
+                            message: CHAT_ERRORS[6304]
+                        });
+                        return;
+                    } else {
+                        fileUploadParams.userGroupHash = params.userGroupHash;
+                    }
+                    return chatUploadHandler({
+                        threadId: params.threadId,
+                        file: params.file,
+                        fileUniqueId: fileUniqueId
+                    }, function (uploadHandlerResult, uploadHandlerMetadata, fileType, fileExtension) {
+                        fileUploadParams = Object.assign(fileUploadParams, uploadHandlerResult);
+                        putInChatUploadQueue({
+                            message: {
+                                chatMessageVOType: chatMessageVOTypes.MESSAGE,
+                                typeCode: params.typeCode,
+                                messageType: (params.messageType && params.messageType.toUpperCase() !== undefined && chatMessageTypes[params.messageType.toUpperCase()] > 0) ? chatMessageTypes[params.messageType.toUpperCase()] : 1,
+                                subjectId: params.threadId,
+                                repliedTo: params.repliedTo,
+                                content: params.content,
+                                metadata: JSON.stringify(objectDeepMerger(uploadHandlerMetadata, params.metadata)),
+                                systemMetadata: JSON.stringify(params.systemMetadata),
+                                uniqueId: fileUniqueId,
+                                pushMsgType: 4
+                            },
+                            callbacks: callbacks
+                        }, function () {
+                            if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
+                                uploadImageToPodspaceUserGroup(fileUploadParams, function (result) {
+                                    if (!result.hasError) {
+                                        metadata['name'] = result.result.name;
+                                        metadata['fileHash'] = result.result.hashCode;
+                                        metadata['file']['name'] = result.result.name;
+                                        metadata['file']['fileHash'] = result.result.hashCode;
+                                        metadata['file']['hashCode'] = result.result.hashCode;
+                                        metadata['file']['parentHash'] = result.result.parentHash;
+                                        metadata['file']['size'] = result.result.size;
+                                        metadata['file']['actualHeight'] = result.result.actualHeight;
+                                        metadata['file']['actualWidth'] = result.result.actualWidth;
+                                        metadata['file']['link'] = `https://podspace.pod.ir/nzh/drive/downloadImage?hash=${result.result.hashCode}`;
+                                        transferFromUploadQToSendQ(parseInt(params.threadId), fileUniqueId, JSON.stringify(metadata), function () {
+                                            chatSendQueueHandler();
+                                        });
+                                    }
+                                    else {
+                                        deleteFromChatUploadQueue({message: {uniqueId: fileUniqueId}});
+                                    }
+                                });
+                            }
+                            else {
+                                uploadFileToPodspace(fileUploadParams, function (result) {
+                                    if (!result.hasError) {
+                                        metadata['fileHash'] = result.result.hashCode;
+                                        metadata['name'] = result.result.name;
+                                        metadata['file']['name'] = result.result.name;
+                                        metadata['file']['fileHash'] = result.result.hashCode;
+                                        metadata['file']['hashCode'] = result.result.hashCode;
+                                        metadata['file']['parentHash'] = result.result.parentHash;
+                                        metadata['file']['size'] = result.result.size;
+                                        transferFromUploadQToSendQ(parseInt(params.threadId), fileUniqueId, JSON.stringify(metadata), function () {
+                                            chatSendQueueHandler();
+                                        });
+                                    }
+                                    else {
+                                        deleteFromChatUploadQueue({message: {uniqueId: fileUniqueId}});
+                                    }
+                                });
+                            }
+                        });
+                    });
+                }
+            },
+
+            /**
              * Fire Event
              *
              * Fires given Event with given parameters
@@ -6602,7 +7521,7 @@
                             .stores({
                                 users: '&id, name, cellphoneNumber, keyId',
                                 contacts: '[owner+id], id, owner, uniqueId, userId, cellphoneNumber, email, firstName, lastName, expireTime',
-                                threads: '[owner+id] ,id, owner, title, time, [owner+time]',
+                                threads: '[owner+id] ,id, owner, title, time, pin, [owner+time]',
                                 participants: '[owner+id], id, owner, threadId, notSeenDuration, admin, auditor, name, contactName, email, expireTime',
                                 messages: '[owner+id], id, owner, threadId, time, [threadId+id], [threadId+owner+time]',
                                 messageGaps: '[owner+id], [owner+waitsFor], id, waitsFor, owner, threadId, time, [threadId+owner+time]',
@@ -6987,17 +7906,29 @@
                             try {
                                 var message = uploadQueue[i].message,
                                     callbacks = uploadQueue[i].callbacks;
-
-                                if (message && typeof message.content === 'object' && typeof message.content.message === 'object') {
-                                    message.content.message['metadata'] = metadata;
+                                let oldMetadata = JSON.parse(message.metadata),
+                                    newMetadata = JSON.parse(metadata);
+                                var finalMetaData = objectDeepMerger(newMetadata, oldMetadata);
+                                if (message && typeof message.content === 'object' && typeof message.content.message !== 'undefined') {
+                                    message.content.message['metadata'] = JSON.stringify(finalMetaData);
                                 }
-
-                                message.metadata = metadata;
+                                if (message && typeof message.content === 'object' && typeof message.content.metadata !== 'undefined') {
+                                    message.content['metadata'] = JSON.stringify(finalMetaData);
+                                }
+                                if (message.chatMessageVOType == 21) {
+                                    getImageDownloadLinkFromPodspace({
+                                        hashCode: finalMetaData.fileHash
+                                    }, function (result) {
+                                        if (!result.hasError) {
+                                            message.content.image = result.downloadUrl;
+                                        }
+                                    });
+                                }
+                                message.metadata = JSON.stringify(finalMetaData);
                             }
                             catch (e) {
                                 console.log(e);
                             }
-
                             deleteFromChatUploadQueue(uploadQueue[i],
                                 function () {
                                     putInChatSendQueue({
@@ -7007,7 +7938,6 @@
                                         callback && callback();
                                     });
                                 });
-
                             break;
                         }
                     }
@@ -7062,6 +7992,25 @@
 
                     return '{}';
                 }
+            },
+
+            objectDeepMerger = function (...arguments) {
+                var target = {};
+                var merger = function (obj) {
+                    for (var prop in obj) {
+                        if (obj.hasOwnProperty(prop)) {
+                            if (Object.prototype.toString.call(obj[prop]) === '[object Object]') {
+                                target[prop] = objectDeepMerger(target[prop], obj[prop]);
+                            } else {
+                                target[prop] = obj[prop];
+                            }
+                        }
+                    }
+                };
+                for (var i = 0; i < arguments.length; i++) {
+                    merger(arguments[i]);
+                }
+                return target;
             },
 
             setRoleToUser = function (params, callback) {
@@ -7157,7 +8106,117 @@
                         callback && callback(result);
                     }
                 });
+            },
+
+            chatUploadHandler = function (params, callbacks) {
+                if (typeof params.file != 'undefined') {
+                    var fileName,
+                        fileType,
+                        fileSize,
+                        fileExtension,
+                        chatUploadHandlerResult = {},
+                        metadata = {file: {}},
+                        fileUniqueId = params.fileUniqueId;
+
+                    fileName = params.file.name;
+                    fileType = params.file.type;
+                    fileSize = params.file.size;
+                    fileExtension = params.file.name.split('.')
+                        .pop();
+
+                    fireEvent('fileUploadEvents', {
+                        threadId: params.threadId,
+                        uniqueId: fileUniqueId,
+                        state: 'NOT_STARTED',
+                        progress: 0,
+                        fileInfo: {
+                            fileName: fileName,
+                            fileSize: fileSize
+                        },
+                        fileObject: params.file
+                    });
+                    /**
+                     * File is a valid Image
+                     * Should upload to image server
+                     */
+                    if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
+                        chatUploadHandlerResult.image = params.file;
+                        if (params.xC >= 0) {
+                            fileUploadParams.xC = params.xC;
+                        }
+                        if (params.yC >= 0) {
+                            fileUploadParams.yC = params.yC;
+                        }
+                        if (params.hC > 0) {
+                            fileUploadParams.hC = params.hC;
+                        }
+                        if (params.wC > 0) {
+                            fileUploadParams.wC = params.wC;
+                        }
+                    }
+                    else {
+                        chatUploadHandlerResult.file = params.file;
+                    }
+                    metadata['file']['originalName'] = fileName;
+                    metadata['file']['mimeType'] = fileType;
+                    metadata['file']['size'] = fileSize;
+                    chatUploadHandlerResult.threadId = params.threadId;
+                    chatUploadHandlerResult.uniqueId = fileUniqueId;
+                    chatUploadHandlerResult.fileObject = params.file;
+                    chatUploadHandlerResult.originalFileName = fileName;
+                    callbacks && callbacks(chatUploadHandlerResult, metadata, fileType, fileExtension);
+                }
+                else {
+                    fireEvent('error', {
+                        code: 6302,
+                        message: CHAT_ERRORS[6302]
+                    });
+                }
+                return {
+                    uniqueId: fileUniqueId,
+                    threadId: params.threadId,
+                    participant: userInfo,
+                    content: {
+                        caption: params.content,
+                        file: {
+                            uniqueId: fileUniqueId,
+                            fileName: fileName,
+                            fileSize: fileSize,
+                            fileObject: params.file
+                        }
+                    }
+                };
+            },
+
+            //TODO Change Node Version
+            getImageFormUrl = function (url, callback) {
+                var img = new Image();
+                img.setAttribute('crossOrigin', 'anonymous');
+                img.onload = function (a) {
+                    var canvas = document.createElement("canvas");
+                    canvas.width = this.width;
+                    canvas.height = this.height;
+                    var ctx = canvas.getContext("2d");
+                    ctx.drawImage(this, 0, 0);
+                    var dataURI = canvas.toDataURL("image/jpg");
+                    // convert base64/URLEncoded data component to raw binary data held in a string
+                    var byteString;
+                    if (dataURI.split(',')[0].indexOf('base64') >= 0)
+                        byteString = atob(dataURI.split(',')[1]);
+                    else
+                        byteString = unescape(dataURI.split(',')[1]);
+                    // separate out the mime component
+                    var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+                    // write the bytes of the string to a typed array
+                    var ia = new Uint8Array(byteString.length);
+                    for (var i = 0; i < byteString.length; i++) {
+                        ia[i] = byteString.charCodeAt(i);
+                    }
+                    return callback(new Blob([ia], {type: mimeString}));
+                }
+                img.src = url;
             };
+
         /******************************************************
          *             P U B L I C   M E T H O D S            *
          ******************************************************/
@@ -7182,7 +8241,7 @@
 
         this.getThreads = getThreads;
 
-        this.getAllThreadList = getAllThreadList;
+        this.getAllThreads = getAllThreads;
 
         this.getHistory = getHistory;
 
@@ -7265,6 +8324,19 @@
 
                 if (typeof params.query === 'string') {
                     content.query = whereClause.query = params.query;
+                }
+
+                if (typeof params.email === 'string') {
+                    content.email = whereClause.email = params.email;
+                }
+                if (typeof params.cellphoneNumber === 'string') {
+                    content.cellphoneNumber = whereClause.cellphoneNumber = params.cellphoneNumber;
+                }
+                if (typeof params.contactId === 'string') {
+                    content.id = whereClause.id = params.contactId;
+                }
+                if (typeof params.uniqueId === 'string') {
+                    content.uniqueId = whereClause.uniqueId = params.uniqueId;
                 }
 
                 var functionLevelCache = (typeof params.cache == 'boolean') ? params.cache : true;
@@ -7353,7 +8425,7 @@
                                                 result: {
                                                     contacts: cacheData,
                                                     contentCount: contactsCount,
-                                                    hasNext: !(contacts.length < count),//(offset + count < contactsCount && contacts.length > 0),
+                                                    hasNext: !(contacts.length < count),
                                                     nextOffset: offset + contacts.length
                                                 }
                                             };
@@ -7530,15 +8602,27 @@
                 if (parseInt(params.threadId) > 0) {
                     sendMessageParams.subjectId = params.threadId;
                 }
-                if (Array.isArray(params.contacts)) {
-                    sendMessageParams.content = params.contacts;
+
+                if (Array.isArray(params.contactIds)) {
+                    sendMessageParams.content = params.contactIds;
                 }
+
                 if (Array.isArray(params.usernames)) {
                     sendMessageParams.content = [];
                     for (var i = 0; i < params.usernames.length; i++) {
                         sendMessageParams.content.push({
                             id: params.usernames[i],
                             idType: inviteeVOidTypes.TO_BE_USER_USERNAME
+                        });
+                    }
+                }
+
+                if (Array.isArray(params.coreUserids)) {
+                    sendMessageParams.content = [];
+                    for (var i = 0; i < params.coreUserids.length; i++) {
+                        sendMessageParams.content.push({
+                            id: params.coreUserids[i],
+                            idType: inviteeVOidTypes.TO_BE_USER_ID
                         });
                     }
                 }
@@ -7583,8 +8667,8 @@
                     sendMessageParams.subjectId = params.threadId;
                 }
 
-                if (Array.isArray(params.participants)) {
-                    sendMessageParams.content = params.participants;
+                if (Array.isArray(params.participantIds)) {
+                    sendMessageParams.content = params.participantIds;
                 }
             }
 
@@ -7611,7 +8695,7 @@
             });
         };
 
-        this.getParticipantRoles = getParticipantRoles;
+        this.getCurrentUserRoles = getCurrentUserRoles;
 
         this.leaveThread = function (params, callback) {
 
@@ -7659,7 +8743,6 @@
 
             /**
              * + CreateThreadRequest      {object}
-             *    - ownerSsoId            {string}
              *    + invitees              {object}
              *       -id                  {string}
              *       -idType              {int} ** inviteeVOidTypes
@@ -7738,11 +8821,11 @@
                         content.message.uniqueId = params.message.uniqueId;
                     }
 
-                    if (typeof params.message.type > 0) {
-                        content.message.type = params.message.type;
+                    if (params.message.type > 0) {
+                        content.message.messageType = params.message.type;
                     }
 
-                    if (typeof params.message.repliedTo > 0) {
+                    if (params.message.repliedTo > 0) {
                         content.message.repliedTo = params.message.repliedTo;
                     }
 
@@ -7773,6 +8856,7 @@
 
             var sendMessageParams = {
                 chatMessageVOType: chatMessageVOTypes.CREATE_THREAD,
+                typeCode: params.typeCode,
                 content: content
             };
 
@@ -7818,7 +8902,7 @@
                     messageType: (params.messageType && params.messageType.toUpperCase() !== undefined && chatMessageTypes[params.messageType.toUpperCase()] > 0) ? chatMessageTypes[params.messageType.toUpperCase()] : chatMessageTypes.TEXT,
                     subjectId: params.threadId,
                     repliedTo: params.repliedTo,
-                    content: params.content,
+                    content: params.textMessage,
                     uniqueId: uniqueId,
                     systemMetadata: JSON.stringify(params.systemMetadata),
                     metadata: JSON.stringify(metadata),
@@ -7850,187 +8934,39 @@
             }, callbacks);
         };
 
-        this.sendFileMessage = function (params, callbacks) {
-            var metadata = {},
-                fileUploadParams = {},
-                fileUniqueId = Utility.generateUUID();
+        this.sendFileMessage = sendFileMessage;
 
-            if (params) {
-                if (typeof params.file != 'undefined') {
-
-                    var fileName,
-                        fileType,
-                        fileSize,
-                        fileExtension;
-
-                    fileName = params.file.name;
-                    fileType = params.file.type;
-                    fileSize = params.file.size;
-                    fileExtension = params.file.name.split('.')
-                        .pop();
-
-                    fireEvent('fileUploadEvents', {
-                        threadId: params.threadId,
-                        uniqueId: fileUniqueId,
-                        state: 'NOT_STARTED',
-                        progress: 0,
-                        fileInfo: {
-                            fileName: fileName,
-                            fileSize: fileSize
-                        },
-                        fileObject: params.file
-                    });
-
-                    /**
-                     * File is a valid Image
-                     * Should upload to image server
-                     */
-                    if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
-                        fileUploadParams.image = params.file;
-
-                        if (typeof params.xC == 'string') {
-                            fileUploadParams.xC = params.xC;
-                        }
-
-                        if (typeof params.yC == 'string') {
-                            fileUploadParams.yC = params.yC;
-                        }
-
-                        if (typeof params.hC == 'string') {
-                            fileUploadParams.hC = params.hC;
-                        }
-
-                        if (typeof params.wC == 'string') {
-                            fileUploadParams.wC = params.wC;
-                        }
-                    }
-                    else {
-                        fileUploadParams.file = params.file;
-                    }
-
-                    metadata['file'] = {};
-
-                    metadata['file']['originalName'] = fileName;
-                    metadata['file']['mimeType'] = fileType;
-                    metadata['file']['size'] = fileSize;
-
-                    fileUploadParams.threadId = params.threadId;
-                    fileUploadParams.uniqueId = fileUniqueId;
-                    fileUploadParams.fileObject = params.file;
-                    fileUploadParams.originalFileName = fileName;
-
-                    putInChatUploadQueue({
-                        message: {
-                            chatMessageVOType: chatMessageVOTypes.MESSAGE,
-                            typeCode: params.typeCode,
-                            messageType: (params.messageType && params.messageType.toUpperCase() !== undefined && chatMessageTypes[params.messageType.toUpperCase()] > 0) ? chatMessageTypes[params.messageType.toUpperCase()] : 1,
-                            subjectId: params.threadId,
-                            repliedTo: params.repliedTo,
-                            content: params.content,
-                            metadata: JSON.stringify(metadata),
-                            systemMetadata: JSON.stringify(params.systemMetadata),
-                            uniqueId: fileUniqueId,
-                            pushMsgType: 4
-                        },
-                        callbacks: callbacks
-                    }, function () {
-                        if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
-                            uploadImage(fileUploadParams, function (result) {
-                                if (!result.hasError) {
-                                    metadata['file']['actualHeight'] = result.result.actualHeight;
-                                    metadata['file']['actualWidth'] = result.result.actualWidth;
-                                    metadata['file']['height'] = result.result.height;
-                                    metadata['file']['width'] = result.result.width;
-                                    metadata['file']['name'] = result.result.name;
-                                    metadata['name'] = result.result.name;
-                                    metadata['file']['hashCode'] = result.result.hashCode;
-                                    metadata['file']['id'] = result.result.id;
-                                    metadata['id'] = result.result.id;
-                                    metadata['file']['link'] = SERVICE_ADDRESSES.FILESERVER_ADDRESS +
-                                        SERVICES_PATH.GET_IMAGE + '?imageId=' +
-                                        result.result.id + '&hashCode=' +
-                                        result.result.hashCode;
-
-                                    transferFromUploadQToSendQ(parseInt(params.threadId), fileUniqueId, JSON.stringify(metadata), function () {
-                                        chatSendQueueHandler();
-                                    });
-                                }
-                                else {
-                                    deleteFromChatUploadQueue({message: {uniqueId: fileUniqueId}});
-                                }
-                            });
-                        }
-                        else {
-                            uploadFile(fileUploadParams, function (result) {
-                                if (!result.hasError) {
-                                    metadata['file']['name'] = result.result.name;
-                                    metadata['name'] = result.result.name;
-                                    metadata['file']['hashCode'] = result.result.hashCode;
-                                    metadata['file']['id'] = result.result.id;
-                                    metadata['id'] = result.result.id;
-                                    metadata['file']['link'] = SERVICE_ADDRESSES.FILESERVER_ADDRESS +
-                                        SERVICES_PATH.GET_FILE + '?fileId=' +
-                                        result.result.id + '&hashCode=' +
-                                        result.result.hashCode;
-
-                                    transferFromUploadQToSendQ(parseInt(params.threadId), fileUniqueId, JSON.stringify(metadata), function () {
-                                        chatSendQueueHandler();
-                                    });
-                                }
-                                else {
-                                    deleteFromChatUploadQueue({message: {uniqueId: fileUniqueId}});
-                                }
-                            });
-                        }
-                    });
-
-                    return {
-                        uniqueId: fileUniqueId,
-                        threadId: params.threadId,
-                        participant: userInfo,
-                        content: {
-                            caption: params.content,
-                            file: {
-                                uniqueId: fileUniqueId,
-                                fileName: fileName,
-                                fileSize: fileSize,
-                                fileObject: params.file
-                            }
-                        }
-                    };
-                }
-                else {
-                    fireEvent('error', {
-                        code: 6302,
-                        message: CHAT_ERRORS[6302]
-                    });
-                }
-            }
-
-            return {
-                uniqueId: fileUniqueId,
-                threadId: params.threadId,
-                participant: userInfo,
-                content: params.content
-            };
-        };
-
-        this.createThreadWithFile = function (params, callbacks) {
-            var metadata = {},
-                fileUploadParams = {},
-                fileUniqueId = Utility.generateUUID(),
-                content = {};
-
+        this.createThreadWithFileMessage = function (params, createThreadCallback, sendFileMessageCallback) {
+            /**
+             * + CreateThreadRequest      {object}
+             *    + invitees              {object}
+             *       -id                  {string}
+             *       -idType              {int} ** inviteeVOidTypes
+             *    - title                 {string}
+             *    - type                  {int} ** createThreadTypes
+             *    - image                 {string}
+             *    - description           {string}
+             *    - metadata              {string}
+             *    - uniqueName            {string}
+             *    + message               {object}
+             *       -text                {string}
+             *       -type                {int}
+             *       -repliedTo           {long}
+             *       -uniqueId            {string}
+             *       -metadata            {string}
+             *       -systemMetadata      {string}
+             *       -forwardedMessageIds {string}
+             *       -forwardedUniqueIds  {string}
+             */
+            var content = {};
             if (params) {
                 if (typeof params.title === 'string') {
                     content.title = params.title;
                 }
-
                 if (typeof params.type === 'string') {
                     var threadType = params.type;
                     content.type = createThreadTypes[threadType];
                 }
-
                 if (Array.isArray(params.invitees)) {
                     var tempInvitee;
                     content.invitees = [];
@@ -8041,15 +8977,12 @@
                         }
                     }
                 }
-
-                if (typeof params.image === 'string') {
-                    content.image = params.image;
-                }
-
                 if (typeof params.description === 'string') {
                     content.description = params.description;
                 }
-
+                if (typeof params.content === 'string') {
+                    content.content = params.content;
+                }
                 if (typeof params.metadata === 'string') {
                     content.metadata = params.metadata;
                 }
@@ -8061,204 +8994,72 @@
                         console.log(e);
                     }
                 }
-
-                if (typeof params.file != 'undefined') {
-
-                    var fileName,
-                        fileType,
-                        fileSize,
-                        fileExtension;
-
-                    fileName = params.file.name;
-                    fileType = params.file.type;
-                    fileSize = params.file.size;
-                    fileExtension = params.file.name.split('.')
-                        .pop();
-
-
-                    fireEvent('fileUploadEvents', {
-                        threadId: 0,
-                        uniqueId: fileUniqueId,
-                        state: 'NOT_STARTED',
-                        progress: 0,
-                        fileInfo: {
-                            fileName: fileName,
-                            fileSize: fileSize
-                        },
-                        fileObject: params.file
-                    });
-
-                    /**
-                     * File is a valid Image
-                     * Should upload to image server
-                     */
-                    if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
-                        fileUploadParams.image = params.file;
-
-                        if (typeof params.xC == 'string') {
-                            fileUploadParams.xC = params.xC;
-                        }
-
-                        if (typeof params.yC == 'string') {
-                            fileUploadParams.yC = params.yC;
-                        }
-
-                        if (typeof params.hC == 'string') {
-                            fileUploadParams.hC = params.hC;
-                        }
-
-                        if (typeof params.wC == 'string') {
-                            fileUploadParams.wC = params.wC;
-                        }
-                    }
-                    else {
-                        fileUploadParams.file = params.file;
-                    }
-
-                    metadata['file'] = {};
-
-                    metadata['file']['originalName'] = fileName;
-                    metadata['file']['mimeType'] = fileType;
-                    metadata['file']['size'] = fileSize;
-
-                    fileUploadParams.threadId = 0;
-                    fileUploadParams.uniqueId = fileUniqueId;
-                    fileUploadParams.fileObject = params.file;
-                    fileUploadParams.originalFileName = fileName;
-
-                    content.message = {};
-                    content.message['uniqueId'] = Utility.generateUUID();
-                    content.message['text'] = params.caption;
-                    content.message['messageType'] = (params.messageType && params.messageType.toUpperCase() !== undefined && chatMessageTypes[params.messageType.toUpperCase()] > 0) ? chatMessageTypes[params.messageType.toUpperCase()] : 2;
-
-                    putInChatUploadQueue({
-                        message: {
-                            chatMessageVOType: chatMessageVOTypes.CREATE_THREAD,
-                            content: content,
-                            subjectId: 0,
-                            uniqueId: fileUniqueId,
-                            pushMsgType: 4
-                        },
-                        callbacks: callbacks
-                    }, function () {
-                        if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
-                            uploadImage(fileUploadParams, function (result) {
-                                if (!result.hasError) {
-                                    metadata['file']['actualHeight'] = result.result.actualHeight;
-                                    metadata['file']['actualWidth'] = result.result.actualWidth;
-                                    metadata['file']['height'] = result.result.height;
-                                    metadata['file']['width'] = result.result.width;
-                                    metadata['file']['name'] = result.result.name;
-                                    metadata['name'] = result.result.name;
-                                    metadata['file']['hashCode'] = result.result.hashCode;
-                                    metadata['file']['id'] = result.result.id;
-                                    metadata['id'] = result.result.id;
-                                    metadata['file']['link'] = SERVICE_ADDRESSES.FILESERVER_ADDRESS +
-                                        SERVICES_PATH.GET_IMAGE + '?imageId=' +
-                                        result.result.id + '&hashCode=' +
-                                        result.result.hashCode;
-
-                                    transferFromUploadQToSendQ(0, fileUniqueId, JSON.stringify(metadata), function () {
-                                        chatSendQueueHandler();
-                                    });
-                                }
-                                else {
-                                    deleteFromChatUploadQueue({message: {uniqueId: fileUniqueId}});
-                                }
-                            });
-                        }
-                        else {
-                            uploadFile(fileUploadParams, function (result) {
-                                if (!result.hasError) {
-                                    metadata['file']['name'] = result.result.name;
-                                    metadata['name'] = result.result.name;
-                                    metadata['file']['hashCode'] = result.result.hashCode;
-                                    metadata['file']['id'] = result.result.id;
-                                    metadata['id'] = result.result.id;
-                                    metadata['file']['link'] = SERVICE_ADDRESSES.FILESERVER_ADDRESS +
-                                        SERVICES_PATH.GET_FILE + '?fileId=' +
-                                        result.result.id + '&hashCode=' +
-                                        result.result.hashCode;
-
-                                    transferFromUploadQToSendQ(0, fileUniqueId, JSON.stringify(metadata), function () {
-                                        chatSendQueueHandler();
-                                    });
-                                }
-                                else {
-                                    deleteFromChatUploadQueue({message: {uniqueId: fileUniqueId}});
-                                }
-                            });
-                        }
-                    });
-
-                    return {
-                        uniqueId: fileUniqueId,
-                        threadId: 0,
-                        participant: userInfo,
-                        content: {
-                            caption: params.content,
-                            file: {
-                                uniqueId: fileUniqueId,
-                                fileName: fileName,
-                                fileSize: fileSize,
-                                fileObject: params.file
-                            }
-                        }
-                    };
-                }
-                else {
-                    fireEvent('error', {
-                        code: 6302,
-                        message: CHAT_ERRORS[6302]
-                    });
-                }
             }
-
-            return {
-                uniqueId: fileUniqueId,
-                threadId: 0,
-                participant: userInfo,
-                content: params.content
+            var sendMessageParams = {
+                chatMessageVOType: chatMessageVOTypes.CREATE_THREAD,
+                typeCode: params.typeCode,
+                content: content
             };
+            return sendMessage(sendMessageParams, {
+                onResult: function (result) {
+                    var returnData = {
+                        hasError: result.hasError,
+                        cache: false,
+                        errorMessage: result.errorMessage,
+                        errorCode: result.errorCode
+                    };
+                    if (!returnData.hasError) {
+                        var messageContent = result.result,
+                            resultData = {
+                                thread: createThread(messageContent)
+                            };
+                        returnData.result = resultData;
+                    }
+                    createThreadCallback && createThreadCallback(returnData);
+                    sendFileMessage({
+                        threadId: returnData.result.thread.id,
+                        file: params.file,
+                        content: params.caption,
+                        messageType: params.messageType,
+                        userGroupHash: returnData.result.thread.userGroupHash
+                    }, sendFileMessageCallback);
+                }
+            });
         };
 
         this.sendLocationMessage = function (params, callbacks) {
             var data = {},
                 url = SERVICE_ADDRESSES.MAP_ADDRESS + SERVICES_PATH.STATIC_IMAGE,
-                hasError = false;
-
+                hasError = false,
+                fileUniqueId = Utility.generateUUID();
             if (params) {
-                if (typeof params.type === 'string') {
-                    data.type = params.type;
+                if (typeof params.mapType === 'string') {
+                    data.type = params.mapType;
                 }
                 else {
                     data.type = 'standard-night';
                 }
-
-                if (parseInt(params.zoom) > 0) {
-                    data.zoom = params.zoom;
+                if (parseInt(params.mapZoom) > 0) {
+                    data.zoom = params.mapZoom;
                 }
                 else {
                     data.zoom = 15;
                 }
-
-                if (parseInt(params.width) > 0) {
-                    data.width = params.width;
+                if (parseInt(params.mapWidth) > 0) {
+                    data.width = params.mapWidth;
                 }
                 else {
                     data.width = 800;
                 }
-
-                if (parseInt(params.height) > 0) {
-                    data.height = params.height;
+                if (parseInt(params.mapHeight) > 0) {
+                    data.height = params.mapHeight;
                 }
                 else {
                     data.height = 600;
                 }
-
-                if (typeof params.center === 'object') {
-                    if (parseFloat(params.center.lat) > 0 && parseFloat(params.center.lng)) {
-                        data.center = params.center.lat + ',' + parseFloat(params.center.lng);
+                if (typeof params.mapCenter === 'object') {
+                    if (parseFloat(params.mapCenter.lat) > 0 && parseFloat(params.mapCenter.lng)) {
+                        data.center = params.mapCenter.lat + ',' + parseFloat(params.mapCenter.lng);
                     }
                     else {
                         hasError = true;
@@ -8277,15 +9078,12 @@
                         error: undefined
                     });
                 }
-
                 data.key = mapApiKey;
+                data.marker = 'red';
             }
-
             var keys = Object.keys(data);
-
             if (keys.length > 0) {
                 url += '?';
-
                 for (var i = 0; i < keys.length; i++) {
                     var key = keys[i];
                     url += key + '=' + data[key];
@@ -8294,85 +9092,26 @@
                     }
                 }
             }
-
             if (!hasError) {
-
-                var metadata = {},
-                    fileUploadParams = {},
-                    fileUniqueId = Utility.generateUUID();
-
-                if (params) {
-                    if (typeof url != 'undefined') {
-                        metadata['file'] = {},
-                            metadata['location'] = {};
-
-                        fileUploadParams.threadId = params.threadId;
-                        fileUploadParams.uniqueId = fileUniqueId;
-                        fileUploadParams.fileUrl = url;
-
-                        putInChatUploadQueue({
-                            message: {
-                                chatMessageVOType: chatMessageVOTypes.MESSAGE,
-                                typeCode: params.typeCode,
-                                messageType: params.messageType,
-                                subjectId: params.threadId,
-                                content: params.content,
-                                metadata: JSON.stringify(metadata),
-                                systemMetadata: JSON.stringify(params.systemMetadata),
-                                uniqueId: fileUniqueId,
-                                pushMsgType: 4
-                            },
-                            callbacks: callbacks
-                        }, function () {
-                            uploadFileFromUrl(fileUploadParams, function (result) {
-                                if (!result.hasError) {
-                                    metadata['location']['center'] = params.center;
-                                    metadata['location']['zoom'] = params.zoom;
-                                    metadata['file']['created'] = result.result.created;
-                                    metadata['file']['size'] = result.result.size;
-                                    metadata['file']['width'] = params.width;
-                                    metadata['file']['height'] = params.height;
-                                    metadata['file']['name'] = result.result.name;
-                                    metadata['file']['hashCode'] = result.result.hashCode;
-                                    metadata['file']['id'] = result.result.id;
-                                    metadata['file']['link'] = SERVICE_ADDRESSES.POD_DRIVE_ADDRESS +
-                                        SERVICES_PATH.DRIVE_DOWNLOAD_FILE + '?hash=' + result.result.hashCode;
-
-                                    transferFromUploadQToSendQ(parseInt(params.threadId), fileUniqueId,
-                                        JSON.stringify(metadata), function () {
-                                            chatSendQueueHandler();
-                                        });
-                                }
-                            });
-                        });
-
-                        return {
-                            uniqueId: fileUniqueId,
-                            threadId: params.threadId,
-                            participant: userInfo,
-                            content: {
-                                caption: params.content,
-                                file: {
-                                    uniqueId: fileUniqueId,
-                                    fileUrl: url
-                                }
-                            }
-                        };
-                    }
-                    else {
-                        fireEvent('error', {
-                            code: 6302,
-                            message: CHAT_ERRORS[6302]
-                        });
-                    }
-                }
+                getImageFormUrl(url, function (blobImage) {
+                    sendFileMessage({
+                        threadId: params.threadId,
+                        fileUniqueId: fileUniqueId,
+                        file: new File([blobImage], "location.png",{type:"image/png", lastModified:new Date()}),
+                        content: params.caption,
+                        messageType: 'POD_SPACE_PICTURE',
+                        userGroupHash: params.userGroupHash,
+                        metadata: {
+                            mapLink: `https://maps.neshan.org/@${data.center},${data.zoom}z`
+                        }
+                    });
+                });
             }
-
             return {
                 uniqueId: fileUniqueId,
                 threadId: params.threadId,
                 participant: userInfo,
-                content: params.content
+                content: params.caption
             };
         };
 
@@ -8500,6 +9239,10 @@
         this.getImage = getImage;
 
         this.getFile = getFile;
+
+        this.getFileFromPodspace = getFileFromPodspace;
+
+        this.getImageFromPodspace = getImageFromPodspace;
 
         this.uploadFile = uploadFile;
 
@@ -8746,7 +9489,7 @@
             });
         };
 
-        this.replyMessage = function (params, callbacks) {
+        this.replyTextMessage = function (params, callbacks) {
             var uniqueId;
 
             if (typeof params.uniqueId != 'undefined') {
@@ -8760,12 +9503,13 @@
                 message: {
                     chatMessageVOType: chatMessageVOTypes.MESSAGE,
                     typeCode: params.typeCode,
-                    messageType: params.messageType,
+                    messageType: 1,
                     subjectId: params.threadId,
                     repliedTo: params.repliedTo,
-                    content: params.content,
+                    content: params.textMessage,
                     uniqueId: uniqueId,
                     systemMetadata: JSON.stringify(params.systemMetadata),
+                    metadata: JSON.stringify(params.metadata),
                     pushMsgType: 5
                 },
                 callbacks: callbacks
@@ -8782,174 +9526,87 @@
         };
 
         this.replyFileMessage = function (params, callbacks) {
-            var metadata = {},
+            var metadata = {file: {}},
                 fileUploadParams = {},
                 fileUniqueId = Utility.generateUUID();
-
-            if (params) {
-                if (typeof params.file != 'undefined') {
-
-                    var fileName,
-                        fileType,
-                        fileSize,
-                        fileExtension;
-
-                    fileName = params.file.name;
-                    fileType = params.file.type;
-                    fileSize = params.file.size;
-                    fileExtension = params.file.name.split('.')
-                        .pop();
-
-                    fireEvent('fileUploadEvents', {
-                        threadId: params.threadId,
-                        uniqueId: fileUniqueId,
-                        state: 'NOT_STARTED',
-                        progress: 0,
-                        fileInfo: {
-                            fileName: fileName,
-                            fileSize: fileSize
-                        },
-                        fileObject: params.file
-                    });
-
-                    /**
-                     * File is a valid Image
-                     * Should upload to image server
-                     */
-                    if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
-                        fileUploadParams.image = params.file;
-
-                        if (typeof params.xC == 'string') {
-                            fileUploadParams.xC = params.xC;
-                        }
-
-                        if (typeof params.yC == 'string') {
-                            fileUploadParams.yC = params.yC;
-                        }
-
-                        if (typeof params.hC == 'string') {
-                            fileUploadParams.hC = params.hC;
-                        }
-
-                        if (typeof params.wC == 'string') {
-                            fileUploadParams.wC = params.wC;
-                        }
-                    }
-                    else {
-                        fileUploadParams.file = params.file;
-                    }
-
-                    metadata['file'] = {};
-
-                    metadata['file']['originalName'] = fileName;
-                    metadata['file']['mimeType'] = fileType;
-                    metadata['file']['size'] = fileSize;
-
-                    if (typeof params.fileName == 'string') {
-                        fileUploadParams.fileName = params.fileName.split('.')[0] + '.' + fileExtension;
-                    }
-                    else {
-                        fileUploadParams.fileName = fileUniqueId + '.' + fileExtension;
-                    }
-
-                    fileUploadParams.threadId = params.threadId;
-                    fileUploadParams.uniqueId = fileUniqueId;
-                    fileUploadParams.fileObject = params.file;
-                    fileUploadParams.originalFileName = fileName;
-
-                    putInChatUploadQueue({
-                        message: {
-                            chatMessageVOType: chatMessageVOTypes.MESSAGE,
-                            typeCode: params.typeCode,
-                            messageType: params.messageType,
-                            subjectId: params.threadId,
-                            repliedTo: params.repliedTo,
-                            content: params.content,
-                            subjectId: params.threadId,
-                            repliedTo: params.repliedTo,
-                            content: params.content,
-                            metadata: JSON.stringify(metadata),
-                            systemMetadata: JSON.stringify(params.systemMetadata),
-                            uniqueId: fileUniqueId,
-                            pushMsgType: 4
-                        },
-                        callbacks: callbacks
-                    }, function () {
-                        if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
-                            uploadImage(fileUploadParams, function (result) {
-                                if (!result.hasError) {
-                                    metadata['file']['actualHeight'] = result.result.actualHeight;
-                                    metadata['file']['actualWidth'] = result.result.actualWidth;
-                                    metadata['file']['height'] = result.result.height;
-                                    metadata['file']['width'] = result.result.width;
-                                    metadata['file']['name'] = result.result.name;
-                                    metadata['name'] = result.result.name;
-                                    metadata['file']['hashCode'] = result.result.hashCode;
-                                    metadata['file']['id'] = result.result.id;
-                                    metadata['id'] = result.result.id;
-                                    metadata['file']['link'] = SERVICE_ADDRESSES.FILESERVER_ADDRESS +
-                                        SERVICES_PATH.GET_IMAGE + '?imageId=' +
-                                        result.result.id + '&hashCode=' +
-                                        result.result.hashCode;
-
-                                    transferFromUploadQToSendQ(
-                                        parseInt(params.threadId), fileUniqueId,
-                                        JSON.stringify(metadata), function () {
-                                            chatSendQueueHandler();
-                                        });
-                                }
-                            });
-                        }
-                        else {
-                            uploadFile(fileUploadParams, function (result) {
-                                if (!result.hasError) {
-                                    metadata['file']['name'] = result.result.name;
-                                    metadata['name'] = result.result.name;
-                                    metadata['file']['hashCode'] = result.result.hashCode;
-                                    metadata['file']['id'] = result.result.id;
-                                    metadata['id'] = result.result.id;
-                                    metadata['file']['link'] = SERVICE_ADDRESSES.FILESERVER_ADDRESS +
-                                        SERVICES_PATH.GET_FILE + '?fileId=' +
-                                        result.result.id + '&hashCode=' +
-                                        result.result.hashCode;
-
-                                    transferFromUploadQToSendQ(
-                                        parseInt(params.threadId), fileUniqueId,
-                                        JSON.stringify(metadata), function () {
-                                            chatSendQueueHandler();
-                                        });
-                                }
-                            });
-                        }
-                    });
-
-                    return {
-                        uniqueId: fileUniqueId,
-                        threadId: params.threadId,
-                        participant: userInfo,
-                        content: {
-                            caption: params.content,
-                            file: {
-                                uniqueId: fileUniqueId,
-                                fileName: fileName,
-                                fileSize: fileSize,
-                                fileObject: params.file
-                            }
-                        }
-                    };
-                }
-                else {
-                    fireEvent('error', {
-                        code: 6302,
-                        message: CHAT_ERRORS[6302]
-                    });
-                }
+            if (!params.userGroupHash || params.userGroupHash.length == 0 || typeof (params.userGroupHash) != 'string') {
+                fireEvent('error', {
+                    code: 6304,
+                    message: CHAT_ERRORS[6304]
+                });
+                return;
+            } else {
+                fileUploadParams.userGroupHash = params.userGroupHash;
             }
+            return chatUploadHandler({
+                threadId: params.threadId,
+                file: params.file,
+                fileUniqueId: fileUniqueId
+            }, function (uploadHandlerResult, uploadHandlerMetadata, fileType, fileExtension) {
+                fileUploadParams = Object.assign(fileUploadParams, uploadHandlerResult);
+                putInChatUploadQueue({
+                    message: {
+                        chatMessageVOType: chatMessageVOTypes.MESSAGE,
+                        typeCode: params.typeCode,
+                        messageType: (params.messageType && params.messageType.toUpperCase() !== undefined && chatMessageTypes[params.messageType.toUpperCase()] > 0) ? chatMessageTypes[params.messageType.toUpperCase()] : 1,
+                        subjectId: params.threadId,
+                        repliedTo: params.repliedTo,
+                        content: params.content,
+                        metadata: JSON.stringify(uploadHandlerMetadata),
+                        systemMetadata: JSON.stringify(params.systemMetadata),
+                        uniqueId: fileUniqueId,
+                        pushMsgType: 4
+                    },
+                    callbacks: callbacks
+                }, function () {
+                    if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
+                        uploadImageToPodspaceUserGroup(fileUploadParams, function (result) {
+                            if (!result.hasError) {
+                                metadata['name'] = result.result.name;
+                                metadata['fileHash'] = result.result.hashCode;
+                                metadata['file']['name'] = result.result.name;
+                                metadata['file']['fileHash'] = result.result.hashCode;
+                                metadata['file']['hashCode'] = result.result.hashCode;
+                                metadata['file']['actualHeight'] = result.result.actualHeight;
+                                metadata['file']['actualWidth'] = result.result.actualWidth;
+                                metadata['file']['parentHash'] = result.result.parentHash;
+                                metadata['file']['size'] = result.result.size;
+                                metadata['file']['link'] = `https://podspace.pod.ir/nzh/drive/downloadImage?hash=${result.result.hashCode}`;
+                                transferFromUploadQToSendQ(parseInt(params.threadId), fileUniqueId, JSON.stringify(metadata), function () {
+                                    chatSendQueueHandler();
+                                });
+                            }
+                            else {
+                                deleteFromChatUploadQueue({message: {uniqueId: fileUniqueId}});
+                            }
+                        });
+                    }
+                    else {
+                        uploadFileToPodspace(fileUploadParams, function (result) {
+                            if (!result.hasError) {
+                                metadata['fileHash'] = result.result.hashCode;
+                                metadata['name'] = result.result.name;
+                                metadata['file']['name'] = result.result.name;
+                                metadata['file']['fileHash'] = result.result.hashCode;
+                                metadata['file']['hashCode'] = result.result.hashCode;
+                                metadata['file']['parentHash'] = result.result.parentHash;
+                                metadata['file']['size'] = result.result.size;
+                                transferFromUploadQToSendQ(parseInt(params.threadId), fileUniqueId, JSON.stringify(metadata), function () {
+                                    chatSendQueueHandler();
+                                });
+                            }
+                            else {
+                                deleteFromChatUploadQueue({message: {uniqueId: fileUniqueId}});
+                            }
+                        });
+                    }
+                });
+            });
         };
 
         this.forwardMessage = function (params, callbacks) {
-            var threadId = params.subjectId,
-                messageIdsList = JSON.parse(params.content),
+            var threadId = params.threadId,
+                messageIdsList = JSON.parse(params.messageIds),
                 uniqueIdsList = [];
 
             for (i in messageIdsList) {
@@ -8987,7 +9644,7 @@
                 message: {
                     chatMessageVOType: chatMessageVOTypes.FORWARD_MESSAGE,
                     typeCode: params.typeCode,
-                    subjectId: params.subjectId,
+                    subjectId: params.threadId,
                     repliedTo: params.repliedTo,
                     content: params.content,
                     uniqueId: uniqueIdsList,
@@ -9026,7 +9683,7 @@
                     content: JSON.stringify({
                         type: systemMessageTypes.IS_TYPING
                     }),
-                    subjectId: threadId,
+                    threadId: threadId,
                     uniqueId: uniqueId
                 });
             }, systemMessageIntervalPitch);
@@ -9101,7 +9758,7 @@
             return sendMessage({
                 chatMessageVOType: chatMessageVOTypes.MUTE_THREAD,
                 typeCode: params.typeCode,
-                subjectId: params.subjectId,
+                subjectId: params.threadId,
                 content: {},
                 pushMsgType: 4,
                 token: token
@@ -9116,7 +9773,7 @@
             return sendMessage({
                 chatMessageVOType: chatMessageVOTypes.UNMUTE_THREAD,
                 typeCode: params.typeCode,
-                subjectId: params.subjectId,
+                subjectId: params.threadId,
                 content: {},
                 pushMsgType: 4,
                 token: token
@@ -9127,7 +9784,7 @@
             });
         };
 
-        this.joinThread = function (params, callback) {
+        this.joinPublicThread = function (params, callback) {
             var joinThreadData = {
                 chatMessageVOType: chatMessageVOTypes.JOIN_THREAD,
                 typeCode: params.typeCode,
@@ -9147,11 +9804,31 @@
             });
         };
 
+        this.isPublicThreadNameAvailable = function (params, callback) {
+            var isNameAvailableData = {
+                chatMessageVOType: chatMessageVOTypes.IS_NAME_AVAILABLE,
+                typeCode: params.typeCode,
+                content: '',
+                pushMsgType: 4,
+                token: token
+            };
+            if (params) {
+                if (typeof params.uniqueName === 'string' && params.uniqueName.length > 0) {
+                    isNameAvailableData.content = params.uniqueName;
+                }
+            }
+            return sendMessage(isNameAvailableData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
         this.pinThread = function (params, callback) {
             return sendMessage({
                 chatMessageVOType: chatMessageVOTypes.PIN_THREAD,
                 typeCode: params.typeCode,
-                subjectId: params.subjectId,
+                subjectId: params.threadId,
                 content: {},
                 pushMsgType: 4,
                 token: token
@@ -9166,7 +9843,7 @@
             return sendMessage({
                 chatMessageVOType: chatMessageVOTypes.UNPIN_THREAD,
                 typeCode: params.typeCode,
-                subjectId: params.subjectId,
+                subjectId: params.threadId,
                 content: {},
                 pushMsgType: 4,
                 token: token
@@ -9196,7 +9873,7 @@
 
         this.unPinMessage = unPinMessage;
 
-        this.spamPvThread = function (params, callback) {
+        this.spamPrivateThread = function (params, callback) {
             var spamData = {
                 chatMessageVOType: chatMessageVOTypes.SPAM_PV_THREAD,
                 typeCode: params.typeCode,
@@ -9292,7 +9969,7 @@
             });
         };
 
-        this.getBlocked = function (params, callback) {
+        this.getBlockedList = function (params, callback) {
             var count = 50,
                 offset = 0,
                 content = {};
@@ -9354,7 +10031,7 @@
             });
         };
 
-        this.getNotSeenDuration = function (params, callback) {
+        this.getUserNotSeenDuration = function (params, callback) {
             var content = {};
 
             if (params) {
@@ -9811,8 +10488,8 @@
                     data.email = whereClause.email = params.email;
                 }
 
-                if (typeof params.q === 'string') {
-                    data.q = whereClause.q = params.q;
+                if (typeof params.query === 'string') {
+                    data.q = whereClause.q = params.query;
                 }
 
                 if (typeof params.uniqueId === 'string') {
@@ -9965,7 +10642,7 @@
                                                 result: {
                                                     contacts: cacheData,
                                                     contentCount: contactsCount,
-                                                    hasNext: !(contacts.length < data.size),//(data.offset + data.size < contactsCount && contacts.length > 0),
+                                                    hasNext: !(contacts.length < data.size),
                                                     nextOffset: data.offset + contacts.length
                                                 }
                                             };
@@ -10119,6 +10796,173 @@
             });
         };
 
+        this.createBot = function (params, callback) {
+            var createBotData = {
+                chatMessageVOType: chatMessageVOTypes.CREATE_BOT,
+                typeCode: params.typeCode,
+                content: '',
+                pushMsgType: 4,
+                token: token
+            };
+            if (params) {
+                if (typeof params.botName === 'string' && params.botName.length > 0) {
+                    if (params.botName.substr(-3) === "BOT") {
+                        createBotData.content = params.botName;
+                    } else {
+                        fireEvent('error', {
+                            code: 999,
+                            message: 'Bot name should end in "BOT", ex. "testBOT"'
+                        });
+                        return;
+                    }
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'Insert a bot name to create one!'
+                    });
+                    return;
+                }
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'Insert a bot name to create one!'
+                });
+                return;
+            }
+            return sendMessage(createBotData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.defineBotCommand = function (params, callback) {
+            var defineBotCommandData = {
+                chatMessageVOType: chatMessageVOTypes.DEFINE_BOT_COMMAND,
+                typeCode: params.typeCode,
+                content: {},
+                pushMsgType: 4,
+                token: token
+            }, commandList = [];
+            if (params) {
+                if (typeof params.botName !== 'string' || params.botName.length == 0) {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'You need to insert a botName!'
+                    });
+                    return;
+                }
+                if (!Array.isArray(params.commandList) || !params.commandList.length) {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'Bot Commands List has to be an array of strings.'
+                    });
+                    return;
+                } else {
+                    for (var i = 0; i < params.commandList.length; i++) {
+                        commandList.push('/' + params.commandList[i].trim());
+                    }
+                }
+                defineBotCommandData.content = {
+                    botName: params.botName.trim(),
+                    commandList: commandList
+                };
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to create bot commands'
+                });
+                return;
+            }
+            return sendMessage(defineBotCommandData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.startBot = function (params, callback) {
+            var startBotData = {
+                chatMessageVOType: chatMessageVOTypes.START_BOT,
+                typeCode: params.typeCode,
+                content: {},
+                pushMsgType: 4,
+                token: token
+            };
+            if (params) {
+                if (typeof +params.threadId !== 'number' || params.threadId < 0) {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'Enter a valid Thread Id for Bot to start in!'
+                    });
+                    return;
+                }
+                if (typeof params.botName !== 'string' || params.botName.length == 0) {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'You need to insert a botName!'
+                    });
+                    return;
+                }
+                startBotData.subjectId = +params.threadId;
+                startBotData.content = JSON.stringify({
+                    botName: params.botName.trim()
+                });
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to create bot commands'
+                });
+                return;
+            }
+            return sendMessage(startBotData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.stopBot = function (params, callback) {
+            var stopBotData = {
+                chatMessageVOType: chatMessageVOTypes.STOP_BOT,
+                typeCode: params.typeCode,
+                content: {},
+                pushMsgType: 4,
+                token: token
+            }, commandList = [];
+            if (params) {
+                if (typeof +params.threadId !== 'number' || params.threadId < 0) {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'Enter a valid Thread Id for Bot to stop on!'
+                    });
+                    return;
+                }
+                if (typeof params.botName !== 'string' || params.botName.length == 0) {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'You need to insert a botName!'
+                    });
+                    return;
+                }
+                stopBotData.subjectId = +params.threadId;
+                stopBotData.content = JSON.stringify({
+                    botName: params.botName.trim()
+                });
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to create bot commands'
+                });
+                return;
+            }
+            return sendMessage(stopBotData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
         this.mapReverse = function (params, callback) {
             var data = {};
 
@@ -10237,7 +11081,7 @@
                         data.origin = params.origin.lat + ',' + parseFloat(params.origin.lng);
                     }
                     else {
-                        // Throw Error
+                        console.log('No origin has been selected!');
                     }
                 }
 
@@ -10246,7 +11090,7 @@
                         data.destination = params.destination.lat + ',' + parseFloat(params.destination.lng);
                     }
                     else {
-                        // Throw Error
+                        console.log('No destination has been selected!');
                     }
                 }
 
