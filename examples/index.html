@@ -1012,18 +1012,19 @@
         }
 
         function forwardMessage(destination, messageIds) {
+
             chatAgent.forwardMessage({
                 threadId: destination,
                 messageIds: messageIds
             }, {
                 onSent: function (result) {
-                    console.log(result.uniqueId + " \t has been Sent! (FORWARD)");
+                    console.log(result.uniqueId + "has been Sent! (FORWARD)");
                 },
                 onDeliver: function (result) {
-                    console.log(result.uniqueId + " \t has been Delivered! (FORWARD)");
+                    console.log(result.uniqueId + "has been Delivered! (FORWARD)");
                 },
                 onSeen: function (result) {
-                    console.log(result.uniqueId + " \t has been Seen! (FORWARD)");
+                    console.log(result.uniqueId + "has been Seen! (FORWARD)");
                 }
             });
         }
