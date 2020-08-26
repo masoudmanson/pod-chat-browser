@@ -9606,12 +9606,10 @@
 
         this.forwardMessage = function (params, callbacks) {
             var threadId = params.threadId,
-                messageIdsList = JSON.parse(params.messageIds),
+                messageIdsList = params.messageIds,
                 uniqueIdsList = [];
 
             for (i in messageIdsList) {
-                var messageId = messageIdsList[i];
-
                 if (!threadCallbacks[threadId]) {
                     threadCallbacks[threadId] = {};
                 }
@@ -9646,7 +9644,7 @@
                     typeCode: params.typeCode,
                     subjectId: params.threadId,
                     repliedTo: params.repliedTo,
-                    content: params.content,
+                    content: messageIdsList,
                     uniqueId: uniqueIdsList,
                     metadata: JSON.stringify(params.metadata),
                     pushMsgType: 5

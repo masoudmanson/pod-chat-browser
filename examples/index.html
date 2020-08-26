@@ -76,7 +76,7 @@
             fullResponseObject: false,
             mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
             // typeCode: "talk",
-            token: "b170315e2c39451f9896706a417a2a2a",
+            token: "436a5729fd7e47e882e94efc656579a2",
             // token: "f19933ae1b1e424db9965a243bf3bcd3", // {**REQUIRED**} SSO Token ZiZi
             // token: "81025b3fbc1a4f7184c3600a2f874673", //  {**REQUIRED**} SSO Token JiJi
             // token: "3c4d62b6068043aa898cf7426d5cae68", // {**REQUIRED**} SSO Token FiFi
@@ -436,7 +436,7 @@
              * @param destination
              * @param messageIds
              */
-            // forwardMessage(1431, [17259, 17258]);
+            // forwardMessage(57583, [592482, 592481]);
 
             /**
              * GET MESSAGE SEEN LIST
@@ -1013,8 +1013,8 @@
 
         function forwardMessage(destination, messageIds) {
             chatAgent.forwardMessage({
-                subjectId: destination,
-                content: JSON.stringify(messageIds)
+                threadId: destination,
+                messageIds: messageIds
             }, {
                 onSent: function (result) {
                     console.log(result.uniqueId + " \t has been Sent! (FORWARD)");
