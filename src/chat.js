@@ -1860,14 +1860,14 @@
                             fireEvent('threadEvents', {
                                 type: 'THREAD_ADD_PARTICIPANTS',
                                 result: {
-                                    thread: messageContent.id
+                                    thread: messageContent
                                 }
                             });
 
                             fireEvent('threadEvents', {
                                 type: 'THREAD_LAST_ACTIVITY_TIME',
                                 result: {
-                                    thread: messageContent.id
+                                    thread: messageContent
                                 }
                             });
                         }
@@ -3705,10 +3705,9 @@
                 if (messageContent.pinMessageVO) {
                     conversation.pinMessageVO = formatDataToMakePinMessage(messageContent.id, messageContent.pinMessageVO);
                 }
+
                 // return conversation;
                 return JSON.parse(JSON.stringify(conversation));
-
-                return conversation;
             },
 
             /**
@@ -4789,9 +4788,6 @@
                                                                     data: Utility.MD5(JSON.stringify([
                                                                         tempMessage.id,
                                                                         tempMessage.message,
-                                                                        // tempMessage.edited,
-                                                                        // tempMessage.delivered,
-                                                                        // tempMessage.seen,
                                                                         tempMessage.metadata,
                                                                         tempMessage.systemMetadata]))
                                                                 };
@@ -6251,7 +6247,8 @@
              * @return {object} File Object
              */
             getFileFromPodspace = function (params, callback) {
-                getFileData = {};
+                var downloadUniqueId = Utility.generateUUID(),
+                    getFileData = {};
                 if (params) {
                     if (params.hashCode && typeof params.hashCode == 'string') {
                         getFileData.hash = params.hashCode;
@@ -6268,6 +6265,7 @@
                     url: SERVICE_ADDRESSES.PODSPACE_FILESERVER_ADDRESS + SERVICES_PATH.PODSPACE_DOWNLOAD_FILE,
                     method: 'GET',
                     responseType: 'blob',
+                    uniqueId: downloadUniqueId,
                     headers: {
                         '_token_': token,
                         '_token_issuer_': 1
@@ -6286,6 +6284,10 @@
                         });
                     }
                 });
+
+                return {
+                    uniqueId: downloadUniqueId
+                };
             },
 
             /**
@@ -6304,7 +6306,8 @@
              * @return {object} File Object
              */
             getImageFromPodspace = function (params, callback) {
-                getImageData = {
+                var downloadUniqueId = Utility.generateUUID(),
+                    getImageData = {
                     size: params.size,
                     quality: params.quality,
                     crop: params.crop
@@ -6323,6 +6326,7 @@
                         url: SERVICE_ADDRESSES.PODSPACE_FILESERVER_ADDRESS + SERVICES_PATH.PODSPACE_DOWNLOAD_IMAGE,
                         method: 'GET',
                         responseType: 'blob',
+                        uniqueId: downloadUniqueId,
                         headers: {
                             '_token_': token,
                             '_token_issuer_': 1
@@ -6341,6 +6345,10 @@
                             });
                         }
                     });
+
+                    return {
+                        uniqueId: downloadUniqueId
+                    };
                 }
             },
 
@@ -9260,6 +9268,18 @@
                             uniqueId: uniqueId
                         }
                     }, callback);
+                }
+            }
+            return;
+        };
+
+        this.cancelFileDownload = function (params, callback) {
+            if (params) {
+                if (typeof params.uniqueId == 'string') {
+                    var uniqueId = params.uniqueId;
+                    httpRequestObject[eval('uniqueId')] && httpRequestObject[eval('uniqueId')].abort();
+                    httpRequestObject[eval('uniqueId')] && delete (httpRequestObject[eval('uniqueId')]);
+                    callback && callback(uniqueId);
                 }
             }
             return;
