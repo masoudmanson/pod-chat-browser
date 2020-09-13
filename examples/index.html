@@ -436,7 +436,7 @@
              * @param destination
              * @param messageIds
              */
-            // forwardMessage(1431, [17259, 17258]);
+            // forwardMessage(57583, [592482, 592481]);
 
             /**
              * GET MESSAGE SEEN LIST
@@ -1012,18 +1012,19 @@
         }
 
         function forwardMessage(destination, messageIds) {
+
             chatAgent.forwardMessage({
-                subjectId: destination,
-                content: JSON.stringify(messageIds)
+                threadId: destination,
+                messageIds: messageIds
             }, {
                 onSent: function (result) {
-                    console.log(result.uniqueId + " \t has been Sent! (FORWARD)");
+                    console.log(result.uniqueId + "has been Sent! (FORWARD)");
                 },
                 onDeliver: function (result) {
-                    console.log(result.uniqueId + " \t has been Delivered! (FORWARD)");
+                    console.log(result.uniqueId + "has been Delivered! (FORWARD)");
                 },
                 onSeen: function (result) {
-                    console.log(result.uniqueId + " \t has been Seen! (FORWARD)");
+                    console.log(result.uniqueId + "has been Seen! (FORWARD)");
                 }
             });
         }

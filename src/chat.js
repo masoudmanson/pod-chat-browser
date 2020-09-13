@@ -3658,6 +3658,7 @@
                 if (messageContent.pinMessageVO) {
                     conversation.pinMessageVO = formatDataToMakePinMessage(messageContent.id, messageContent.pinMessageVO);
                 }
+
                 // return conversation;
                 return JSON.parse(JSON.stringify(conversation));
             },
@@ -6293,7 +6294,6 @@
                         quality: params.quality,
                         crop: params.crop
                     };
-
                 if (params) {
                     if (params.hashCode && typeof params.hashCode == 'string') {
                         getImageData.hash = params.hashCode;
