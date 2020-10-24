@@ -5645,7 +5645,7 @@
                     }
 
                     if (typeof params.metadata == 'object') {
-                        threadInfoContent.metadata = params.metadata;
+                        threadInfoContent.metadata = JSON.parse(JSON.stringify(params.metadata));
                     } else if (typeof params.metadata == 'string') {
                         try {
                             threadInfoContent.metadata = JSON.parse(params.metadata);
