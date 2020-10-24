@@ -1115,7 +1115,7 @@
                                     }
                                 }
 
-                                resultData = {
+                                var resultData = {
                                     user: currentUser
                                 };
 
