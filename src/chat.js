@@ -286,7 +286,7 @@
             httpRequestObject = {},
             connectionCheckTimeout = params.connectionCheckTimeout,
             connectionCheckTimeoutThreshold = params.connectionCheckTimeoutThreshold,
-            httpRequestTimeout = (params.httpRequestTimeout >= 0) ? params.httpRequestTimeout : 30000,
+            httpRequestTimeout = (params.httpRequestTimeout >= 0) ? params.httpRequestTimeout : 0,
             httpUploadRequestTimeout = (params.httpUploadRequestTimeout >= 0) ? params.httpUploadRequestTimeout : 0,
             actualTimingLog = (params.asyncLogging.actualTiming && typeof params.asyncLogging.actualTiming === 'boolean')
                 ? params.asyncLogging.actualTiming
@@ -767,12 +767,12 @@
                 httpRequestObject[eval('fileUploadUniqueId')].responseType = xhrResponseType;
 
                 if (data && typeof data === 'object' && (data.hasOwnProperty('image') || data.hasOwnProperty('file'))) {
-                    httpRequestObject[eval('fileUploadUniqueId')].timeout = (settings && typeof parseInt(settings.timeout) > 0 && settings.timeout > 0)
-                        ? settings.timeout
-                        : httpUploadRequestTimeout;
-                } else {
                     httpRequestObject[eval('fileUploadUniqueId')].timeout = (settings && typeof parseInt(settings.uploadTimeout) > 0 && settings.uploadTimeout > 0)
                         ? settings.uploadTimeout
+                        : httpUploadRequestTimeout;
+                } else {
+                    httpRequestObject[eval('fileUploadUniqueId')].timeout = (settings && typeof parseInt(settings.timeout) > 0 && settings.timeout > 0)
+                        ? settings.timeout
                         : httpRequestTimeout;
                 }
 
@@ -962,7 +962,8 @@
                                 result: {
                                     response: httpRequestObject[eval('fileUploadUniqueId')].response,
                                     responseText: (xhrResponseType === 'text') ? httpRequestObject[eval('fileUploadUniqueId')].responseText : '',
-                                    responseHeaders: httpRequestObject[eval('fileUploadUniqueId')].getAllResponseHeaders()
+                                    responseHeaders: httpRequestObject[eval('fileUploadUniqueId')].getAllResponseHeaders(),
+                                    responseContentType: httpRequestObject[eval('fileUploadUniqueId')].getResponseHeader('content-type')
                                 }
                             });
                         } else {
@@ -6236,40 +6237,52 @@
                     }
                 }
 
-                httpRequest({
-                    url: SERVICE_ADDRESSES.PODSPACE_FILESERVER_ADDRESS + SERVICES_PATH.PODSPACE_DOWNLOAD_FILE,
-                    method: 'GET',
-                    responseType: 'blob',
-                    uniqueId: downloadUniqueId,
-                    headers: {
-                        '_token_': token,
-                        '_token_issuer_': 1,
-                        // 'Range': 'bytes=100-200'
-                    },
-                    data: getFileData
-                }, function (result) {
-                    if (!result.hasError) {
-                        callback({
-                            hasError: result.hasError,
-                            result: result.result.response
-                        });
-                    } else {
-                        callback({
-                            hasError: true
-                        });
-                    }
-                });
+                if(params.responseType === 'link') {
+                    var returnLink = SERVICE_ADDRESSES.PODSPACE_FILESERVER_ADDRESS + SERVICES_PATH.PODSPACE_DOWNLOAD_FILE +`?hash=${params.hashCode}&_token_=${token}&_token_issuer_=1`;
 
-                return {
-                    uniqueId: downloadUniqueId,
-                    cancel: function () {
-                        cancelFileDownload({
-                            uniqueId: downloadUniqueId
-                        }, function () {
-                            console.log(`❌ "${downloadUniqueId}" - File download has been canceled!`);
-                        });
-                    }
-                };
+                    callback({
+                        hasError: false,
+                        type: 'link',
+                        result: returnLink
+                    });
+                } else {
+
+                    httpRequest({
+                        url: SERVICE_ADDRESSES.PODSPACE_FILESERVER_ADDRESS + SERVICES_PATH.PODSPACE_DOWNLOAD_FILE,
+                        method: 'GET',
+                        responseType: 'blob',
+                        uniqueId: downloadUniqueId,
+                        headers: {
+                            '_token_': token,
+                            '_token_issuer_': 1,
+                            // 'Range': 'bytes=100-200'
+                        },
+                        data: getFileData
+                    }, function (result) {
+                        if (!result.hasError) {
+                            callback({
+                                hasError: result.hasError,
+                                result: result.result.response,
+                                type: 'blob'
+                            });
+                        } else {
+                            callback({
+                                hasError: true
+                            });
+                        }
+                    });
+
+                    return {
+                        uniqueId: downloadUniqueId,
+                        cancel: function () {
+                            cancelFileDownload({
+                                uniqueId: downloadUniqueId
+                            }, function () {
+                                console.log(`❌ "${downloadUniqueId}" - File download has been canceled!`);
+                            });
+                        }
+                    };
+                }
             },
 
             /**
@@ -6305,39 +6318,91 @@
                         return;
                     }
 
-                    httpRequest({
-                        url: SERVICE_ADDRESSES.PODSPACE_FILESERVER_ADDRESS + SERVICES_PATH.PODSPACE_DOWNLOAD_IMAGE,
-                        method: 'GET',
-                        responseType: 'blob',
-                        uniqueId: downloadUniqueId,
-                        headers: {
-                            '_token_': token,
-                            '_token_issuer_': 1
-                        },
-                        data: getImageData
-                    }, function (result) {
-                        if (!result.hasError) {
-                            callback({
-                                hasError: result.hasError,
-                                result: result.result.response
-                            });
-                        } else {
-                            callback({
-                                hasError: true
-                            });
-                        }
-                    });
+                    if(params.responseType === 'link') {
+                        var returnLink = SERVICE_ADDRESSES.PODSPACE_FILESERVER_ADDRESS + SERVICES_PATH.PODSPACE_DOWNLOAD_IMAGE +`?hash=${params.hashCode}&_token_=${token}&_token_issuer_=1&size=${params.size}&quality=${params.quality}&crop=${params.crop}`;
 
-                    return {
-                        uniqueId: downloadUniqueId,
-                        cancel: function () {
-                            cancelFileDownload({
-                                uniqueId: downloadUniqueId
-                            }, function () {
-                                console.log(`❌ "${downloadUniqueId}" - Image download has been canceled!`);
-                            });
-                        }
-                    };
+                        callback({
+                            hasError: false,
+                            type: 'link',
+                            result: returnLink
+                        });
+                    } else if(params.responseType === 'base64') {
+                        httpRequest({
+                            url: SERVICE_ADDRESSES.PODSPACE_FILESERVER_ADDRESS + SERVICES_PATH.PODSPACE_DOWNLOAD_IMAGE,
+                            method: 'GET',
+                            uniqueId: downloadUniqueId,
+                            responseType: 'blob',
+                            headers: {
+                                '_token_': token,
+                                '_token_issuer_': 1
+                            },
+                            data: getImageData
+                        }, function (result) {
+                            if (!result.hasError) {
+                                var fr = new FileReader();
+
+                                fr.onloadend = function () {
+                                    callback({
+                                        hasError: result.hasError,
+                                        type: 'base64',
+                                        result: fr.result
+                                    });
+                                }
+
+                                fr.readAsDataURL(result.result.response);
+                            } else {
+                                callback({
+                                    hasError: true
+                                });
+                            }
+                        });
+
+                        return {
+                            uniqueId: downloadUniqueId,
+                            cancel: function () {
+                                cancelFileDownload({
+                                    uniqueId: downloadUniqueId
+                                }, function () {
+                                    console.log(`❌ "${downloadUniqueId}" - Image download has been canceled!`);
+                                });
+                            }
+                        };
+                    } else {
+                        httpRequest({
+                            url: SERVICE_ADDRESSES.PODSPACE_FILESERVER_ADDRESS + SERVICES_PATH.PODSPACE_DOWNLOAD_IMAGE,
+                            method: 'GET',
+                            responseType: 'blob',
+                            uniqueId: downloadUniqueId,
+                            headers: {
+                                '_token_': token,
+                                '_token_issuer_': 1
+                            },
+                            data: getImageData
+                        }, function (result) {
+                            if (!result.hasError) {
+                                callback({
+                                    hasError: result.hasError,
+                                    type: 'blob',
+                                    result: result.result.response
+                                });
+                            } else {
+                                callback({
+                                    hasError: true
+                                });
+                            }
+                        });
+
+                        return {
+                            uniqueId: downloadUniqueId,
+                            cancel: function () {
+                                cancelFileDownload({
+                                    uniqueId: downloadUniqueId
+                                }, function () {
+                                    console.log(`❌ "${downloadUniqueId}" - Image download has been canceled!`);
+                                });
+                            }
+                        };
+                    }
                 }
             },
 
@@ -8179,6 +8244,15 @@
             }
         };
 
+        this.off = function (eventName, eventId) {
+            if (eventCallbacks[eventName]) {
+                if(eventCallbacks[eventName].hasOwnProperty(eventId)) {
+                    delete eventCallbacks[eventName][eventId];
+                    return eventId;
+                }
+            }
+        }
+
         this.getPeerId = function () {
             return peerId;
         };
@@ -8187,7 +8261,35 @@
             return userInfo;
         };
 
-        this.getUserInfo = getUserInfo;
+        this.getUserInfo = function(callback) {
+            return sendMessage({
+                chatMessageVOType: chatMessageVOTypes.USER_INFO,
+                typeCode: generalTypeCode
+            }, {
+                onResult: function (result) {
+                    var returnData = {
+                        hasError: result.hasError,
+                        cache: false,
+                        errorMessage: result.errorMessage,
+                        errorCode: result.errorCode
+                    };
+
+                    if (!returnData.hasError) {
+
+                        var messageContent = result.result;
+                        var currentUser = formatDataToMakeUser(messageContent);
+
+                        var resultData = {
+                            user: currentUser
+                        };
+
+                        returnData.result = resultData;
+
+                        callback && callback(returnData);
+                    }
+                }
+            });
+        };
 
         this.getThreads = getThreads;
 
