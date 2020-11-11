@@ -11,15 +11,13 @@
 
     function Chat(params) {
         if (typeof (require) !== 'undefined' && typeof (exports) !== 'undefined') {
-            Async = require('podasync-ws-only'),
-                ChatUtility = require('./utility/utility.js'),
-                Dexie = require('dexie').default || require('dexie');
-
-            var QueryString = require('querystring');
+            Async = require('podasync-ws-only');
+            ChatUtility = require('./utility/utility.js');
+            Dexie = require('dexie').default || require('dexie');
         } else {
-            Async = window.POD.Async,
-                ChatUtility = window.POD.ChatUtility,
-                Dexie = window.Dexie;
+            Async = window.POD.Async;
+            ChatUtility = window.POD.ChatUtility;
+            Dexie = window.Dexie;
         }
 
         /*******************************************************
@@ -39,7 +37,7 @@
             productEnv = (typeof navigator != 'undefined') ? navigator.product : 'undefined',
             db,
             queueDb,
-            hasCache = productEnv != 'ReactNative' && typeof Dexie != 'undefined',
+            hasCache = productEnv !== 'ReactNative' && typeof Dexie != 'undefined',
             enableCache = (params.enableCache && typeof params.enableCache === 'boolean') ? params.enableCache : false,
             canUseCache = hasCache && enableCache,
             isCacheReady = false,
@@ -171,8 +169,6 @@
             },
             systemMessageIntervalPitch = params.systemMessageIntervalPitch || 1000,
             isTypingInterval,
-            recordingVoiceInterval,
-            upoadingInterval,
             protocol = params.protocol || 'websocket',
             queueHost = params.queueHost,
             queuePort = params.queuePort,
@@ -292,7 +288,7 @@
                 ? params.asyncLogging.actualTiming
                 : false,
             minIntegerValue = Number.MAX_SAFE_INTEGER * -1,
-            maxIntegerValue = Number.MAX_SAFE_INTEGER * 1,
+            maxIntegerValue = Number.MAX_SAFE_INTEGER,
             chatSendQueue = [],
             chatWaitQueue = [],
             chatUploadQueue = [],
@@ -5724,7 +5720,7 @@
                             }
                         });
                     } else {
-                        if(Object.keys(threadInfoContent.metadata).length ==  0) {
+                        if (Object.keys(threadInfoContent.metadata).length == 0) {
                             delete threadInfoContent.metadata;
                         }
 
@@ -7934,7 +7930,7 @@
                 }
             },
 
-            objectDeepMerger = function (...arguments) {
+            objectDeepMerger = function (...args) {
                 var target = {};
                 var merger = function (obj) {
                     for (var prop in obj) {
@@ -7947,8 +7943,8 @@
                         }
                     }
                 };
-                for (var i = 0; i < arguments.length; i++) {
-                    merger(arguments[i]);
+                for (var i = 0; i < args.length; i++) {
+                    merger(args[i]);
                 }
                 return target;
             },
