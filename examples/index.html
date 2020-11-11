@@ -76,14 +76,15 @@
             fullResponseObject: false,
             mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
             // typeCode: "talk",
-            token: "7ba398f6cebb4f5185941237d5e2ebce",
-            // token: "f19933ae1b1e424db9965a243bf3bcd3", // {**REQUIRED**} SSO Token ZiZi
-            // token: "81025b3fbc1a4f7184c3600a2f874673", //  {**REQUIRED**} SSO Token JiJi
-            // token: "3c4d62b6068043aa898cf7426d5cae68", // {**REQUIRED**} SSO Token FiFi
-            // token: "49c1a43116764ae2ab965a6c40bb46d3", // {**REQUIRED**} SSO Token Masoud
-            // token: "bebc31c4ead6458c90b607496dae25c6", // {**REQUIRED**} SSO Token Alexi
-            // token: "e4f1d5da7b254d9381d0487387eabb0a", // {**REQUIRED**} SSO Token Felfeli
-            // token: "6f5b9aba52414efaa0073a1178c5881f", // maBOT
+            token: "235bf77ee074471182b8f8c658d34ab2",
+            // token: "3dd6895c8dc64f93bcd43b58dcc2aab3", // Masoud Amjadi
+            // token: "9c627a9125d04ebf8455bf57bb33d2a9", // Pooria Pahlevani
+            // token: "f6464d4e0f044314b1a668f90287ba26", // Nadia Anvari
+            // token: "99506f7c32c849a9a6e2a954303b81ee", // Farhad Kheirkhah
+            // token: "979aa5de03934c73a5c6c855bd80cb04", // Mahyar Zhiani
+            // token: "a47c9016c8354236abc01395093bed5c", // Ahmad Sajadi
+            // token: "d3114ed2fd2a49b4a0a386e727c9e5fa", // Saba Safavi
+            // token: "872110b9c6944eda9bc98ef2a68dcf50", // Leila Nemati
             wsConnectionWaitTime: 500, // Time out to wait for socket to get ready after open
             connectionRetryInterval: 5000, // Time interval to retry registering device or registering server
             connectionCheckTimeout: 10000, // Socket connection live time on server
@@ -103,8 +104,7 @@
             PID,
             P2P_THREAD_ID = 293;
 
-        chatAgent.on("chatReady", function () {
-
+        var chatReadyInstance = chatAgent.on("chatReady", function () {
             /*******************************************************
              *                       U S E R                       *
              *******************************************************/
@@ -113,6 +113,9 @@
             //     messageId: 109291,
             //     ownerId: 254
             // })
+
+            // var currentUser = chatAgent.getCurrentUser();
+            // console.log(currentUser)
 
             // chatAgent.getAllUnreadMessagesCount({}, function(result){
             //     console.log('All unread messages count is: ', result);
@@ -124,7 +127,7 @@
             // getUserInfo();
 
             // chatAgent.startTyping({
-            //     threadId: 4441
+            //     threadId: 13554
             // });
             //
             // setTimeout(function () {
@@ -155,11 +158,11 @@
              * @param threadType
              */
             // createThread([{
-            //   id: 581,
-            //   type: "TO_BE_USER_CONTACT_ID"
+            //     "id": 934363,
+            //     "type": "TO_BE_USER_CONTACT_ID"
             // }, {
-            //   id: 582,
-            //   type: "TO_BE_USER_CONTACT_ID"
+            //     "id": 3459620,
+            //     "type": "TO_BE_USER_CONTACT_ID"
             // }], "NORMAL");
 
             /**
@@ -578,8 +581,8 @@
             //     },
             //     mapWidth: 1200,
             //     mapHeight: 500,
-            //     threadId: 54436,
-            //     userGroupHash: '5GW93QH695O7HC',
+            //     threadId: 201,
+            //     userGroupHash: 'K1WFONDNRZ5CS8',
             //     caption: "This is the Address on map!",
             //     systemMetadata: {
             //         time: new Date()
@@ -1039,7 +1042,19 @@
             createThreadParams = {
                 title: "Thread Title Sample",
                 type: threadTypeText,
-                invitees: []
+                invitees: [],
+                message: {
+                    uniqueId: "9766b140-24a9-49fb-a02e-6aff70we5a6",
+                    text: "This is a new Mesage",
+                    metadata: {
+                        messageTime: new Date()
+                    },
+                    systemMetadata: {
+                        id: new Date().getTime()
+                    },
+                    type: 1
+                    // forwardedMessageIds: [19633, 19632, 19631]
+                }
             };
 
             if (Array.isArray(invitees)) {
@@ -1572,6 +1587,12 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
         <label for="fileHash">HashCode:</label>
         <input type="text" name="fileHash" id="fileHash" value="">
         <button type="button" name="button" id="getFileFromPodspace">Get File</button>
+
+        <label for="fileResponseType">Response Type</label>
+        <select name="fileResponseType" id="fileResponseType">
+            <option value="link">link</option>
+            <option value="blob">blob</option>
+        </select>
         <br>
         <div id="getFileFromPodspaceResult"></div>
     </fieldset>
@@ -1593,6 +1614,13 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
         <input type="text" name="imageQuality" id="imageQuality" value="1"><br>
         <label for="imageCrop">Crop:</label>
         <input type="checkbox" name="imageCrop" id="imageCrop"><br>
+
+        <label for="imageResponseType">Response Type</label>
+        <select name="imageResponseType" id="imageResponseType">
+            <option value="link">link</option>
+            <option value="blob">blob</option>
+            <option value="base64" selected>base64</option>
+        </select>
 
         <button type="button" name="button" id="getImageFromPodspace">Get Image</button>
         <br>
@@ -2051,35 +2079,42 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
             var hashCode = document.getElementById("fileHash").value;
 
             chatAgent.getFileFromPodspace({
-                hashCode: hashCode
+                hashCode: hashCode,
+                responseType: document.getElementById('fileResponseType').value
             }, function (result) {
                 if (!result.hasError) {
-                    if (result.result.type.match(/image/g)) {
-                        var reader = new FileReader();
-
-                        reader.onloadend = function () {
-                            var image = new Image;
-                            image.src = reader.result;
-                            var fileOutput = document.createElement('a');
-                            fileOutput.href = reader.result;
-                            fileOutput.download = 'image.jpg';
-                            fileOutput.appendChild(image);
-                            document.getElementById('getFileFromPodspaceResult').appendChild(fileOutput);
-                        };
-
-                        reader.readAsDataURL(result.result);
-                    } else {
-                        var fileUrl = URL.createObjectURL(result.result);
+                    if(result.type == 'link') {
                         var fileOutput = document.createElement('a');
-                        fileOutput.addEventListener('load', function () {
-                            URL.revokeObjectURL(fileUrl)
-                        });
-                        fileOutput.innerText = 'Download File';
-                        fileOutput.href = fileUrl;
-                        fileOutput.download = 'Darkthrone.svg';
+                        fileOutput.href = result.result;
+                        fileOutput.innerText = result.result;
                         document.getElementById('getFileFromPodspaceResult').appendChild(fileOutput);
-                    }
+                    } else {
+                        if (result.result.type.match(/image/g)) {
+                            var reader = new FileReader();
 
+                            reader.onloadend = function () {
+                                var image = new Image;
+                                image.src = reader.result;
+                                var fileOutput = document.createElement('a');
+                                fileOutput.href = reader.result;
+                                fileOutput.download = 'image.jpg';
+                                fileOutput.appendChild(image);
+                                document.getElementById('getFileFromPodspaceResult').appendChild(fileOutput);
+                            };
+
+                            reader.readAsDataURL(result.result);
+                        } else {
+                            var fileUrl = URL.createObjectURL(result.result);
+                            var fileOutput = document.createElement('a');
+                            fileOutput.addEventListener('load', function () {
+                                URL.revokeObjectURL(fileUrl)
+                            });
+                            fileOutput.innerText = 'Download File';
+                            fileOutput.href = fileUrl;
+                            fileOutput.download = 'Darkthrone.svg';
+                            document.getElementById('getFileFromPodspaceResult').appendChild(fileOutput);
+                        }
+                    }
                 }
             });
         });
@@ -2090,22 +2125,48 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
                 hashCode: document.getElementById("imageHash").value,
                 size: document.getElementById("imageSize").value,
                 quality: document.getElementById("imageQuality").value,
-                crop: document.getElementById("imageCrop").checked
+                crop: document.getElementById("imageCrop").checked,
+                responseType: document.getElementById('imageResponseType').value
             }, function (result) {
                 if (!result.hasError) {
-                    var reader = new FileReader();
+                    switch(result.type) {
+                        case 'link':
+                            var output = document.createElement('img');
+                            output.src = result.result;
+                            document.getElementById('getImageFromPodspaceResult').appendChild(output);
+                            break;
 
-                    reader.onloadend = function () {
-                        var image = new Image;
-                        image.src = reader.result;
-                        var fileOutput = document.createElement('a');
-                        fileOutput.href = reader.result;
-                        fileOutput.download = 'image.jpg';
-                        fileOutput.appendChild(image);
-                        document.getElementById('getImageFromPodspaceResult').appendChild(fileOutput);
-                    };
+                        case 'base64':
+                            // var reader = new FileReader();
+                            // reader.onloadend = function () {
+                            //     console.log('read as dataturl', reader.result);
+                            //     document.getElementById('getImageFromPodspaceResult').innerHTML = `<img src="${reader.result}" >`;
+                            //     reader = null;
+                            // };
+                            // reader.readAsDataURL(result.result);
 
-                    reader.readAsDataURL(result.result);
+                            // Base64 Model
+                            console.log('Base 64 from SDK', result.result);
+                            document.getElementById('getImageFromPodspaceResult').innerHTML = `<img src="${result.result}" >`;
+                            break;
+
+                        case 'blob':
+                        default:
+                            var reader = new FileReader();
+
+                            reader.onloadend = function () {
+                                var image = new Image;
+                                image.src = reader.result;
+                                var fileOutput = document.createElement('a');
+                                fileOutput.href = reader.result;
+                                fileOutput.download = 'image.jpg';
+                                fileOutput.appendChild(image);
+                                document.getElementById('getImageFromPodspaceResult').appendChild(fileOutput);
+                            };
+
+                            reader.readAsDataURL(result.result);
+                            break;
+                    }
                 }
             });
         });
