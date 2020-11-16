@@ -7912,12 +7912,15 @@
                                 let oldMetadata = JSON.parse(message.metadata),
                                     newMetadata = JSON.parse(metadata);
                                 var finalMetaData = objectDeepMerger(newMetadata, oldMetadata);
-                                if (message && typeof message.content === 'object' && typeof message.content.message !== 'undefined') {
+
+                                if (message && message.content && typeof message.content === 'object' && typeof message.content.hasOwnProperty('message')) {
                                     message.content.message['metadata'] = JSON.stringify(finalMetaData);
                                 }
-                                if (message && typeof message.content === 'object' && typeof message.content.metadata !== 'undefined') {
+
+                                if (message && message.content && typeof message.content === 'object' && typeof message.content.hasOwnProperty('metadata')) {
                                     message.content['metadata'] = JSON.stringify(finalMetaData);
                                 }
+
                                 if (message.chatMessageVOType == 21) {
                                     getImageDownloadLinkFromPodspace({
                                         hashCode: finalMetaData.fileHash
@@ -7927,6 +7930,7 @@
                                         }
                                     });
                                 }
+
                                 message.metadata = JSON.stringify(finalMetaData);
                             } catch (e) {
                                 console.log(e);
