@@ -3499,7 +3499,7 @@
                 var participant = {
                     id: messageContent.id,
                     coreUserId: messageContent.coreUserId,
-                    threadId: threadId,
+                    threadId: parseInt(threadId),
                     sendEnable: messageContent.sendEnable,
                     receiveEnable: messageContent.receiveEnable,
                     firstName: messageContent.firstName,
