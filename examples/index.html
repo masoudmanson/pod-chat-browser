@@ -3,7 +3,7 @@
 
 <head>
     <title>PodChat Browser Version</title>
-    <link href="http://fams.fanapsoft.com/TSK/favicon.ico" rel="icon" type="image/x-icon"/>
+    <link href="https://talk.pod.ir/styles/images/_common/favicon-32x32.png" rel="icon" type="image/x-icon"/>
 
     <!-- Development Mode -->
     <script type="text/javascript" src="../src/utility/utility.js"></script>
@@ -76,7 +76,7 @@
             fullResponseObject: false,
             mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
             // typeCode: "talk",
-            token: "235bf77ee074471182b8f8c658d34ab2",
+            token: "fe406d9925e74c5bad49e28fd0ff416c",
             // token: "3dd6895c8dc64f93bcd43b58dcc2aab3", // Masoud Amjadi
             // token: "9c627a9125d04ebf8455bf57bb33d2a9", // Pooria Pahlevani
             // token: "f6464d4e0f044314b1a668f90287ba26", // Nadia Anvari
@@ -619,7 +619,7 @@
             //     console.log(result);
             // });
 
-            // addParticipants(42076, 'username', ['spanishBOT']);
+            addParticipants(8543, 'username', ['p.pahlevani']);
 
             /*
              * Start Bot
@@ -844,10 +844,10 @@
                         console.log(result);
                     });
 
-                case 'coreuserid':
+                case 'coreUserids':
                     chatAgent.addParticipants({
                         threadId: threadId,
-                        coreuserids: participants
+                        coreUserids: participants
                     }, function (result) {
                         console.log(result);
                     });
@@ -1492,6 +1492,44 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
 
 <form>
     <fieldset>
+        <legend>Reply File Message</legend>
+        <label for="sendFileThreadReply">Thread Id</label>
+        <input type="text" name="sendFileThread" id="sendFileThreadReply" value="">
+        <br>
+        <label for="sendFileMesageRepliedTo">Message Id</label>
+        <input type="text" name="sendFileThread" id="sendFileMesageRepliedTo" value="">
+        <br>
+        <label for="sendFileUserGroupHashReply">Thread userGroupHash</label>
+        <input type="text" name="sendFileUserGroupHash" id="sendFileUserGroupHashReply" value="">
+        <br>
+
+        <label for="sendFileMessageTypeReply">Message Type</label>
+        <select name="sendFileMessageType" id="sendFileMessageTypeReply">
+            <option value="TEXT">TEXT</option>
+            <option value="POD_SPACE_PICTURE">POD_SPACE_PICTURE</option>
+            <option value="POD_SPACE_VIDEO">POD_SPACE_VIDEO</option>
+            <option value="POD_SPACE_SOUND">POD_SPACE_SOUND</option>
+            <option value="POD_SPACE_VOICE">POD_SPACE_VOICE</option>
+            <option value="POD_SPACE_FILE">POD_SPACE_FILE</option>
+            <option value="LINK">LINK</option>
+        </select>
+        <br>
+
+        <input type="file" name="sendFileInput" id="sendFileInputReply">
+        <br>
+        <label for="sendFileDescriptionReply">Description: </label>
+        <textarea type="text" name="sendFileDescription" id="sendFileDescriptionReply"></textarea>
+        <button type="button" name="button" id="sendFileMessageReply">Reply File Message</button>
+    </fieldset>
+</form>
+
+<br>
+<hr>
+<br>
+
+
+<form>
+    <fieldset>
         <legend>Update Thread Info</legend>
         <label for="updateThreadThreadId">Thread Id</label>
         <input type="text" name="updateThreadThreadId" id="updateThreadThreadId" value="54436">
@@ -1636,17 +1674,17 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
 <form method="POST" action="https://sandbox.pod.ir:8043/srv/basic-platform/nzh/addContacts">
     <fieldset>
         <legend>Add Contact</legend>
-        <label for="firstName">firstName : </label>
-        <input type="text" name="firstName" id="firstName" value="">
+        <label for="firstNameAdd">firstName : </label>
+        <input type="text" name="firstName" id="firstNameAdd" value="">
         <br>
-        <label for="lastName">lastName : </label>
-        <input type="text" name="lastName" id="lastName" value="">
+        <label for="lastNameAdd">lastName : </label>
+        <input type="text" name="lastName" id="lastNameAdd" value="">
         <br>
-        <label for="cellphoneNumber">cellphoneNumber : </label>
-        <input type="text" name="cellphoneNumber" id="cellphoneNumber" value="">
+        <label for="cellphoneNumberAdd">cellphoneNumber : </label>
+        <input type="text" name="cellphoneNumber" id="cellphoneNumberAdd" value="">
         <br>
-        <label for="email">email : </label>
-        <input type="text" name="email" id="email" value="">
+        <label for="emailAdd">email : </label>
+        <input type="text" name="email" id="emailAdd" value="">
         <br>
         <label for="_token_">Token : </label>
         <input type="text" name="_token_">
@@ -1942,6 +1980,45 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
             // }, 100);
         });
 
+
+    /**
+     * REPLY FILE MESSAGE
+     */
+    document.getElementById("sendFileMessageReply")
+        .addEventListener("click", function () {
+            var fileInput = document.getElementById("sendFileInputReply"),
+                image = fileInput.files[0],
+                content = document.getElementById("sendFileDescriptionReply").value,
+                thread = document.getElementById("sendFileThreadReply").value,
+                repliedTo = document.getElementById("sendFileMesageRepliedTo").value,
+                messageType = document.getElementById("sendFileMessageTypeReply").value,
+                userGroupHash = document.getElementById("sendFileUserGroupHashReply").value;
+
+            var instantResult = chatAgent.replyFileMessage({
+                threadId: thread,
+                repliedTo: repliedTo,
+                file: image,
+                content: content,
+                userGroupHash: userGroupHash,
+                messageType: messageType,
+                metadata: {
+                    custom_name: "John Doe"
+                }
+            }, {
+                onSent: function (result) {
+                    console.log(result.uniqueId + " \t has been Sent!");
+                },
+                onDeliver: function (result) {
+                    console.log(result.uniqueId + " \t has been Delivered!");
+                },
+                onSeen: function (result) {
+                    console.log(result.uniqueId + " \t has been Seen!");
+                }
+            });
+
+            console.log("Instant Reply File Message Results", instantResult);
+        });
+
     /**
      * Update Threaf Info
      */
@@ -1964,6 +2041,7 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
             }, function (result) {
                 console.log(result);
             });
+
             //
             // console.log("Instant updateThreadInfo Results", instantResult)
         });
@@ -2079,8 +2157,8 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
             var hashCode = document.getElementById("fileHash").value;
 
             chatAgent.getFileFromPodspace({
-                hashCode: hashCode,
-                responseType: document.getElementById('fileResponseType').value
+                hashCode: 'qef78wse80vs587wserfwv',
+                responseType: 'link'
             }, function (result) {
                 if (!result.hasError) {
                     if(result.type == 'link') {
@@ -2117,6 +2195,8 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
                     }
                 }
             });
+
+
         });
 
     document.getElementById("getImageFromPodspace")
