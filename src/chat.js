@@ -128,6 +128,9 @@
                 THREAD_ALL_BOTS: 69,
                 CONTACT_SYNCED: 90,
                 LOGOUT: 100,
+                LOCATION_PING: 101,
+                CLOSE_THREAD: 102,
+                REMOVE_BOT_COMMANDS: 104,
                 ERROR: 999
             },
             inviteeVOidTypes = {
@@ -2809,6 +2812,49 @@
                         break;
 
                     /**
+                     * Type 102    Close Thread
+                     */
+                    case chatMessageVOTypes.CLOSE_THREAD:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        if (fullResponseObject) {
+                            getThreads({
+                                threadIds: [threadId]
+                            }, function (threadsResult) {
+                                var thread = threadsResult.result.threads[0];
+                                thread.mute = true;
+
+                                fireEvent('threadEvents', {
+                                    type: 'THREAD_CLOSE',
+                                    result: {
+                                        thread: thread
+                                    }
+                                });
+                            });
+                        }
+                        else {
+                            fireEvent('threadEvents', {
+                                type: 'THREAD_CLOSE',
+                                result: {
+                                    thread: threadId
+                                }
+                            });
+                        }
+
+                        break;
+
+                    /**
+                     * Type 104    Remove Bot Commands
+                     */
+                    case chatMessageVOTypes.REMOVE_BOT_COMMANDS:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+                        break;
+
+                    /**
                      * Type 999   All unknown errors
                      */
                     case chatMessageVOTypes.ERROR:
@@ -3807,7 +3853,7 @@
                     editable: pushMessageVO.editable,
                     deletable: pushMessageVO.deletable,
                     delivered: pushMessageVO.delivered,
-                    seen: pushMessageVO.seen,
+                    sseen: pushMessageVO.seen,
                     mentioned: pushMessageVO.mentioned,
                     pinned: pushMessageVO.pinned,
                     participant: undefined,
@@ -4346,11 +4392,7 @@
                     content: {}
                 };
 
-                if (params) {
-                    if (typeof params.summary == 'boolean') {
-                        sendMessageParams.content.summary = params.summary;
-                    }
-                }
+                sendMessageParams.content.summary = params.summary;
 
                 return sendMessage(sendMessageParams, {
                     onResult: function (result) {
@@ -6234,8 +6276,8 @@
                     }
                 }
 
-                if(params.responseType === 'link') {
-                    var returnLink = SERVICE_ADDRESSES.PODSPACE_FILESERVER_ADDRESS + SERVICES_PATH.PODSPACE_DOWNLOAD_FILE +`?hash=${params.hashCode}&_token_=${token}&_token_issuer_=1`;
+                if (params.responseType === 'link') {
+                    var returnLink = SERVICE_ADDRESSES.PODSPACE_FILESERVER_ADDRESS + SERVICES_PATH.PODSPACE_DOWNLOAD_FILE + `?hash=${params.hashCode}&_token_=${token}&_token_issuer_=1`;
 
                     callback({
                         hasError: false,
@@ -6315,15 +6357,15 @@
                         return;
                     }
 
-                    if(params.responseType === 'link') {
-                        var returnLink = SERVICE_ADDRESSES.PODSPACE_FILESERVER_ADDRESS + SERVICES_PATH.PODSPACE_DOWNLOAD_IMAGE +`?hash=${params.hashCode}&_token_=${token}&_token_issuer_=1&size=${params.size}&quality=${params.quality}&crop=${params.crop}`;
+                    if (params.responseType === 'link') {
+                        var returnLink = SERVICE_ADDRESSES.PODSPACE_FILESERVER_ADDRESS + SERVICES_PATH.PODSPACE_DOWNLOAD_IMAGE + `?hash=${params.hashCode}&_token_=${token}&_token_issuer_=1&size=${params.size}&quality=${params.quality}&crop=${params.crop}`;
 
                         callback({
                             hasError: false,
                             type: 'link',
                             result: returnLink
                         });
-                    } else if(params.responseType === 'base64') {
+                    } else if (params.responseType === 'base64') {
                         httpRequest({
                             url: SERVICE_ADDRESSES.PODSPACE_FILESERVER_ADDRESS + SERVICES_PATH.PODSPACE_DOWNLOAD_IMAGE,
                             method: 'GET',
@@ -8204,6 +8246,248 @@
                 return;
             },
 
+            mapReverse = function (params, callback) {
+                var data = {};
+
+                if (params) {
+                    if (parseFloat(params.lat) > 0) {
+                        data.lat = params.lat;
+                    }
+
+                    if (parseFloat(params.lng) > 0) {
+                        data.lng = params.lng;
+                    }
+
+                    data.uniqueId = Utility.generateUUID();
+                }
+
+                var requestParams = {
+                    url: SERVICE_ADDRESSES.MAP_ADDRESS + SERVICES_PATH.REVERSE,
+                    method: 'GET',
+                    data: data,
+                    headers: {
+                        'Api-Key': mapApiKey
+                    }
+                };
+
+                httpRequest(requestParams, function (result) {
+                    if (!result.hasError) {
+                        var responseData = JSON.parse(result.result.responseText);
+
+                        var returnData = {
+                            hasError: result.hasError,
+                            cache: result.cache,
+                            errorMessage: result.message,
+                            errorCode: result.errorCode,
+                            result: responseData
+                        };
+
+                        callback && callback(returnData);
+
+                    } else {
+                        fireEvent('error', {
+                            code: result.errorCode,
+                            message: result.errorMessage,
+                            error: result
+                        });
+                    }
+                });
+            },
+
+            mapSearch = function (params, callback) {
+                var data = {};
+
+                if (params) {
+                    if (typeof params.term === 'string') {
+                        data.term = params.term;
+                    }
+
+                    if (parseFloat(params.lat) > 0) {
+                        data.lat = params.lat;
+                    }
+
+                    if (parseFloat(params.lng) > 0) {
+                        data.lng = params.lng;
+                    }
+
+                    data.uniqueId = Utility.generateUUID();
+                }
+
+                var requestParams = {
+                    url: SERVICE_ADDRESSES.MAP_ADDRESS + SERVICES_PATH.SEARCH,
+                    method: 'GET',
+                    data: data,
+                    headers: {
+                        'Api-Key': mapApiKey
+                    }
+                };
+
+                httpRequest(requestParams, function (result) {
+                    if (!result.hasError) {
+                        var responseData = JSON.parse(result.result.responseText);
+
+                        var returnData = {
+                            hasError: result.hasError,
+                            cache: result.cache,
+                            errorMessage: result.message,
+                            errorCode: result.errorCode,
+                            result: responseData
+                        };
+
+                        callback && callback(returnData);
+
+                    } else {
+                        fireEvent('error', {
+                            code: result.errorCode,
+                            message: result.errorMessage,
+                            error: result
+                        });
+                    }
+                });
+            },
+
+            mapRouting = function (params, callback) {
+                var data = {};
+
+                if (params) {
+                    if (typeof params.alternative === 'boolean') {
+                        data.alternative = params.alternative;
+                    } else {
+                        data.alternative = true;
+                    }
+
+                    if (typeof params.origin === 'object') {
+                        if (parseFloat(params.origin.lat) > 0 && parseFloat(params.origin.lng)) {
+                            data.origin = params.origin.lat + ',' + parseFloat(params.origin.lng);
+                        } else {
+                            console.log('No origin has been selected!');
+                        }
+                    }
+
+                    if (typeof params.destination === 'object') {
+                        if (parseFloat(params.destination.lat) > 0 && parseFloat(params.destination.lng)) {
+                            data.destination = params.destination.lat + ',' + parseFloat(params.destination.lng);
+                        } else {
+                            console.log('No destination has been selected!');
+                        }
+                    }
+
+                    data.uniqueId = Utility.generateUUID();
+                }
+
+                var requestParams = {
+                    url: SERVICE_ADDRESSES.MAP_ADDRESS + SERVICES_PATH.ROUTING,
+                    method: 'GET',
+                    data: data,
+                    headers: {
+                        'Api-Key': mapApiKey
+                    }
+                };
+
+                httpRequest(requestParams, function (result) {
+                    if (!result.hasError) {
+                        var responseData = JSON.parse(result.result.responseText);
+
+                        var returnData = {
+                            hasError: result.hasError,
+                            cache: result.cache,
+                            errorMessage: result.message,
+                            errorCode: result.errorCode,
+                            result: responseData
+                        };
+
+                        callback && callback(returnData);
+
+                    } else {
+                        fireEvent('error', {
+                            code: result.errorCode,
+                            message: result.errorMessage,
+                            error: result
+                        });
+                    }
+                });
+            },
+
+            mapStaticImage = function (params, callback) {
+                var data = {},
+                    url = SERVICE_ADDRESSES.MAP_ADDRESS + SERVICES_PATH.STATIC_IMAGE,
+                    hasError = false;
+
+                if (params) {
+                    if (typeof params.type === 'string') {
+                        data.type = params.type;
+                    } else {
+                        data.type = 'standard-night';
+                    }
+
+                    if (parseInt(params.zoom) > 0) {
+                        data.zoom = params.zoom;
+                    } else {
+                        data.zoom = 15;
+                    }
+
+                    if (parseInt(params.width) > 0) {
+                        data.width = params.width;
+                    } else {
+                        data.width = 800;
+                    }
+
+                    if (parseInt(params.height) > 0) {
+                        data.height = params.height;
+                    } else {
+                        data.height = 600;
+                    }
+
+                    if (typeof params.center === 'object') {
+                        if (parseFloat(params.center.lat) > 0 && parseFloat(params.center.lng)) {
+                            data.center = params.center.lat + ',' + parseFloat(params.center.lng);
+                        } else {
+                            hasError = true;
+                            fireEvent('error', {
+                                code: 6700,
+                                message: CHAT_ERRORS[6700],
+                                error: undefined
+                            });
+                        }
+                    } else {
+                        hasError = true;
+                        fireEvent('error', {
+                            code: 6700,
+                            message: CHAT_ERRORS[6700],
+                            error: undefined
+                        });
+                    }
+
+                    data.key = mapApiKey;
+                }
+
+                var keys = Object.keys(data);
+
+                if (keys.length > 0) {
+                    url += '?';
+
+                    for (var i = 0; i < keys.length; i++) {
+                        var key = keys[i];
+                        url += key + '=' + data[key];
+                        if (i < keys.length - 1) {
+                            url += '&';
+                        }
+                    }
+                }
+
+                var returnData = {
+                    hasError: hasError,
+                    cache: false,
+                    errorMessage: (hasError) ? CHAT_ERRORS[6700] : '',
+                    errorCode: (hasError) ? 6700 : undefined,
+                    result: {
+                        link: (!hasError) ? url : ''
+                    }
+                };
+
+                callback && callback(returnData);
+            },
+
             //TODO Change Node Version
             getImageFormUrl = function (url, callback) {
                 var img = new Image();
@@ -8247,7 +8531,7 @@
 
         this.off = function (eventName, eventId) {
             if (eventCallbacks[eventName]) {
-                if(eventCallbacks[eventName].hasOwnProperty(eventId)) {
+                if (eventCallbacks[eventName].hasOwnProperty(eventId)) {
                     delete eventCallbacks[eventName][eventId];
                     return eventId;
                 }
@@ -8262,7 +8546,7 @@
             return userInfo;
         };
 
-        this.getUserInfo = function(callback) {
+        this.getUserInfo = function (callback) {
             return sendMessage({
                 chatMessageVOType: chatMessageVOTypes.USER_INFO,
                 typeCode: generalTypeCode
@@ -8370,22 +8654,19 @@
                 if (parseInt(params.count) > 0) {
                     count = parseInt(params.count);
                 }
-
                 if (parseInt(params.offset) > 0) {
                     offset = parseInt(params.offset);
                 }
-
                 if (typeof params.query === 'string') {
                     content.query = whereClause.query = params.query;
                 }
-
                 if (typeof params.email === 'string') {
                     content.email = whereClause.email = params.email;
                 }
                 if (typeof params.cellphoneNumber === 'string') {
                     content.cellphoneNumber = whereClause.cellphoneNumber = params.cellphoneNumber;
                 }
-                if (typeof params.contactId === 'string') {
+                if (parseInt(params.contactId) > 0) {
                     content.id = whereClause.id = params.contactId;
                 }
                 if (typeof params.uniqueId === 'string') {
@@ -8762,6 +9043,16 @@
                 if (parseInt(params.threadId) > 0) {
                     sendMessageParams.subjectId = params.threadId;
                 }
+
+                if (typeof params.clearHistory === 'boolean') {
+                    sendMessageParams.content = {
+                        clearHistory: params.clearHistory
+                    };
+                } else {
+                    sendMessageParams.content = {
+                        clearHistory: false
+                    };
+                }
             }
 
             return sendMessage(sendMessageParams, {
@@ -9128,25 +9419,30 @@
                 }
             }
             if (!hasError) {
-                getImageFormUrl(url, function (blobImage) {
-                    sendFileMessage({
-                        threadId: params.threadId,
-                        fileUniqueId: fileUniqueId,
-                        file: new File([blobImage], "location.png", {type: "image/png", lastModified: new Date()}),
-                        content: params.caption,
-                        messageType: 'POD_SPACE_PICTURE',
-                        userGroupHash: params.userGroupHash,
-                        metadata: {
-                            mapLink: `https://maps.neshan.org/@${data.center},${data.zoom}z`
-                        }
+                mapReverse({
+                    lng: parseFloat(params.mapCenter.lng),
+                    lat: parseFloat(params.mapCenter.lat)
+                }, function (address) {
+                    getImageFormUrl(url, function (blobImage) {
+                        sendFileMessage({
+                            threadId: params.threadId,
+                            fileUniqueId: fileUniqueId,
+                            file: new File([blobImage], "location.png", {type: "image/png", lastModified: new Date()}),
+                            content: address.result.formatted_address,
+                            messageType: 'POD_SPACE_PICTURE',
+                            userGroupHash: params.userGroupHash,
+                            metadata: {
+                                mapLink: `https://maps.neshan.org/@${data.center},${data.zoom}z`,
+                                address: address
+                            }
+                        });
                     });
                 });
             }
             return {
                 uniqueId: fileUniqueId,
                 threadId: params.threadId,
-                participant: userInfo,
-                content: params.caption
+                participant: userInfo
             };
         };
 
@@ -9797,6 +10093,21 @@
         this.unMuteThread = function (params, callback) {
             return sendMessage({
                 chatMessageVOType: chatMessageVOTypes.UNMUTE_THREAD,
+                typeCode: params.typeCode,
+                subjectId: params.threadId,
+                content: {},
+                pushMsgType: 4,
+                token: token
+            }, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.closeThread = function (params, callback) {
+            return sendMessage({
+                chatMessageVOType: chatMessageVOTypes.CLOSE_THREAD,
                 typeCode: params.typeCode,
                 subjectId: params.threadId,
                 content: {},
@@ -10879,6 +11190,56 @@
             });
         };
 
+        this.removeBotCommand = function (params, callback) {
+            var defineBotCommandData = {
+                chatMessageVOType: chatMessageVOTypes.REMOVE_BOT_COMMANDS,
+                typeCode: params.typeCode,
+                content: {},
+                pushMsgType: 4,
+                token: token
+            }, commandList = [];
+
+            if (params) {
+                if (typeof params.botName !== 'string' || params.botName.length == 0) {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'You need to insert a botName!'
+                    });
+                    return;
+                }
+
+                if (!Array.isArray(params.commandList) || !params.commandList.length) {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'Bot Commands List has to be an array of strings.'
+                    });
+                    return;
+                } else {
+                    for (var i = 0; i < params.commandList.length; i++) {
+                        commandList.push('/' + params.commandList[i].trim());
+                    }
+                }
+
+                defineBotCommandData.content = {
+                    botName: params.botName.trim(),
+                    commandList: commandList
+                };
+
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to remove bot commands'
+                });
+                return;
+            }
+
+            return sendMessage(defineBotCommandData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
         this.startBot = function (params, callback) {
             var startBotData = {
                 chatMessageVOType: chatMessageVOTypes.START_BOT,
@@ -11033,247 +11394,13 @@
             });
         };
 
-        this.mapReverse = function (params, callback) {
-            var data = {};
+        this.mapReverse = mapReverse;
 
-            if (params) {
-                if (parseFloat(params.lat) > 0) {
-                    data.lat = params.lat;
-                }
+        this.mapSearch = mapSearch;
 
-                if (parseFloat(params.lng) > 0) {
-                    data.lng = params.lng;
-                }
+        this.mapRouting = mapRouting;
 
-                data.uniqueId = Utility.generateUUID();
-            }
-
-            var requestParams = {
-                url: SERVICE_ADDRESSES.MAP_ADDRESS + SERVICES_PATH.REVERSE,
-                method: 'GET',
-                data: data,
-                headers: {
-                    'Api-Key': mapApiKey
-                }
-            };
-
-            httpRequest(requestParams, function (result) {
-                if (!result.hasError) {
-                    var responseData = JSON.parse(result.result.responseText);
-
-                    var returnData = {
-                        hasError: result.hasError,
-                        cache: result.cache,
-                        errorMessage: result.message,
-                        errorCode: result.errorCode,
-                        result: responseData
-                    };
-
-                    callback && callback(returnData);
-
-                } else {
-                    fireEvent('error', {
-                        code: result.errorCode,
-                        message: result.errorMessage,
-                        error: result
-                    });
-                }
-            });
-        };
-
-        this.mapSearch = function (params, callback) {
-            var data = {};
-
-            if (params) {
-                if (typeof params.term === 'string') {
-                    data.term = params.term;
-                }
-
-                if (parseFloat(params.lat) > 0) {
-                    data.lat = params.lat;
-                }
-
-                if (parseFloat(params.lng) > 0) {
-                    data.lng = params.lng;
-                }
-
-                data.uniqueId = Utility.generateUUID();
-            }
-
-            var requestParams = {
-                url: SERVICE_ADDRESSES.MAP_ADDRESS + SERVICES_PATH.SEARCH,
-                method: 'GET',
-                data: data,
-                headers: {
-                    'Api-Key': mapApiKey
-                }
-            };
-
-            httpRequest(requestParams, function (result) {
-                if (!result.hasError) {
-                    var responseData = JSON.parse(result.result.responseText);
-
-                    var returnData = {
-                        hasError: result.hasError,
-                        cache: result.cache,
-                        errorMessage: result.message,
-                        errorCode: result.errorCode,
-                        result: responseData
-                    };
-
-                    callback && callback(returnData);
-
-                } else {
-                    fireEvent('error', {
-                        code: result.errorCode,
-                        message: result.errorMessage,
-                        error: result
-                    });
-                }
-            });
-        };
-
-        this.mapRouting = function (params, callback) {
-            var data = {};
-
-            if (params) {
-                if (typeof params.alternative === 'boolean') {
-                    data.alternative = params.alternative;
-                } else {
-                    data.alternative = true;
-                }
-
-                if (typeof params.origin === 'object') {
-                    if (parseFloat(params.origin.lat) > 0 && parseFloat(params.origin.lng)) {
-                        data.origin = params.origin.lat + ',' + parseFloat(params.origin.lng);
-                    } else {
-                        console.log('No origin has been selected!');
-                    }
-                }
-
-                if (typeof params.destination === 'object') {
-                    if (parseFloat(params.destination.lat) > 0 && parseFloat(params.destination.lng)) {
-                        data.destination = params.destination.lat + ',' + parseFloat(params.destination.lng);
-                    } else {
-                        console.log('No destination has been selected!');
-                    }
-                }
-
-                data.uniqueId = Utility.generateUUID();
-            }
-
-            var requestParams = {
-                url: SERVICE_ADDRESSES.MAP_ADDRESS + SERVICES_PATH.ROUTING,
-                method: 'GET',
-                data: data,
-                headers: {
-                    'Api-Key': mapApiKey
-                }
-            };
-
-            httpRequest(requestParams, function (result) {
-                if (!result.hasError) {
-                    var responseData = JSON.parse(result.result.responseText);
-
-                    var returnData = {
-                        hasError: result.hasError,
-                        cache: result.cache,
-                        errorMessage: result.message,
-                        errorCode: result.errorCode,
-                        result: responseData
-                    };
-
-                    callback && callback(returnData);
-
-                } else {
-                    fireEvent('error', {
-                        code: result.errorCode,
-                        message: result.errorMessage,
-                        error: result
-                    });
-                }
-            });
-        };
-
-        this.mapStaticImage = function (params, callback) {
-            var data = {},
-                url = SERVICE_ADDRESSES.MAP_ADDRESS + SERVICES_PATH.STATIC_IMAGE,
-                hasError = false;
-
-            if (params) {
-                if (typeof params.type === 'string') {
-                    data.type = params.type;
-                } else {
-                    data.type = 'standard-night';
-                }
-
-                if (parseInt(params.zoom) > 0) {
-                    data.zoom = params.zoom;
-                } else {
-                    data.zoom = 15;
-                }
-
-                if (parseInt(params.width) > 0) {
-                    data.width = params.width;
-                } else {
-                    data.width = 800;
-                }
-
-                if (parseInt(params.height) > 0) {
-                    data.height = params.height;
-                } else {
-                    data.height = 600;
-                }
-
-                if (typeof params.center === 'object') {
-                    if (parseFloat(params.center.lat) > 0 && parseFloat(params.center.lng)) {
-                        data.center = params.center.lat + ',' + parseFloat(params.center.lng);
-                    } else {
-                        hasError = true;
-                        fireEvent('error', {
-                            code: 6700,
-                            message: CHAT_ERRORS[6700],
-                            error: undefined
-                        });
-                    }
-                } else {
-                    hasError = true;
-                    fireEvent('error', {
-                        code: 6700,
-                        message: CHAT_ERRORS[6700],
-                        error: undefined
-                    });
-                }
-
-                data.key = mapApiKey;
-            }
-
-            var keys = Object.keys(data);
-
-            if (keys.length > 0) {
-                url += '?';
-
-                for (var i = 0; i < keys.length; i++) {
-                    var key = keys[i];
-                    url += key + '=' + data[key];
-                    if (i < keys.length - 1) {
-                        url += '&';
-                    }
-                }
-            }
-
-            var returnData = {
-                hasError: hasError,
-                cache: false,
-                errorMessage: (hasError) ? CHAT_ERRORS[6700] : '',
-                errorCode: (hasError) ? 6700 : undefined,
-                result: {
-                    link: (!hasError) ? url : ''
-                }
-            };
-
-            callback && callback(returnData);
-        };
+        this.mapStaticImage = mapStaticImage;
 
         this.setAdmin = function (params, callback) {
             setRoleToUser(params, callback);
