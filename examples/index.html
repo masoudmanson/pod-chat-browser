@@ -76,7 +76,7 @@
             fullResponseObject: false,
             mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
             // typeCode: "talk",
-            token: "231c748a5a324390989b6117358e5947",
+            token: "cc4a29538afe487e89c266f190de8ec8",
             // token: "3dd6895c8dc64f93bcd43b58dcc2aab3", // Masoud Amjadi
             // token: "9c627a9125d04ebf8455bf57bb33d2a9", // Pooria Pahlevani
             // token: "f6464d4e0f044314b1a668f90287ba26", // Nadia Anvari
@@ -114,6 +114,7 @@
             //     ownerId: 254
             // })
 
+
             // var currentUser = chatAgent.getCurrentUser();
             // console.log(currentUser)
 
@@ -125,6 +126,22 @@
              *  Get User Info
              */
             // getUserInfo();
+
+            // chatAgent.updateChatProfile({
+            //     bio: 'Whatever :|',
+            //     metadata: {
+            //         birthDate: '26 Jun 1991',
+            //         constellation: 'cancer ♋'
+            //     }
+            // }, function(result) {
+            //     console.log(result)
+            // });
+
+            // chatAgent.getUserNotSeenDuration({
+            //     userIds: [164055, 366174]
+            // }, function(result) {
+            //     console.log(result);
+            // });
 
             // chatAgent.startTyping({
             //     threadId: 13554
@@ -151,6 +168,7 @@
             //     // threadIds: [312, 1210],
             //     threadName: "فرهاد"
             // });
+
 
             /**
              * CREATE THREAD (Creates Group)
@@ -298,7 +316,7 @@
              * BLOCK CONTACT
              * @param contactId
              */
-            // blockContact(563);
+            // blockContact(3459620);
 
             /**
              * GET BLOCKED CONTACTS LIST
@@ -311,7 +329,7 @@
              * UNBLOCK CONTACT
              * @param blockId
              */
-            // unblockContact(83);
+            // unblockContact(23602);
 
             /**
              * ADD CONTACTS
@@ -418,21 +436,21 @@
              * @param messageId  325 editable: false
              * @param newMessage
              */
-            // editMessage(1, "This message has been edited at " + new Date());
+            // editMessage(881909, "New message content goes here.");
 
             /**
              * DELETE MESSAGE IN THREAD
              * @param {int}      messageId
              * @param {boolean}  deleteForAll
              */
-            // deleteMessage(15672, true);
+            // deleteMessage(883308, true);
 
             /**
              * REPLY TO MESSAGE
              * @param threadId
              * @param messageId
              */
-            // replyMessage(6848, 108287, "This is a reply to message #108287 at " + new Date());
+            // replyMessage(8543, 881920, "Reply to message.");
 
             /**
              * FORWARD MESSAGE
@@ -576,21 +594,20 @@
             //     mapType: "standard-night",
             //     mapZoom: 16,
             //     mapCenter: {
-            //         lat: 35.7034534,
-            //         lng: 51.3776390
+            //         lat: 35.73229,
+            //         lng: 51.90794
             //     },
             //     mapWidth: 1200,
             //     mapHeight: 500,
-            //     threadId: 201,
-            //     userGroupHash: 'K1WFONDNRZ5CS8',
-            //     caption: "This is the Address on map!",
+            //     threadId: 8543,
+            //     userGroupHash: 'A6ULVAUYM1E1G9',
             //     systemMetadata: {
             //         time: new Date()
             //     }
             // }, function(result) {
             //     console.log(result);
             // });
-            //
+
             // console.log('sendLocationMessageInstantResponse', sendLocationMessageInstantResponse);
 
 
@@ -598,9 +615,9 @@
              * Create Bot
              */
             // chatAgent.createBot({
-            //     botName: 'metalBOT'
+            //     botName: 'docsBOT'
             // }, (result) => {
-            //     console.log('createBot ersult in index', result.result);
+            //     console.log(result);
             // });
 
             /*
@@ -619,16 +636,16 @@
             //     console.log(result);
             // });
 
-            // addParticipants(42076, 'username', ['spanishBOT']);
+            // addParticipants(8543, 'username', ['docsBOT']);
 
             /*
              * Start Bot
              */
             // chatAgent.startBot({
-            //     botName: 'spanishBOT',
-            //     threadId: 42076
+            //     botName: 'docsBOT',
+            //     threadId: 8543
             // }, (result) => {
-            //     console.log('Start Bot result', result);
+            //     console.log(result);
             // });
 
             /*
@@ -640,6 +657,16 @@
             // }, (result) => {
             //     console.log('Stop Bot result', result);
             // });
+
+            // chatAgent.getBotCommandsList({
+            //     botName: 'docsBOT'
+            // }, function(result) {
+            //     console.log(result);
+            // });
+
+            chatAgent.getThreadAllBots({threadId: 8543}, function (result) {
+                console.log(result);
+            })
         });
 
         /**
@@ -647,20 +674,19 @@
          */
         chatAgent.on("error", function (error) {
             console.log("Error ", error);
-            // console.log("Error ", error.error);
         });
 
         /**
          * Listen to Chat State Changes
          */
         chatAgent.on("chatState", function (chatState) {
+            // console.log(chatState);
         });
 
         /**
          * Listen to File Upload Events
          */
         chatAgent.on("fileUploadEvents", function (event) {
-            var type = event.type;
             console.log(event);
         });
 
@@ -844,10 +870,10 @@
                         console.log(result);
                     });
 
-                case 'coreuserid':
+                case 'coreUserids':
                     chatAgent.addParticipants({
                         threadId: threadId,
-                        coreuserids: participants
+                        coreUserids: participants
                     }, function (result) {
                         console.log(result);
                     });
@@ -1134,7 +1160,7 @@
                 count: 50,
                 offset: 0
             }
-            chatAgent.getBlocked(data, function (result) {
+            chatAgent.getBlockedList(data, function (result) {
                 if (!result.hasError) {
                     console.log(result);
                 }
@@ -2041,6 +2067,7 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
             }, function (result) {
                 console.log(result);
             });
+
             //
             // console.log("Instant updateThreadInfo Results", instantResult)
         });
@@ -2156,11 +2183,12 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
             var hashCode = document.getElementById("fileHash").value;
 
             chatAgent.getFileFromPodspace({
-                hashCode: hashCode,
-                responseType: document.getElementById('fileResponseType').value
+                hashCode: 'qef78wse80vs587wserfwv',
+                responseType: 'link'
             }, function (result) {
+                console.log(result);
                 if (!result.hasError) {
-                    if(result.type == 'link') {
+                    if (result.type == 'link') {
                         var fileOutput = document.createElement('a');
                         fileOutput.href = result.result;
                         fileOutput.innerText = result.result;
@@ -2194,6 +2222,8 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
                     }
                 }
             });
+
+
         });
 
     document.getElementById("getImageFromPodspace")
@@ -2205,8 +2235,9 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
                 crop: document.getElementById("imageCrop").checked,
                 responseType: document.getElementById('imageResponseType').value
             }, function (result) {
+                console.log(result)
                 if (!result.hasError) {
-                    switch(result.type) {
+                    switch (result.type) {
                         case 'link':
                             var output = document.createElement('img');
                             output.src = result.result;
