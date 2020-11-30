@@ -44,22 +44,22 @@
             /**
              * Main Server
              */
-            socketAddress: 'wss://msg.pod.ir/ws', // {**REQUIRED**} Socket Address
-            ssoHost: 'https://accounts.pod.ir', // {**REQUIRED**} Socket Address
-            platformHost: 'https://api.pod.ir/srv/core', // {**REQUIRED**} Platform Core Address
-            fileServer: 'https://core.pod.ir', // {**REQUIRED**} File Server Address
-            podSpaceFileServer: 'https://podspace.pod.ir', // {**REQUIRED**} File Server Address
-            serverName: 'chat-server', // {**REQUIRED**} Server to to register on
+            // socketAddress: 'wss://msg.pod.ir/ws', // {**REQUIRED**} Socket Address
+            // ssoHost: 'https://accounts.pod.ir', // {**REQUIRED**} Socket Address
+            // platformHost: 'https://api.pod.ir/srv/core', // {**REQUIRED**} Platform Core Address
+            // fileServer: 'https://core.pod.ir', // {**REQUIRED**} File Server Address
+            // podSpaceFileServer: 'https://podspace.pod.ir', // {**REQUIRED**} File Server Address
+            // serverName: 'chat-server', // {**REQUIRED**} Server to to register on
 
             /**
              * Sand Box
              */
-            // socketAddress: "wss://chat-sandbox.pod.ir/ws",
-            // ssoHost: "https://accounts.pod.ir",
-            // platformHost: "https://sandbox.pod.ir:8043/srv/basic-platform",
-            // fileServer: 'https://core.pod.ir',
-            // podSpaceFileServer: 'https://podspace.pod.ir',
-            // serverName: "chat-server",
+            socketAddress: "wss://chat-sandbox.pod.ir/ws",
+            ssoHost: "https://accounts.pod.ir",
+            platformHost: "https://sandbox.pod.ir:8043/srv/basic-platform",
+            fileServer: 'https://core.pod.ir',
+            podSpaceFileServer: 'https://podspace.pod.ir',
+            serverName: "chat-server",
 
             /**
              * Integration
@@ -76,7 +76,7 @@
             fullResponseObject: false,
             mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
             // typeCode: "talk",
-            token: "cc4a29538afe487e89c266f190de8ec8",
+            token: "619d747b777c4375aa9b53dd0bb21ab9",
             // token: "3dd6895c8dc64f93bcd43b58dcc2aab3", // Masoud Amjadi
             // token: "9c627a9125d04ebf8455bf57bb33d2a9", // Pooria Pahlevani
             // token: "f6464d4e0f044314b1a668f90287ba26", // Nadia Anvari
@@ -114,6 +114,12 @@
             //     ownerId: 254
             // })
 
+
+            chatAgent.getCurrentUserRoles({
+                threadId: 35316
+            }, function(result) {
+                console.log(result);
+            });
 
             // var currentUser = chatAgent.getCurrentUser();
             // console.log(currentUser)
@@ -230,7 +236,7 @@
             // getHistory({
             //     count: 50,
             //     offset: 0,
-            //     threadId: 47596,
+            //     threadId: 7549,
             //     // firstMessageId: 17035,
             //     // order: "ASC",
             //     // lastMessageId: 17052,
@@ -243,7 +249,7 @@
             //     //   }]
             //     // },
             //     // query: "query",
-            //     messageType: 'voice'
+            //     messageType: 'sticker'
             // });
 
             /**
@@ -664,9 +670,9 @@
             //     console.log(result);
             // });
 
-            chatAgent.getThreadAllBots({threadId: 8543}, function (result) {
-                console.log(result);
-            })
+            // chatAgent.getThreadAllBots({threadId: 8543}, function (result) {
+            //     console.log(result);
+            // })
         });
 
         /**
@@ -1398,6 +1404,7 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
             <option value="POD_SPACE_VOICE">POD_SPACE_VOICE</option>
             <option value="POD_SPACE_FILE">POD_SPACE_FILE</option>
             <option value="LINK">LINK</option>
+            <option value="STICKER">STICKER</option>
         </select>
         <br>
 
@@ -1501,6 +1508,7 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
             <option value="POD_SPACE_VOICE">POD_SPACE_VOICE</option>
             <option value="POD_SPACE_FILE">POD_SPACE_FILE</option>
             <option value="LINK">LINK</option>
+            <option value="STICKER">STICKER</option>
         </select>
         <br>
 
@@ -1907,7 +1915,7 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
             var instantResult = chatAgent.sendTextMessage({
                 threadId: thread,
                 textMessage: message,
-                // messageType: 'picture'
+                messageType: 'STICKER'
             }, {
                 onSent: function (result) {
                     console.log(result.uniqueId + " \t has been Sent!");

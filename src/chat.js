@@ -131,6 +131,8 @@
                 LOCATION_PING: 101,
                 CLOSE_THREAD: 102,
                 REMOVE_BOT_COMMANDS: 104,
+                SEARCH: 105,
+                CONTINUE_SEARCH: 106,
                 ERROR: 999
             },
             inviteeVOidTypes = {
