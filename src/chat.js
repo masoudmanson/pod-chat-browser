@@ -131,6 +131,8 @@
                 LOCATION_PING: 101,
                 CLOSE_THREAD: 102,
                 REMOVE_BOT_COMMANDS: 104,
+                SEARCH: 105,
+                CONTINUE_SEARCH: 106,
                 ERROR: 999
             },
             inviteeVOidTypes = {
@@ -275,12 +277,6 @@
             },
             getUserInfoRetry = 5,
             getUserInfoRetryCount = 0,
-            asyncStateTypes = {
-                0: 'CONNECTING',
-                1: 'CONNECTED',
-                2: 'CLOSING',
-                3: 'CLOSED'
-            },
             chatState = false,
             chatFullStateObject = {},
             httpRequestObject = {},
@@ -404,10 +400,10 @@
                                                             fireEvent('chatReady');
                                                             chatSendQueueHandler();
                                                         } else {
-                                                            if (result.message != '') {
+                                                            if (result.message !== '') {
                                                                 try {
                                                                     var response = JSON.parse(result.message);
-                                                                    if (response.error == 'invalid_param') {
+                                                                    if (response.error === 'invalid_param') {
                                                                         generateEncryptionKey({
                                                                             keyAlgorithm: 'AES',
                                                                             keySize: 256
@@ -582,6 +578,7 @@
              *
              * @access private
              *
+             * @param params
              * @param {function}  callback    The callback function to run after Generating Keys
              *
              * @return {undefined}
@@ -595,7 +592,7 @@
                 };
 
                 if (params) {
-                    if (params.keyAlgorithm != 'undefined') {
+                    if (params.keyAlgorithm !== undefined) {
                         data.keyAlgorithm = params.keyAlgorithm;
                     }
 
@@ -672,6 +669,7 @@
              *
              * @access private
              *
+             * @param params
              * @param {function}  callback    The callback function to run after getting Keys
              *
              * @return {undefined}
@@ -680,7 +678,7 @@
                 var keyId;
 
                 if (params) {
-                    if (params.keyId != 'undefined') {
+                    if (typeof params.keyId !== 'undefined') {
                         keyId = params.keyId;
 
                         var httpRequestParams = {
@@ -761,8 +759,8 @@
 
                 var hasFile = false;
 
-                httpRequestObject[eval('fileUploadUniqueId')] = new XMLHttpRequest(),
-                    settings = params.settings;
+                httpRequestObject[eval('fileUploadUniqueId')] = new XMLHttpRequest();
+                settings = params.settings;
 
                 httpRequestObject[eval('fileUploadUniqueId')].responseType = xhrResponseType;
 
@@ -831,7 +829,7 @@
                     }, false);
 
                 try {
-                    if (method == 'GET') {
+                    if (method === 'GET') {
                         if (typeof data === 'object' && data !== null) {
                             var keys = Object.keys(data);
 
@@ -846,7 +844,7 @@
                                     }
                                 }
                             }
-                        } else if (typeof data === 'string' && data !== null) {
+                        } else if (typeof data === 'string') {
                             url += '?' + data;
                         }
 
@@ -854,7 +852,8 @@
 
                         if (typeof params.headers === 'object') {
                             for (var key in params.headers) {
-                                httpRequestObject[eval('fileUploadUniqueId')].setRequestHeader(key, params.headers[key]);
+                                if (params.headers.hasOwnProperty(key))
+                                    httpRequestObject[eval('fileUploadUniqueId')].setRequestHeader(key, params.headers[key]);
                             }
                         }
 
@@ -867,7 +866,8 @@
 
                         if (typeof params.headers === 'object') {
                             for (var key in params.headers) {
-                                httpRequestObject[eval('fileUploadUniqueId')].setRequestHeader(key, params.headers[key]);
+                                if (params.headers.hasOwnProperty(key))
+                                    httpRequestObject[eval('fileUploadUniqueId')].setRequestHeader(key, params.headers[key]);
                             }
                         }
 
@@ -876,7 +876,8 @@
                                 hasFile = true;
                                 var formData = new FormData();
                                 for (var key in data) {
-                                    formData.append(key, data[key]);
+                                    if (data.hasOwnProperty(key))
+                                        formData.append(key, data[key]);
                                 }
 
                                 fileSize = data.fileSize;
@@ -939,8 +940,8 @@
                 }
 
                 httpRequestObject[eval('fileUploadUniqueId')].onreadystatechange = function () {
-                    if (httpRequestObject[eval('fileUploadUniqueId')].readyState == 4) {
-                        if (httpRequestObject[eval('fileUploadUniqueId')].status == 200) {
+                    if (httpRequestObject[eval('fileUploadUniqueId')].readyState === 4) {
+                        if (httpRequestObject[eval('fileUploadUniqueId')].status === 200) {
                             if (hasFile) {
                                 hasError = false;
                                 fireEvent('fileUploadEvents', {
@@ -1091,11 +1092,10 @@
                                     }
                                 }
 
-                                var resultData = {
+                                returnData.result = {
                                     user: currentUser
                                 };
 
-                                returnData.result = resultData;
                                 getUserInfoRetryCount = 0;
 
                                 callback && callback(returnData);
@@ -1142,13 +1142,13 @@
                  *    - type            {int}
                  *    - typeCode        {string}
                  *    - messageType     {int}
-                 *    - subjectId       {long}
+                 *    - subjectId       {int}
                  *    - uniqueId        {string}
                  *    - content         {string}
-                 *    - time            {long}
+                 *    - time            {int}
                  *    - medadata        {string}
                  *    - systemMedadata  {string}
-                 *    - repliedTo       {long}
+                 *    - repliedTo       {int}
                  */
                 var threadId = null;
 
@@ -1251,12 +1251,12 @@
                  *    - type           {int}       Type of ASYNC message based on content
                  *    + content        {string}
                  *       -peerName     {string}    Name of receiver Peer
-                 *       -receivers[]  {long}      Array of receiver peer ids (if you use this, peerName will be ignored)
+                 *       -receivers[]  {int}      Array of receiver peer ids (if you use this, peerName will be ignored)
                  *       -priority     {int}       Priority of message 1-10, lower has more priority
-                 *       -messageId    {long}      Id of message on your side, not required
-                 *       -ttl          {long}      Time to live for message in milliseconds
+                 *       -messageId    {int}      Id of message on your side, not required
+                 *       -ttl          {int}      Time to live for message in milliseconds
                  *       -content      {string}    Chat Message goes here after stringifying
-                 *    - trackId        {long}      Tracker id of message that you receive from DIRANA previously (if you are replying a sync message)
+                 *    - trackId        {int}      Tracker id of message that you receive from DIRANA previously (if you are replying a sync message)
                  */
 
                 var data = {
@@ -1372,7 +1372,7 @@
              * @return {undefined}
              */
             ping = function () {
-                if (chatState && userInfo !== undefined) {
+                if (chatState && typeof userInfo !== 'undefined') {
                     /**
                      * Ping messages should be sent ASAP, because
                      * we don't want to wait for send queue, we send them
@@ -1418,10 +1418,10 @@
             receivedAsyncMessageHandler = function (asyncMessage) {
                 /**
                  * + Message Received From Async      {object}
-                 *    - id                            {long}
-                 *    - senderMessageId               {long}
+                 *    - id                            {int}
+                 *    - senderMessageId               {int}
                  *    - senderName                    {string}
-                 *    - senderId                      {long}
+                 *    - senderId                      {int}
                  *    - type                          {int}
                  *    - content                       {string}
                  */
@@ -1624,7 +1624,7 @@
                                 db.participants.where('threadId')
                                     .equals(parseInt(threadId))
                                     .and(function (participant) {
-                                        return (participant.id == messageContent.id || participant.owner == userInfo.id);
+                                        return (participant.id === messageContent.id || participant.owner === userInfo.id);
                                     })
                                     .delete()
                                     .catch(function (error) {
@@ -1641,7 +1641,7 @@
                                  * thread from this users cache database
                                  */
 
-                                if (messageContent.id == userInfo.id) {
+                                if (messageContent.id === userInfo.id) {
 
                                     /**
                                      * Remove Thread from this users cache
@@ -1664,7 +1664,7 @@
                                     db.messages.where('threadId')
                                         .equals(parseInt(threadId))
                                         .and(function (message) {
-                                            return message.owner == userInfo.id;
+                                            return message.owner === userInfo.id;
                                         })
                                         .delete()
                                         .catch(function (error) {
@@ -1900,7 +1900,7 @@
                                 db.messages.where('threadId')
                                     .equals(parseInt(threadId))
                                     .and(function (message) {
-                                        return message.owner == userInfo.id;
+                                        return message.owner === userInfo.id;
                                     })
                                     .delete()
                                     .catch(function (error) {
@@ -1918,7 +1918,7 @@
                                 db.participants.where('threadId')
                                     .equals(parseInt(threadId))
                                     .and(function (participant) {
-                                        return participant.owner == userInfo.id;
+                                        return participant.owner === userInfo.id;
                                     })
                                     .delete()
                                     .catch(function (error) {
@@ -1957,7 +1957,7 @@
                                     db.participants.where('id')
                                         .equals(parseInt(messageContent[i].id))
                                         .and(function (participants) {
-                                            return participants.threadId == threadId;
+                                            return participants.threadId === threadId;
                                         })
                                         .delete()
                                         .catch(function (error) {
@@ -2228,7 +2228,7 @@
                                 db.messages.where('id')
                                     .equals(messageContent)
                                     .and(function (message) {
-                                        return message.owner == userInfo.id;
+                                        return message.owner === userInfo.id;
                                     })
                                     .delete()
                                     .catch(function (error) {
@@ -2833,8 +2833,7 @@
                                     }
                                 });
                             });
-                        }
-                        else {
+                        } else {
                             fireEvent('threadEvents', {
                                 type: 'THREAD_CLOSE',
                                 result: {
@@ -2866,7 +2865,7 @@
                          * If error code is 21, Token is invalid &
                          * user should logged out
                          */
-                        if (messageContent.code == 21) {
+                        if (messageContent.code === 21) {
                             // TODO: Temporarily removed due to unknown side-effects
                             // chatState = false;
                             // asyncClient.logout();
@@ -2893,7 +2892,7 @@
              * @access private
              *
              * @param {int}     actionType      Switch between Delivery or Seen
-             * @param {long}    threadId        Id of thread
+             * @param {int}    threadId        Id of thread
              * @param {string}  uniqueId        uniqueId of message
              *
              * @return {undefined}
@@ -2905,7 +2904,7 @@
                         if (threadCallbacks[threadId]) {
                             var lastThreadCallbackIndex = Object.keys(threadCallbacks[threadId])
                                 .indexOf(uniqueId);
-                            if (lastThreadCallbackIndex !== undefined) {
+                            if (typeof lastThreadCallbackIndex !== 'undefined') {
                                 while (lastThreadCallbackIndex > -1) {
                                     var tempUniqueId = Object.entries(threadCallbacks[threadId])[lastThreadCallbackIndex][0];
                                     if (sendMessageCallbacks[tempUniqueId] && sendMessageCallbacks[tempUniqueId].onDeliver) {
@@ -2929,7 +2928,7 @@
                         if (threadCallbacks[threadId]) {
                             var lastThreadCallbackIndex = Object.keys(threadCallbacks[threadId])
                                 .indexOf(uniqueId);
-                            if (lastThreadCallbackIndex !== undefined) {
+                            if (typeof lastThreadCallbackIndex !== 'undefined') {
                                 while (lastThreadCallbackIndex > -1) {
                                     var tempUniqueId = Object.entries(threadCallbacks[threadId])[lastThreadCallbackIndex][0];
 
@@ -2979,7 +2978,7 @@
              *
              * @access private
              *
-             * @param {long}    threadId         ID of image
+             * @param {int}    threadId         ID of image
              * @param {object}  messageContent   Json Content of the message
              *
              * @return {undefined}
@@ -3092,7 +3091,7 @@
                     queueDb.waitQ.where('uniqueId')
                         .equals(message.uniqueId)
                         .and(function (item) {
-                            return item.owner == parseInt(userInfo.id);
+                            return item.owner === parseInt(userInfo.id);
                         })
                         .delete()
                         .catch(function (error) {
@@ -3104,7 +3103,7 @@
                         });
                 } else {
                     for (var i = 0; i < chatSendQueue.length; i++) {
-                        if (chatSendQueue[i].uniqueId == message.uniqueId) {
+                        if (chatSendQueue[i].uniqueId === message.uniqueId) {
                             chatSendQueue.splice(i, 1);
                         }
                     }
@@ -3118,7 +3117,7 @@
              *
              * @access private
              *
-             * @param {long}    threadId         ID of image
+             * @param {int}    threadId         ID of image
              * @param {object}  messageContent   Json Content of the message
              *
              * @return {undefined}
@@ -3222,6 +3221,7 @@
              * @param {object}    messageContent    Json object of thread taken from chat server
              * @param {boolean}   addFromService    if this is a newly created Thread, addFromService should be True
              *
+             * @param showThread
              * @return {object} Formatted Thread Object
              */
             createThread = function (messageContent, addFromService, showThread) {
@@ -3295,7 +3295,7 @@
             formatDataToMakeLinkedUser = function (messageContent) {
                 /**
                  * + RelatedUserVO                 {object}
-                 *   - coreUserId                  {long}
+                 *   - coreUserId                  {int}
                  *   - username                    {string}
                  *   - nickname                    {string}
                  *   - name                        {string}
@@ -3303,7 +3303,7 @@
                  */
 
                 var linkedUser = {
-                    coreUserId: (messageContent.coreUserId !== undefined)
+                    coreUserId: (typeof messageContent.coreUserId !== 'undefined')
                         ? messageContent.coreUserId
                         : messageContent.id,
                     username: messageContent.username,
@@ -3330,23 +3330,23 @@
             formatDataToMakeContact = function (messageContent) {
                 /**
                  * + ContactVO                        {object}
-                 *    - id                            {long}
+                 *    - id                            {int}
                  *    - blocked                       {boolean}
-                 *    - userId                        {long}
+                 *    - userId                        {int}
                  *    - firstName                     {string}
                  *    - lastName                      {string}
                  *    - image                         {string}
                  *    - email                         {string}
                  *    - cellphoneNumber               {string}
                  *    - uniqueId                      {string}
-                 *    - notSeenDuration               {long}
+                 *    - notSeenDuration               {int}
                  *    - hasUser                       {boolean}
                  *    - linkedUser                    {object : RelatedUserVO}
                  */
 
                 var contact = {
                     id: messageContent.id,
-                    blocked: (messageContent.blocked !== undefined)
+                    blocked: (typeof messageContent.blocked !== 'undefined')
                         ? messageContent.blocked
                         : false,
                     userId: messageContent.userId,
@@ -3361,7 +3361,7 @@
                     linkedUser: undefined
                 };
 
-                if (messageContent.linkedUser !== undefined) {
+                if (typeof messageContent.linkedUser !== 'undefined') {
                     contact.linkedUser = formatDataToMakeLinkedUser(messageContent.linkedUser);
                 }
 
@@ -3383,12 +3383,12 @@
             formatDataToMakeUser = function (messageContent) {
                 /**
                  * + User                     {object}
-                 *    - id                    {long}
+                 *    - id                    {int}
                  *    - name                  {string}
                  *    - email                 {string}
                  *    - cellphoneNumber       {string}
                  *    - image                 {string}
-                 *    - lastSeen              {long}
+                 *    - lastSeen              {int}
                  *    - sendEnable            {boolean}
                  *    - receiveEnable         {boolean}
                  *    - contactSynced         {boolean}
@@ -3450,8 +3450,8 @@
             formatDataToMakeBlockedUser = function (messageContent) {
                 /**
                  * + BlockedUser              {object}
-                 *    - id                    {long}
-                 *    - coreUserId            {long}
+                 *    - id                    {int}
+                 *    - coreUserId            {int}
                  *    - firstName             {string}
                  *    - lastName              {string}
                  *    - nickName              {string}
@@ -3494,12 +3494,10 @@
                  *    - idType       {int}
                  */
 
-                var inviteeData = {
+                return {
                     id: messageContent.id,
                     idType: inviteeVOidTypes[messageContent.idType]
                 };
-
-                return inviteeData;
             },
 
             /**
@@ -3511,14 +3509,15 @@
              *
              * @param {object}  messageContent    Json object of thread taken from chat server
              *
+             * @param threadId
              * @return {object} participant Object
              */
             formatDataToMakeParticipant = function (messageContent, threadId) {
                 /**
                  * + ParticipantVO                   {object}
-                 *    - id                           {long}
-                 *    - coreUserId                   {long}
-                 *    - threadId                     {long}
+                 *    - id                           {int}
+                 *    - coreUserId                   {int}
+                 *    - threadId                     {int}
                  *    - sendEnable                   {boolean}
                  *    - receiveEnable                {boolean}
                  *    - firstName                    {string}
@@ -3530,8 +3529,8 @@
                  *    - chatProfileVO                {object}
                  *    - myFriend                     {boolean}
                  *    - online                       {boolean}
-                 *    - notSeenDuration              {long}
-                 *    - contactId                    {long}
+                 *    - notSeenDuration              {int}
+                 *    - contactId                    {int}
                  *    - contactName                  {string}
                  *    - contactFirstName             {string}
                  *    - contactLastName              {string}
@@ -3594,35 +3593,35 @@
 
                 /**
                  * + Conversation                           {object}
-                 *    - id                                  {long}
-                 *    - joinDate                            {long}
+                 *    - id                                  {int}
+                 *    - joinDate                            {int}
                  *    - title                               {string}
                  *    - inviter                             {object : ParticipantVO}
                  *    - participants                        {list : ParticipantVO}
-                 *    - time                                {long}
+                 *    - time                                {int}
                  *    - lastMessage                         {string}
                  *    - lastParticipantName                 {string}
                  *    - group                               {boolean}
-                 *    - partner                             {long}
+                 *    - partner                             {int}
                  *    - lastParticipantImage                {string}
                  *    - image                               {string}
                  *    - description                         {string}
-                 *    - unreadCount                         {long}
-                 *    - lastSeenMessageId                   {long}
-                 *    - lastSeenMessageTime                 {long}
+                 *    - unreadCount                         {int}
+                 *    - lastSeenMessageId                   {int}
+                 *    - lastSeenMessageTime                 {int}
                  *    - lastSeenMessageNanos                {integer}
                  *    - lastMessageVO                       {object : ChatMessageVO}
                  *    - pinMessageVO                        {object : pinMessageVO}
-                 *    - partnerLastSeenMessageId            {long}
-                 *    - partnerLastSeenMessageTime          {long}
+                 *    - partnerLastSeenMessageId            {int}
+                 *    - partnerLastSeenMessageTime          {int}
                  *    - partnerLastSeenMessageNanos         {integer}
-                 *    - partnerLastDeliveredMessageId       {long}
-                 *    - partnerLastDeliveredMessageTime     {long}
+                 *    - partnerLastDeliveredMessageId       {int}
+                 *    - partnerLastDeliveredMessageTime     {int}
                  *    - partnerLastDeliveredMessageNanos    {integer}
                  *    - type                                {int}
                  *    - metadata                            {string}
                  *    - mute                                {boolean}
-                 *    - participantCount                    {long}
+                 *    - participantCount                    {int}
                  *    - canEditInfo                         {boolean}
                  *    - canSpam                             {boolean}
                  *    - admin                               {boolean}
@@ -3716,14 +3715,15 @@
              *
              * @param {object}  messageContent    Json object of thread taken from chat server
              *
+             * @param threadId
              * @return {object} replyInfo Object
              */
             formatDataToMakeReplyInfo = function (messageContent, threadId) {
                 /**
                  * + replyInfoVO                  {object : replyInfoVO}
                  *   - participant                {object : ParticipantVO}
-                 *   - repliedToMessageId         {long}
-                 *   - repliedToMessageTime       {long}
+                 *   - repliedToMessageId         {int}
+                 *   - repliedToMessageTime       {int}
                  *   - repliedToMessageNanos      {int}
                  *   - message                    {string}
                  *   - deleted                    {boolean}
@@ -3765,6 +3765,7 @@
              *
              * @param {object}  messageContent    Json object of thread taken from chat server
              *
+             * @param threadId
              * @return {object} forwardInfo Object
              */
             formatDataToMakeForwardInfo = function (messageContent, threadId) {
@@ -3798,18 +3799,20 @@
              *
              * @access private
              *
-             * @param {object}  messageContent    Json object of thread taken from chat server
              *
              * @return {object} message Object
+             * @param threadId
+             * @param pushMessageVO
+             * @param fromCache
              */
             formatDataToMakeMessage = function (threadId, pushMessageVO, fromCache) {
                 /**
                  * + MessageVO                       {object}
-                 *    - id                           {long}
-                 *    - threadId                     {long}
-                 *    - ownerId                      {long}
+                 *    - id                           {int}
+                 *    - threadId                     {int}
+                 *    - ownerId                      {int}
                  *    - uniqueId                     {string}
-                 *    - previousId                   {long}
+                 *    - previousId                   {int}
                  *    - message                      {string}
                  *    - messageType                  {int}
                  *    - edited                       {boolean}
@@ -3825,8 +3828,8 @@
                  *    - forwardInfo                  {object : forwardInfoVO}
                  *    - metadata                     {string}
                  *    - systemMetadata               {string}
-                 *    - time                         {long}
-                 *    - timeNanos                    {long}
+                 *    - time                         {int}
+                 *    - timeNanos                    {int}
                  */
 
                 if (fromCache || pushMessageVO.time.toString().length > 14) {
@@ -3908,9 +3911,9 @@
             formatDataToMakePinMessage = function (threadId, pushMessageVO) {
                 /**
                  * + PinMessageVO                    {object}
-                 *    - messageId                    {long}
-                 *    - time                         {long}
-                 *    - sender                       {long}
+                 *    - messageId                    {int}
+                 *    - time                         {int}
+                 *    - sender                       {int}
                  *    - text                         {string}
                  *    - notifyAll                    {boolean}
                  */
@@ -3938,7 +3941,7 @@
              *
              * @access private
              *
-             * @param {long}    threadId         Id of Thread
+             * @param {int}    threadId         Id of Thread
              * @param {object}  historyContent   Array of Thread History Messages
              *
              * @return {object} Formatted Thread History
@@ -3962,7 +3965,7 @@
              * @access private
              *
              * @param {object}  participantsContent   Array of Thread Participant Objects
-             * @param {long}    threadId              Id of Thread
+             * @param {int}    threadId              Id of Thread
              *
              * @return {object} Formatted Thread Participant Array
              */
@@ -4046,9 +4049,9 @@
              * @param {int}       offset                offset of select query
              * @param {array}     threadIds             An array of thread ids to be received
              * @param {string}    name                  Search term to look up in thread Titles
-             * @param {long}      creatorCoreUserId     SSO User Id of thread creator
-             * @param {long}      partnerCoreUserId     SSO User Id of thread partner
-             * @param {long}      partnerCoreContactId  Contact Id of thread partner
+             * @param {int}      creatorCoreUserId     SSO User Id of thread creator
+             * @param {int}      partnerCoreUserId     SSO User Id of thread partner
+             * @param {int}      partnerCoreContactId  Contact Id of thread partner
              * @param {function}  callback              The callback function to call after
              *
              * @return {object} Instant sendMessage result
@@ -4121,7 +4124,7 @@
                                 thenAble = db.threads.where('id')
                                     .anyOf(whereClause.threadIds)
                                     .and(function (thread) {
-                                        return thread.owner == userInfo.id;
+                                        return thread.owner === userInfo.id;
                                     });
                             }
 
@@ -4139,7 +4142,7 @@
                                     .equals(parseInt(userInfo.id))
                                     .filter(function (thread) {
                                         var threadObject = JSON.parse(chatDecrypt(thread.data, cacheSecret, thread.salt), false);
-                                        return parseInt(threadObject.inviter.coreUserId) == parseInt(whereClause.creatorCoreUserId);
+                                        return parseInt(threadObject.inviter.coreUserId) === parseInt(whereClause.creatorCoreUserId);
                                     });
                             }
                         }
@@ -4156,9 +4159,6 @@
 
                                         for (var i = 0; i < threads.length; i++) {
                                             try {
-                                                var tempData = {},
-                                                    salt = threads[i].salt;
-
                                                 cacheData.push(createThread(JSON.parse(chatDecrypt(threads[i].data, cacheSecret, threads[i].salt)), false));
                                             } catch (error) {
                                                 fireEvent('error', {
@@ -4244,8 +4244,8 @@
                              * thread's last section
                              */
 
-                            if (typeof Worker !== 'undefined' && productEnv != 'ReactNative' && canUseCache && cacheSecret.length > 0) {
-                                if (typeof (cacheSyncWorker) == 'undefined') {
+                            if (typeof Worker !== 'undefined' && productEnv !== 'ReactNative' && canUseCache && cacheSecret.length > 0) {
+                                if (typeof cacheSyncWorker === 'undefined') {
                                     var plainWorker = function () {
                                         self.importScripts('https://npmcdn.com/dexie@2.0.4/dist/dexie.min.js');
                                         db = new Dexie('podChat');
@@ -4300,7 +4300,7 @@
                                 cacheSyncWorker.postMessage(JSON.stringify(workerCommand));
 
                                 cacheSyncWorker.onmessage = function (event) {
-                                    if (event.data == 'terminate') {
+                                    if (event.data === 'terminate') {
                                         cacheSyncWorker.terminate();
                                         cacheSyncWorker = undefined;
                                     }
@@ -4442,15 +4442,15 @@
              *
              * @param {int}       count             Count of threads to be received
              * @param {int}       offset            Offset of select query
-             * @param {long}      threadId          Id of thread to get its history
-             * @param {long}      id                Id of single message to get
-             * @param {long}      userId            Messages of this SSO User
+             * @param {int}      threadId          Id of thread to get its history
+             * @param {int}      id                Id of single message to get
+             * @param {int}      userId            Messages of this SSO User
              * @param {int}       messageType       Type of messages to get (types should be set by client)
-             * @param {long}      fromTime          Get messages which have bigger time than given fromTime
+             * @param {int}      fromTime          Get messages which have bigger time than given fromTime
              * @param {int}       fromTimeNanos     Get messages which have bigger time than given fromTimeNanos
-             * @param {long}      toTime            Get messages which have smaller time than given toTime
+             * @param {int}      toTime            Get messages which have smaller time than given toTime
              * @param {int}       toTimeNanos       Get messages which have smaller time than given toTimeNanos
-             * @param {long}      senderId          Messages of this sender only
+             * @param {int}      senderId          Messages of this sender only
              * @param {string}    uniqueIds         Array of unique ids to retrieve
              * @param {string}    order             Order of select query (default: DESC)
              * @param {string}    query             Search term to be looked up in messages content
@@ -4572,7 +4572,7 @@
                             sendMessageParams.content.uniqueIds = params.uniqueIds;
                         }
 
-                        if (parseInt(params.fromTimeFull) > 0 && params.fromTimeFull.toString().length == 19) {
+                        if (parseInt(params.fromTimeFull) > 0 && params.fromTimeFull.toString().length === 19) {
                             sendMessageParams.content.fromTime = whereClause.fromTime = parseInt(params.fromTimeFull.toString()
                                 .substring(0, 13));
                             sendMessageParams.content.fromTimeNanos = whereClause.fromTimeNanos = parseInt(params.fromTimeFull.toString()
@@ -4587,7 +4587,7 @@
                             }
                         }
 
-                        if (parseInt(params.toTimeFull) > 0 && params.toTimeFull.toString().length == 19) {
+                        if (parseInt(params.toTimeFull) > 0 && params.toTimeFull.toString().length === 19) {
                             sendMessageParams.content.toTime = whereClause.toTime = parseInt(params.toTimeFull.toString()
                                 .substring(0, 13));
                             sendMessageParams.content.toTimeNanos = whereClause.toTimeNanos = parseInt(params.toTimeFull.toString()
@@ -4614,7 +4614,7 @@
                             sendMessageParams.content.unreadMentioned = whereClause.unreadMentioned = params.unreadMentioned;
                         }
 
-                        if (params.messageType && params.messageType.toUpperCase() !== undefined && chatMessageTypes[params.messageType.toUpperCase()] > 0) {
+                        if (params.messageType && typeof params.messageType.toUpperCase() !== 'undefined' && chatMessageTypes[params.messageType.toUpperCase()] > 0) {
                             sendMessageParams.content.messageType = whereClause.messageType = chatMessageTypes[params.messageType.toUpperCase()];
                         }
 
@@ -4635,7 +4635,7 @@
                             && canUseCache
                             && cacheSecret.length > 0
                             && !whereClause.hasOwnProperty('metadataCriteria')
-                            && order.toLowerCase() != "asc") {
+                            && order.toLowerCase() !== "asc") {
                             if (db) {
                                 var table = db.messages,
                                     collection;
@@ -4645,7 +4645,7 @@
                                     collection = table.where('id')
                                         .equals(parseInt(params.id))
                                         .and(function (message) {
-                                            return message.owner == userInfo.id;
+                                            return message.owner === userInfo.id;
                                         })
                                         .reverse();
                                 } else {
@@ -4698,7 +4698,7 @@
                                         if (returnCache) {
                                             messages = messages.slice(offset, offset + count);
 
-                                            if (messages.length == 0) {
+                                            if (messages.length === 0) {
                                                 returnCache = false;
                                             }
 
@@ -4750,15 +4750,12 @@
                                                              * has a GAP before them, we shouldn't return cache's result and
                                                              * wait for server's response to hit in
                                                              */
-                                                            if (i != 0 && i != messages.length - 1 && messages[i].hasGap) {
+                                                            if (i !== 0 && i !== messages.length - 1 && messages[i].hasGap) {
                                                                 returnCache = false;
                                                                 break;
                                                             }
 
                                                             try {
-                                                                var tempData = {},
-                                                                    salt = messages[i].salt;
-
                                                                 var tempMessage = formatDataToMakeMessage(messages[i].threadId, JSON.parse(chatDecrypt(messages[i].data, cacheSecret, messages[i].salt)), true);
                                                                 cacheData.push(tempMessage);
 
@@ -4797,7 +4794,7 @@
                                                                 .toArray()
                                                                 .then(function (res) {
                                                                     var hasNext = true;
-                                                                    if (res.length > 0 && res[0].threadId == parseInt(params.threadId)) {
+                                                                    if (res.length > 0 && res[0].threadId === parseInt(params.threadId)) {
                                                                         contentCount = res[0].contentCount;
                                                                         hasNext = offset + count < res[0].contentCount && messages.length > 0
                                                                     } else {
@@ -4936,7 +4933,7 @@
                                                  *
                                                  * whereClause == []
                                                  */
-                                                if (!whereClause || Object.keys(whereClause).length == 0) {
+                                                if (!whereClause || Object.keys(whereClause).length === 0) {
 
                                                     /**
                                                      * There is no condition applied on
@@ -4948,14 +4945,14 @@
                                                      *
                                                      * result   []
                                                      */
-                                                    if (messageLength == 0) {
+                                                    if (messageLength === 0) {
 
                                                         /**
                                                          * Order is ASC, so if the server result is empty we
                                                          * should delete everything from cache which has bigger
                                                          * time than first item of cache results for this query
                                                          */
-                                                        if (order == 'asc') {
+                                                        if (order === 'asc') {
                                                             var finalMessageTime = cacheFirstMessage.time;
 
                                                             db.messages.where('[threadId+owner+time]')
@@ -5016,8 +5013,8 @@
                                                          * is undefined, so it is the first message of thread and
                                                          * we should delete everything before it from cache
                                                          */
-                                                        if (firstMessage.previousId == undefined || lastMessage.previousId == undefined) {
-                                                            var finalMessageTime = (lastMessage.previousId == undefined)
+                                                        if (typeof firstMessage.previousId === 'undefined' || typeof lastMessage.previousId === 'undefined') {
+                                                            var finalMessageTime = (typeof lastMessage.previousId === 'undefined')
                                                                 ? lastMessage.time
                                                                 : firstMessage.time;
 
@@ -5041,7 +5038,7 @@
                                                          *
                                                          * offset == 0
                                                          */
-                                                        if (offset == 0) {
+                                                        if (offset === 0) {
 
                                                             /**
                                                              * Results are sorted ASC, and the offset is 0 so
@@ -5147,7 +5144,7 @@
                                                         db.messages.where('id')
                                                             .equals(parseInt(whereClause.id))
                                                             .and(function (message) {
-                                                                return message.owner == userInfo.id;
+                                                                return message.owner === userInfo.id;
                                                             })
                                                             .delete()
                                                             .catch(function (error) {
@@ -5194,7 +5191,7 @@
                                                         /**
                                                          * Server response is Empty []
                                                          */
-                                                        if (messageLength == 0) {
+                                                        if (messageLength === 0) {
 
                                                             /**
                                                              * User set both fromTime and toTime, so we have a
@@ -5371,7 +5368,7 @@
                                                             .between([userInfo.id, lastMessage.previousId], [userInfo.id, lastMessage.previousId], true, true)
                                                             .toArray()
                                                             .then(function (messages) {
-                                                                if (messages.length == 0) {
+                                                                if (messages.length === 0) {
                                                                     /**
                                                                      * Previous Message of last message is not in cache database
                                                                      * so there is a GAP in cache database for this thread before
@@ -5425,7 +5422,7 @@
                                                         .where('waitsFor')
                                                         .anyOf(resultMessagesId)
                                                         .and(function (messages) {
-                                                            return messages.owner == userInfo.id;
+                                                            return messages.owner === userInfo.id;
                                                         })
                                                         .toArray()
                                                         .then(function (needsToBeDeleted) {
@@ -5498,15 +5495,13 @@
                                         }
                                     }
 
-                                    var resultData = {
+                                    returnData.result = {
                                         history: history,
                                         contentCount: result.contentCount,
                                         hasNext: (sendMessageParams.content.offset + sendMessageParams.content.count < result.contentCount &&
                                             messageLength > 0),
                                         nextOffset: sendMessageParams.content.offset + messageLength
                                     };
-
-                                    returnData.result = resultData;
 
                                     if (sendingQueue) {
                                         returnData.result.sending = sendingQueueMessages;
@@ -5569,7 +5564,7 @@
                                                  * Check digest of cache and server response, if
                                                  * they are not the same, we should emit
                                                  */
-                                                if (cacheResult[key].data != serverResult[key].data) {
+                                                if (cacheResult[key].data !== serverResult[key].data) {
                                                     /**
                                                      * This message is already on cache, but it's
                                                      * content has been changed, so we emit a
@@ -5631,7 +5626,6 @@
                         code: 999,
                         message: 'Thread ID is required for Getting history!'
                     });
-                    return;
                 }
             },
 
@@ -5661,11 +5655,21 @@
                     },
                     threadInfoContent = {},
                     fileUploadParams = {},
-                    metadata = {},
+                    metadata = {file: {}},
                     threadId,
                     fileUniqueId = Utility.generateUUID();
 
                 if (params) {
+                    if (!params.userGroupHash || params.userGroupHash.length === 0 || typeof (params.userGroupHash) !== 'string') {
+                        fireEvent('error', {
+                            code: 6304,
+                            message: CHAT_ERRORS[6304]
+                        });
+                        return;
+                    } else {
+                        fileUploadParams.userGroupHash = params.userGroupHash;
+                    }
+
                     if (parseInt(params.threadId) > 0) {
                         threadId = parseInt(params.threadId);
                         updateThreadInfoData.subjectId = threadId;
@@ -5705,6 +5709,7 @@
                             fileUniqueId: fileUniqueId
                         }, function (uploadHandlerResult, uploadHandlerMetadata, fileType, fileExtension) {
                             fileUploadParams = Object.assign(fileUploadParams, uploadHandlerResult);
+
                             threadInfoContent.metadata = JSON.stringify(Object.assign(threadInfoContent.metadata, uploadHandlerMetadata));
                             putInChatUploadQueue({
                                 message: {
@@ -5720,9 +5725,18 @@
                                 callbacks: callback
                             }, function () {
                                 if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
-                                    uploadImageToPodspace(fileUploadParams, function (result) {
+                                    uploadImageToPodspaceUserGroup(fileUploadParams, function (result) {
                                         if (!result.hasError) {
+                                            metadata['name'] = result.result.name;
                                             metadata['fileHash'] = result.result.hashCode;
+                                            metadata['file']['name'] = result.result.name;
+                                            metadata['file']['fileHash'] = result.result.hashCode;
+                                            metadata['file']['hashCode'] = result.result.hashCode;
+                                            metadata['file']['parentHash'] = result.result.parentHash;
+                                            metadata['file']['size'] = result.result.size;
+                                            metadata['file']['actualHeight'] = result.result.actualHeight;
+                                            metadata['file']['actualWidth'] = result.result.actualWidth;
+                                            metadata['file']['link'] = `https://podspace.pod.ir/nzh/drive/downloadImage?hash=${result.result.hashCode}`;
                                             transferFromUploadQToSendQ(parseInt(params.threadId), fileUniqueId, JSON.stringify(metadata), function () {
                                                 chatSendQueueHandler();
                                             });
@@ -5764,7 +5778,7 @@
                             }
                         });
                     } else {
-                        if (Object.keys(threadInfoContent.metadata).length == 0) {
+                        if (Object.keys(threadInfoContent.metadata).length === 0) {
                             delete threadInfoContent.metadata;
                         }
 
@@ -5914,14 +5928,14 @@
                                     thenAble = db.participants.where('threadId')
                                         .equals(parseInt(params.threadId))
                                         .and(function (participant) {
-                                            return participant.owner == userInfo.id;
+                                            return participant.owner === userInfo.id;
                                         });
                                 } else {
                                     if (whereClause.hasOwnProperty('name')) {
                                         thenAble = db.participants.where('threadId')
                                             .equals(parseInt(params.threadId))
                                             .and(function (participant) {
-                                                return participant.owner == userInfo.id;
+                                                return participant.owner === userInfo.id;
                                             })
                                             .filter(function (contact) {
                                                 var reg = new RegExp(whereClause.name);
@@ -5940,7 +5954,7 @@
                                         db.participants.where('threadId')
                                             .equals(parseInt(params.threadId))
                                             .and(function (participant) {
-                                                return participant.owner == userInfo.id;
+                                                return participant.owner === userInfo.id;
                                             })
                                             .count()
                                             .then(function (participantsCount) {
@@ -5949,9 +5963,6 @@
 
                                                 for (var i = 0; i < participants.length; i++) {
                                                     try {
-                                                        var tempData = {},
-                                                            salt = participants[i].salt;
-
                                                         cacheData.push(formatDataToMakeParticipant(
                                                             JSON.parse(chatDecrypt(participants[i].data, cacheSecret, participants[i].salt)), participants[i].threadId));
                                                     } catch (error) {
@@ -6108,7 +6119,7 @@
              * @access private
              *
              * @param {int}    ownerId    Id of Message owner
-             * @param {long}   messageId  Id of Message
+             * @param {int}   messageId  Id of Message
              *
              * @return {object} Instant sendMessage result
              */
@@ -6131,7 +6142,7 @@
              * @since 3.9.9
              * @access private
              *
-             * @param {long}    imageId         ID of image
+             * @param {int}    imageId         ID of image
              * @param {int}     width           Required width to get
              * @param {int}     height          Required height to get
              * @param {boolean} actual          Required height to get
@@ -6201,7 +6212,7 @@
              * @since 3.9.9
              * @access private
              *
-             * @param {long}    fileId          ID of file
+             * @param {int}    fileId          ID of file
              * @param {boolean} downloadable    TRUE to be downloadable / False to not
              * @param {string}  hashCode        HashCode of uploaded file
              *
@@ -6211,7 +6222,7 @@
                 getFileData = {};
 
                 if (params) {
-                    if (typeof params.fileId != 'undefined') {
+                    if (typeof params.fileId !== 'undefined') {
                         getFileData.fileId = params.fileId;
                     }
 
@@ -6317,7 +6328,7 @@
                             cancelFileDownload({
                                 uniqueId: downloadUniqueId
                             }, function () {
-                                console.log(`❌ "${downloadUniqueId}" - File download has been canceled!`);
+                                console.log(`"${downloadUniqueId}" - File download has been canceled!`);
                             });
                         }
                     };
@@ -6335,7 +6346,6 @@
              * @param {string}  hashCode        HashCode of uploaded file
              * @param {string}  size            (1: 100×75, 2: 200×150, 3: 400×300)
              * @param {string}  quality         Image quality betwenn 0.0 anf 1.0
-             * @param {bolean}  crop            Crop image based on uploaded xC, yC, hC and wC parameters
              *
              * @return {object} File Object
              */
@@ -6402,7 +6412,7 @@
                                 cancelFileDownload({
                                     uniqueId: downloadUniqueId
                                 }, function () {
-                                    console.log(`❌ "${downloadUniqueId}" - Image download has been canceled!`);
+                                    console.log(`"${downloadUniqueId}" - Image download has been canceled!`);
                                 });
                             }
                         };
@@ -6437,7 +6447,7 @@
                                 cancelFileDownload({
                                     uniqueId: downloadUniqueId
                                 }, function () {
-                                    console.log(`❌ "${downloadUniqueId}" - Image download has been canceled!`);
+                                    console.log(`"${downloadUniqueId}" - Image download has been canceled!`);
                                 });
                             }
                         };
@@ -6471,7 +6481,6 @@
                             hasError: true,
                             error: 'Enter a image hash to get download link!'
                         });
-                        return;
                     }
                 }
             },
@@ -6502,7 +6511,6 @@
                             hasError: true,
                             error: 'Enter a file hash to get download link!'
                         });
-                        return;
                     }
                 }
             },
@@ -7344,7 +7352,7 @@
                     fileUploadParams = {},
                     fileUniqueId = (typeof params.fileUniqueId == 'string' && params.fileUniqueId.length > 0) ? params.fileUniqueId : Utility.generateUUID();
                 if (params) {
-                    if (!params.userGroupHash || params.userGroupHash.length == 0 || typeof (params.userGroupHash) != 'string') {
+                    if (!params.userGroupHash || params.userGroupHash.length === 0 || typeof (params.userGroupHash) !== 'string') {
                         fireEvent('error', {
                             code: 6304,
                             message: CHAT_ERRORS[6304]
@@ -7363,7 +7371,7 @@
                             message: {
                                 chatMessageVOType: chatMessageVOTypes.MESSAGE,
                                 typeCode: params.typeCode,
-                                messageType: (params.messageType && params.messageType.toUpperCase() !== undefined && chatMessageTypes[params.messageType.toUpperCase()] > 0) ? chatMessageTypes[params.messageType.toUpperCase()] : 1,
+                                messageType: (params.messageType && typeof params.messageType.toUpperCase() !== 'undefined' && chatMessageTypes[params.messageType.toUpperCase()] > 0) ? chatMessageTypes[params.messageType.toUpperCase()] : 1,
                                 subjectId: params.threadId,
                                 repliedTo: params.repliedTo,
                                 content: params.content,
@@ -7430,8 +7438,8 @@
              * @return {undefined}
              */
             fireEvent = function (eventName, param) {
-                if (eventName == "chatReady") {
-                    if (typeof navigator == "undefined") {
+                if (eventName === "chatReady") {
+                    if (typeof navigator === "undefined") {
                         console.log("\x1b[90m    ☰ \x1b[0m\x1b[90m%s\x1b[0m", "Chat is Ready 😉");
                     } else {
                         console.log("%c   Chat is Ready 😉", 'border-left: solid #666 10px; color: #666;');
@@ -7617,7 +7625,7 @@
                     var tempSendQueue = [];
 
                     for (var i = 0; i < chatSendQueue.length; i++) {
-                        if (chatSendQueue[i].threadId == threadId) {
+                        if (chatSendQueue[i].threadId === threadId) {
                             tempSendQueue.push(chatSendQueue[i]);
                         }
                     }
@@ -7647,7 +7655,7 @@
                         queueDb.waitQ.where('threadId')
                             .equals(threadId)
                             .and(function (item) {
-                                return item.owner == parseInt(userInfo.id);
+                                return item.owner === parseInt(userInfo.id);
                             })
                             .toArray()
                             .then(function (waitQueueOnCache) {
@@ -7676,7 +7684,7 @@
                                                  */
                                                 for (var i = 0; i < messageContent.length; i++) {
                                                     for (var j = 0; j < uniqueIds.length; j++) {
-                                                        if (uniqueIds[j] == messageContent[i].uniqueId) {
+                                                        if (uniqueIds[j] === messageContent[i].uniqueId) {
                                                             deleteFromChatWaitQueue(messageContent[i], function () {
                                                             });
                                                             uniqueIds.splice(j, 1);
@@ -7692,7 +7700,7 @@
                                                  */
                                                 for (var i = 0; i < chatSendQueue.length; i++) {
                                                     for (var j = 0; j < uniqueIds.length; j++) {
-                                                        if (uniqueIds[j] == chatSendQueue[i].message.uniqueId) {
+                                                        if (uniqueIds[j] === chatSendQueue[i].message.uniqueId) {
                                                             deleteFromChatWaitQueue(chatSendQueue[i].message, function () {
                                                             });
                                                             uniqueIds.splice(j, 1);
@@ -7737,7 +7745,7 @@
 
                                         for (var i = 0; i < messageContent.length; i++) {
                                             for (var j = 0; j < uniqueIds.length; j++) {
-                                                if (uniqueIds[j] == messageContent[i].uniqueId) {
+                                                if (uniqueIds[j] === messageContent[i].uniqueId) {
                                                     uniqueIds.splice(j, 1);
                                                     chatWaitQueue.splice(j, 1);
                                                 }
@@ -7770,7 +7778,7 @@
             getChatUploadQueue = function (threadId, callback) {
                 var uploadQ = [];
                 for (var i = 0; i < chatUploadQueue.length; i++) {
-                    if (parseInt(chatUploadQueue[i].message.subjectId) == threadId) {
+                    if (parseInt(chatUploadQueue[i].message.subjectId) === threadId) {
                         uploadQ.push(chatUploadQueue[i]);
                     }
                 }
@@ -7790,7 +7798,7 @@
              */
             deleteFromChatSentQueue = function (item, callback) {
                 for (var i = 0; i < chatSendQueue.length; i++) {
-                    if (chatSendQueue[i].message.uniqueId == item.message.uniqueId) {
+                    if (chatSendQueue[i].message.uniqueId === item.message.uniqueId) {
                         chatSendQueue.splice(i, 1);
                     }
                 }
@@ -7813,7 +7821,7 @@
                     queueDb.waitQ.where('uniqueId')
                         .equals(item.uniqueId)
                         .and(function (item) {
-                            return item.owner == parseInt(userInfo.id);
+                            return item.owner === parseInt(userInfo.id);
                         })
                         .delete()
                         .then(function () {
@@ -7828,7 +7836,7 @@
                         });
                 } else {
                     for (var i = 0; i < chatWaitQueue.length; i++) {
-                        if (chatWaitQueue[i].uniqueId == item.uniqueId) {
+                        if (chatWaitQueue[i].uniqueId === item.uniqueId) {
                             chatWaitQueue.splice(i, 1);
                         }
                     }
@@ -7848,7 +7856,7 @@
              */
             deleteFromChatUploadQueue = function (item, callback) {
                 for (var i = 0; i < chatUploadQueue.length; i++) {
-                    if (chatUploadQueue[i].message.uniqueId == item.message.uniqueId) {
+                    if (chatUploadQueue[i].message.uniqueId === item.message.uniqueId) {
                         chatUploadQueue.splice(i, 1);
                     }
                 }
@@ -7887,7 +7895,7 @@
              * @return {undefined}
              */
             putInChatWaitQueue = function (item, callback) {
-                if (item.uniqueId != '') {
+                if (item.uniqueId !== '') {
                     var waitQueueUniqueId = (typeof item.uniqueId == 'string') ? item.uniqueId : (Array.isArray(item.uniqueId)) ? item.uniqueId[0] : null;
 
                     if (waitQueueUniqueId != null) {
@@ -7948,7 +7956,7 @@
             transferFromUploadQToSendQ = function (threadId, uniqueId, metadata, callback) {
                 getChatUploadQueue(threadId, function (uploadQueue) {
                     for (var i = 0; i < uploadQueue.length; i++) {
-                        if (uploadQueue[i].message.uniqueId == uniqueId) {
+                        if (uploadQueue[i].message.uniqueId === uniqueId) {
                             try {
                                 var message = uploadQueue[i].message,
                                     callbacks = uploadQueue[i].callbacks;
@@ -7956,15 +7964,15 @@
                                     newMetadata = JSON.parse(metadata);
                                 var finalMetaData = objectDeepMerger(newMetadata, oldMetadata);
 
-                                if (message && message.content && typeof message.content === 'object' && typeof message.content.hasOwnProperty('message')) {
+                                if (typeof message !== 'undefined' && typeof message.content === 'object' && message.content.hasOwnProperty('message')) {
                                     message.content.message['metadata'] = JSON.stringify(finalMetaData);
                                 }
 
-                                if (message && message.content && typeof message.content === 'object' && typeof message.content.hasOwnProperty('metadata')) {
+                                if (typeof message !== 'undefined' && typeof message.content === 'object' && message.content.hasOwnProperty('metadata')) {
                                     message.content['metadata'] = JSON.stringify(finalMetaData);
                                 }
 
-                                if (message.chatMessageVOType == 21) {
+                                if (message.chatMessageVOType === 21) {
                                     getImageDownloadLinkFromPodspace({
                                         hashCode: finalMetaData.fileHash
                                     }, function (result) {
@@ -8019,7 +8027,7 @@
                      * there is definitely something wrong with the key; so we are
                      * good to go and delete cache databases.
                      */
-                    if (secret != 'undefined' && secret != '') {
+                    if (typeof secret !== 'undefined' && secret !== '') {
                         if (db) {
                             db.threads
                                 .where('owner')
@@ -8157,7 +8165,7 @@
             },
 
             chatUploadHandler = function (params, callbacks) {
-                if (typeof params.file != 'undefined') {
+                if (typeof params.file !== 'undefined') {
                     var fileName,
                         fileType,
                         fileSize,
@@ -8243,7 +8251,34 @@
                         callback && callback(uniqueId);
                     }
                 }
-                return;
+            },
+
+            cancelFileUpload = function (params, callback) {
+                if (params) {
+                    if (typeof params.uniqueId == 'string') {
+                        var uniqueId = params.uniqueId;
+                        httpRequestObject[eval('uniqueId')] && httpRequestObject[eval('uniqueId')].abort();
+                        httpRequestObject[eval('uniqueId')] && delete (httpRequestObject[eval('uniqueId')]);
+
+                        deleteFromChatUploadQueue({
+                            message: {
+                                uniqueId: uniqueId
+                            }
+                        }, callback);
+                    }
+                }
+            },
+
+            cancelMessage = function (uniqueId, callback) {
+                deleteFromChatSentQueue({
+                    message: {
+                        uniqueId: uniqueId
+                    }
+                }, function () {
+                    deleteFromChatWaitQueue({
+                        uniqueId: uniqueId
+                    }, callback);
+                });
             },
 
             mapReverse = function (params, callback) {
@@ -8492,7 +8527,7 @@
             getImageFormUrl = function (url, callback) {
                 var img = new Image();
                 img.setAttribute('crossOrigin', 'anonymous');
-                img.onload = function (a) {
+                img.onload = function () {
                     var canvas = document.createElement("canvas");
                     canvas.width = this.width;
                     canvas.height = this.height;
@@ -8564,11 +8599,9 @@
                         var messageContent = result.result;
                         var currentUser = formatDataToMakeUser(messageContent);
 
-                        var resultData = {
+                        returnData.result = {
                             user: currentUser
                         };
-
-                        returnData.result = resultData;
 
                         callback && callback(returnData);
                     }
@@ -8736,9 +8769,6 @@
 
                                             for (var i = 0; i < contacts.length; i++) {
                                                 try {
-                                                    var tempData = {},
-                                                        salt = contacts[i].salt;
-
                                                     cacheData.push(formatDataToMakeContact(JSON.parse(chatDecrypt(contacts[i].data, cacheSecret, contacts[i].salt))));
                                                 } catch (error) {
                                                     fireEvent('error', {
@@ -8918,7 +8948,7 @@
         this.addParticipants = function (params, callback) {
             /**
              * + AddParticipantsRequest   {object}
-             *    - subjectId             {long}
+             *    - subjectId             {int}
              *    + content               {list} List of CONTACT IDs or inviteeVO Objects
              *    - uniqueId              {string}
              */
@@ -8965,11 +8995,10 @@
                         errorCode: result.errorCode
                     };
                     if (!returnData.hasError) {
-                        var messageContent = result.result,
-                            resultData = {
-                                thread: createThread(messageContent)
-                            };
-                        returnData.result = resultData;
+                        var messageContent = result.result;
+                        returnData.result = {
+                            thread: createThread(messageContent)
+                        };
                     }
                     callback && callback(returnData);
                 }
@@ -8980,9 +9009,9 @@
 
             /**
              * + RemoveParticipantsRequest    {object}
-             *    - subjectId                 {long}
+             *    - subjectId                 {int}
              *    + content                   {list} List of PARTICIPANT IDs from Thread's Participants object
-             *       -id                      {long}
+             *       -id                      {int}
              *    - uniqueId                  {string}
              */
 
@@ -9011,12 +9040,11 @@
                     };
 
                     if (!returnData.hasError) {
-                        var messageContent = result.result,
-                            resultData = {
-                                thread: createThread(messageContent)
-                            };
+                        var messageContent = result.result;
 
-                        returnData.result = resultData;
+                        returnData.result = {
+                            thread: createThread(messageContent)
+                        };
                     }
 
                     callback && callback(returnData);
@@ -9030,7 +9058,7 @@
 
             /**
              * + LeaveThreadRequest    {object}
-             *    - subjectId          {long}
+             *    - subjectId          {int}
              *    - uniqueId           {string}
              */
 
@@ -9065,12 +9093,11 @@
                     };
 
                     if (!returnData.hasError) {
-                        var messageContent = result.result,
-                            resultData = {
-                                thread: createThread(messageContent)
-                            };
+                        var messageContent = result.result;
 
-                        returnData.result = resultData;
+                        returnData.result = {
+                            thread: createThread(messageContent)
+                        };
                     }
 
                     callback && callback(returnData);
@@ -9094,7 +9121,7 @@
              *    + message               {object}
              *       -text                {string}
              *       -type                {int}
-             *       -repliedTo           {long}
+             *       -repliedTo           {int}
              *       -uniqueId            {string}
              *       -metadata            {string}
              *       -systemMetadata      {string}
@@ -9119,7 +9146,6 @@
                 }
 
                 if (Array.isArray(params.invitees)) {
-                    var tempInvitee;
                     content.invitees = [];
                     for (var i = 0; i < params.invitees.length; i++) {
                         var tempInvitee = formatDataToMakeInvitee(params.invitees[i]);
@@ -9205,12 +9231,11 @@
                     };
 
                     if (!returnData.hasError) {
-                        var messageContent = result.result,
-                            resultData = {
-                                thread: createThread(messageContent)
-                            };
+                        var messageContent = result.result;
 
-                        returnData.result = resultData;
+                        returnData.result = {
+                            thread: createThread(messageContent)
+                        };
                     }
 
                     callback && callback(returnData);
@@ -9223,7 +9248,7 @@
             var metadata = {},
                 uniqueId;
 
-            if (typeof params.uniqueId != 'undefined') {
+            if (typeof params.uniqueId !== 'undefined') {
                 uniqueId = params.uniqueId;
             } else {
                 uniqueId = Utility.generateUUID();
@@ -9233,7 +9258,7 @@
                 message: {
                     chatMessageVOType: chatMessageVOTypes.MESSAGE,
                     typeCode: params.typeCode,
-                    messageType: (params.messageType && params.messageType.toUpperCase() !== undefined && chatMessageTypes[params.messageType.toUpperCase()] > 0) ? chatMessageTypes[params.messageType.toUpperCase()] : chatMessageTypes.TEXT,
+                    messageType: (params.messageType && typeof params.messageType.toUpperCase() !== 'undefined' && chatMessageTypes[params.messageType.toUpperCase()] > 0) ? chatMessageTypes[params.messageType.toUpperCase()] : chatMessageTypes.TEXT,
                     subjectId: params.threadId,
                     repliedTo: params.repliedTo,
                     content: params.textMessage,
@@ -9264,6 +9289,7 @@
                 subjectId: params.messageId,
                 content: params.content,
                 uniqueId: params.uniqueId,
+                metadata: metadata,
                 pushMsgType: 4
             }, callbacks);
         };
@@ -9285,7 +9311,7 @@
              *    + message               {object}
              *       -text                {string}
              *       -type                {int}
-             *       -repliedTo           {long}
+             *       -repliedTo           {int}
              *       -uniqueId            {string}
              *       -metadata            {string}
              *       -systemMetadata      {string}
@@ -9302,7 +9328,6 @@
                     content.type = createThreadTypes[threadType];
                 }
                 if (Array.isArray(params.invitees)) {
-                    var tempInvitee;
                     content.invitees = [];
                     for (var i = 0; i < params.invitees.length; i++) {
                         var tempInvitee = formatDataToMakeInvitee(params.invitees[i]);
@@ -9341,11 +9366,10 @@
                         errorCode: result.errorCode
                     };
                     if (!returnData.hasError) {
-                        var messageContent = result.result,
-                            resultData = {
-                                thread: createThread(messageContent)
-                            };
-                        returnData.result = resultData;
+                        var messageContent = result.result;
+                        returnData.result = {
+                            thread: createThread(messageContent)
+                        };
                     }
                     createThreadCallback && createThreadCallback(returnData);
                     sendFileMessage({
@@ -9435,14 +9459,21 @@
                                 mapLink: `https://maps.neshan.org/@${data.center},${data.zoom}z`,
                                 address: address
                             }
-                        });
+                        }, callbacks);
                     });
                 });
             }
             return {
                 uniqueId: fileUniqueId,
                 threadId: params.threadId,
-                participant: userInfo
+                participant: userInfo,
+                cancel: function () {
+                    cancelFileUpload({
+                        uniqueId: fileUniqueId
+                    }, function () {
+                        console.log(`"${fileUniqueId}" - Sending Location Message has been canceled!`);
+                    });
+                }
             };
         };
 
@@ -9451,7 +9482,7 @@
                 queueDb.waitQ.where('uniqueId')
                     .equals(uniqueId)
                     .and(function (item) {
-                        return item.owner == parseInt(userInfo.id);
+                        return item.owner === parseInt(userInfo.id);
                     })
                     .toArray()
                     .then(function (messages) {
@@ -9473,7 +9504,7 @@
                     });
             } else {
                 for (var i = 0; i < chatWaitQueue.length; i++) {
-                    if (chatWaitQueue[i].message.uniqueId == uniqueId) {
+                    if (chatWaitQueue[i].message.uniqueId === uniqueId) {
                         putInChatSendQueue({
                             message: chatWaitQueue[i].message,
                             callbacks: callbacks
@@ -9486,23 +9517,13 @@
             }
         };
 
-        this.cancelMessage = function (uniqueId, callback) {
-            deleteFromChatSentQueue({
-                message: {
-                    uniqueId: uniqueId
-                }
-            }, function () {
-                deleteFromChatWaitQueue({
-                    uniqueId: uniqueId
-                }, callback);
-            });
-        };
+        this.cancelMessage = cancelMessage;
 
         this.clearHistory = function (params, callback) {
 
             /**
              * + Clear History Request Object    {object}
-             *    - subjectId                    {long}
+             *    - subjectId                    {int}
              */
 
             var clearHistoryParams = {
@@ -9526,11 +9547,9 @@
                     };
 
                     if (!returnData.hasError) {
-                        var resultData = {
+                        returnData.result = {
                             thread: result.result
                         };
-
-                        returnData.result = resultData;
 
                         /**
                          * Delete all messages of this thread from cache
@@ -9540,7 +9559,7 @@
                                 db.messages.where('threadId')
                                     .equals(parseInt(result.result))
                                     .and(function (message) {
-                                        return message.owner == userInfo.id;
+                                        return message.owner === userInfo.id;
                                     })
                                     .delete()
                                     .catch(function (error) {
@@ -9577,22 +9596,7 @@
 
         this.uploadImage = uploadImage;
 
-        this.cancelFileUpload = function (params, callback) {
-            if (params) {
-                if (typeof params.uniqueId == 'string') {
-                    var uniqueId = params.uniqueId;
-                    httpRequestObject[eval('uniqueId')] && httpRequestObject[eval('uniqueId')].abort();
-                    httpRequestObject[eval('uniqueId')] && delete (httpRequestObject[eval('uniqueId')]);
-
-                    deleteFromChatUploadQueue({
-                        message: {
-                            uniqueId: uniqueId
-                        }
-                    }, callback);
-                }
-            }
-            return;
-        };
+        this.cancelFileUpload = cancelFileUpload;
 
         this.cancelFileDownload = cancelFileDownload;
 
@@ -9694,20 +9698,17 @@
                     };
 
                     if (!returnData.hasError) {
-                        var messageContent = result.result,
-                            resultData = {
-                                deletedMessage: {
-                                    id: result.result.id,
-                                    pinned: result.result.pinned,
-                                    mentioned: result.result.mentioned,
-                                    messageType: result.result.messageType,
-                                    edited: result.result.edited,
-                                    editable: result.result.editable,
-                                    deletable: result.result.deletable
-                                }
-                            };
-
-                        returnData.result = resultData;
+                        returnData.result = {
+                            deletedMessage: {
+                                id: result.result.id,
+                                pinned: result.result.pinned,
+                                mentioned: result.result.mentioned,
+                                messageType: result.result.messageType,
+                                edited: result.result.edited,
+                                editable: result.result.editable,
+                                deletable: result.result.deletable
+                            }
+                        };
 
                         /**
                          * Remove Message from cache
@@ -9745,8 +9746,6 @@
                 uniqueIdsList = [];
 
             for (i in messageIdsList) {
-                var messageId = messageIdsList[i];
-
                 var uniqueId = Utility.generateUUID();
                 uniqueIdsList.push(uniqueId);
 
@@ -9759,20 +9758,17 @@
                     };
 
                     if (!returnData.hasError) {
-                        var messageContent = result.result,
-                            resultData = {
-                                deletedMessage: {
-                                    id: result.result.id,
-                                    pinned: result.result.pinned,
-                                    mentioned: result.result.mentioned,
-                                    messageType: result.result.messageType,
-                                    edited: result.result.edited,
-                                    editable: result.result.editable,
-                                    deletable: result.result.deletable
-                                }
-                            };
-
-                        returnData.result = resultData;
+                        returnData.result = {
+                            deletedMessage: {
+                                id: result.result.id,
+                                pinned: result.result.pinned,
+                                mentioned: result.result.mentioned,
+                                messageType: result.result.messageType,
+                                edited: result.result.edited,
+                                editable: result.result.editable,
+                                deletable: result.result.deletable
+                            }
+                        };
 
                         /**
                          * Remove Message from cache
@@ -9819,7 +9815,7 @@
         this.replyTextMessage = function (params, callbacks) {
             var uniqueId;
 
-            if (typeof params.uniqueId != 'undefined') {
+            if (typeof params.uniqueId !== 'undefined') {
                 uniqueId = params.uniqueId;
             } else {
                 uniqueId = Utility.generateUUID();
@@ -9855,7 +9851,7 @@
             var metadata = {file: {}},
                 fileUploadParams = {},
                 fileUniqueId = Utility.generateUUID();
-            if (!params.userGroupHash || params.userGroupHash.length == 0 || typeof (params.userGroupHash) != 'string') {
+            if (!params.userGroupHash || params.userGroupHash.length === 0 || typeof (params.userGroupHash) !== 'string') {
                 fireEvent('error', {
                     code: 6304,
                     message: CHAT_ERRORS[6304]
@@ -9874,7 +9870,7 @@
                     message: {
                         chatMessageVOType: chatMessageVOTypes.MESSAGE,
                         typeCode: params.typeCode,
-                        messageType: (params.messageType && params.messageType.toUpperCase() !== undefined && chatMessageTypes[params.messageType.toUpperCase()] > 0) ? chatMessageTypes[params.messageType.toUpperCase()] : 1,
+                        messageType: (params.messageType && typeof params.messageType.toUpperCase() !== 'undefined' && chatMessageTypes[params.messageType.toUpperCase()] > 0) ? chatMessageTypes[params.messageType.toUpperCase()] : 1,
                         subjectId: params.threadId,
                         repliedTo: params.repliedTo,
                         content: params.content,
@@ -10873,13 +10869,13 @@
                                     thenAble = db.contacts.where('owner')
                                         .equals(parseInt(userInfo.id))
                                         .and(function (contact) {
-                                            return contact.id == whereClause.id;
+                                            return contact.id === whereClause.id;
                                         });
                                 } else if (whereClause.hasOwnProperty('uniqueId')) {
                                     thenAble = db.contacts.where('owner')
                                         .equals(parseInt(userInfo.id))
                                         .and(function (contact) {
-                                            return contact.uniqueId == whereClause.uniqueId;
+                                            return contact.uniqueId === whereClause.uniqueId;
                                         });
                                 } else {
                                     if (whereClause.hasOwnProperty('firstName')) {
@@ -10934,9 +10930,6 @@
 
                                             for (var i = 0; i < contacts.length; i++) {
                                                 try {
-                                                    var tempData = {},
-                                                        salt = contacts[i].salt;
-
                                                     cacheData.push(formatDataToMakeContact(JSON.parse(chatDecrypt(contacts[i].data, cacheSecret, ontacts[i].salt))));
                                                 } catch (error) {
                                                     fireEvent('error', {
@@ -11154,7 +11147,7 @@
                 token: token
             }, commandList = [];
             if (params) {
-                if (typeof params.botName !== 'string' || params.botName.length == 0) {
+                if (typeof params.botName !== 'string' || params.botName.length === 0) {
                     fireEvent('error', {
                         code: 999,
                         message: 'You need to insert a botName!'
@@ -11200,7 +11193,7 @@
             }, commandList = [];
 
             if (params) {
-                if (typeof params.botName !== 'string' || params.botName.length == 0) {
+                if (typeof params.botName !== 'string' || params.botName.length === 0) {
                     fireEvent('error', {
                         code: 999,
                         message: 'You need to insert a botName!'
@@ -11256,7 +11249,7 @@
                     });
                     return;
                 }
-                if (typeof params.botName !== 'string' || params.botName.length == 0) {
+                if (typeof params.botName !== 'string' || params.botName.length === 0) {
                     fireEvent('error', {
                         code: 999,
                         message: 'You need to insert a botName!'
@@ -11288,7 +11281,7 @@
                 content: {},
                 pushMsgType: 4,
                 token: token
-            }, commandList = [];
+            };
             if (params) {
                 if (typeof +params.threadId !== 'number' || params.threadId < 0) {
                     fireEvent('error', {
@@ -11297,7 +11290,7 @@
                     });
                     return;
                 }
-                if (typeof params.botName !== 'string' || params.botName.length == 0) {
+                if (typeof params.botName !== 'string' || params.botName.length === 0) {
                     fireEvent('error', {
                         code: 999,
                         message: 'You need to insert a botName!'
@@ -11332,7 +11325,7 @@
             };
 
             if (params) {
-                if (typeof params.botName !== 'string' || params.botName.length == 0) {
+                if (typeof params.botName !== 'string' || params.botName.length === 0) {
                     fireEvent('error', {
                         code: 999,
                         message: 'You need to insert a botName!'
@@ -11433,7 +11426,7 @@
         };
 
         this.setToken = function (newToken) {
-            if (typeof newToken != 'undefined') {
+            if (typeof newToken !== 'undefined') {
                 token = newToken;
             }
         };
@@ -11457,7 +11450,7 @@
         init();
     }
 
-    if (typeof module !== 'undefined' && typeof module.exports != 'undefined') {
+    if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
         module.exports = Chat;
     } else {
         if (!window.POD) {

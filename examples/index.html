@@ -76,7 +76,7 @@
             fullResponseObject: false,
             mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
             // typeCode: "talk",
-            token: "cc4a29538afe487e89c266f190de8ec8",
+            token: "f856ca28205344ea87f3ad3c3fc480d8",
             // token: "3dd6895c8dc64f93bcd43b58dcc2aab3", // Masoud Amjadi
             // token: "9c627a9125d04ebf8455bf57bb33d2a9", // Pooria Pahlevani
             // token: "f6464d4e0f044314b1a668f90287ba26", // Nadia Anvari
@@ -599,7 +599,7 @@
             //     },
             //     mapWidth: 1200,
             //     mapHeight: 500,
-            //     threadId: 8543,
+            //     threadId: 148737,
             //     userGroupHash: 'A6ULVAUYM1E1G9',
             //     systemMetadata: {
             //         time: new Date()
@@ -607,8 +607,11 @@
             // }, function(result) {
             //     console.log(result);
             // });
-
+            //
             // console.log('sendLocationMessageInstantResponse', sendLocationMessageInstantResponse);
+            // setTimeout(function() {
+            //     sendLocationMessageInstantResponse.cancel();
+            // }, 2000)
 
 
             /*
@@ -664,9 +667,9 @@
             //     console.log(result);
             // });
 
-            chatAgent.getThreadAllBots({threadId: 8543}, function (result) {
-                console.log(result);
-            })
+            // chatAgent.getThreadAllBots({threadId: 8543}, function (result) {
+            //     console.log(result);
+            // })
         });
 
         /**
@@ -1558,7 +1561,10 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
     <fieldset>
         <legend>Update Thread Info</legend>
         <label for="updateThreadThreadId">Thread Id</label>
-        <input type="text" name="updateThreadThreadId" id="updateThreadThreadId" value="54436">
+        <input type="text" name="updateThreadThreadId" id="updateThreadThreadId" value="">
+        <br>
+        <label for="updateThreadUserGroupHash">Thread User Group Hash</label>
+        <input type="text" name="updateThreadUserGroupHash" id="updateThreadUserGroupHash" value="">
         <br>
         <input type="file" name="updateThreadFile" id="updateThreadFile">
         <br>
@@ -2055,10 +2061,12 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
                 title = document.getElementById("updateThreadTitle").value,
                 description = document.getElementById("updateThreadDescription").value,
                 metadata = document.getElementById("updateThreadMetadata").value,
-                thread = document.getElementById("updateThreadThreadId").value;
+                thread = document.getElementById("updateThreadThreadId").value,
+                userGroupHash = document.getElementById("updateThreadUserGroupHash").value;
 
             var instantResult = chatAgent.updateThreadInfo({
                 threadId: thread,
+                userGroupHash: userGroupHash,
                 image: image,
                 description: description,
                 title: title,
