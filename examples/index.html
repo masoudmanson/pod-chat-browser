@@ -44,22 +44,22 @@
             /**
              * Main Server
              */
-            // socketAddress: 'wss://msg.pod.ir/ws', // {**REQUIRED**} Socket Address
-            // ssoHost: 'https://accounts.pod.ir', // {**REQUIRED**} Socket Address
-            // platformHost: 'https://api.pod.ir/srv/core', // {**REQUIRED**} Platform Core Address
-            // fileServer: 'https://core.pod.ir', // {**REQUIRED**} File Server Address
-            // podSpaceFileServer: 'https://podspace.pod.ir', // {**REQUIRED**} File Server Address
-            // serverName: 'chat-server', // {**REQUIRED**} Server to to register on
+            socketAddress: 'wss://msg.pod.ir/ws', // {**REQUIRED**} Socket Address
+            ssoHost: 'https://accounts.pod.ir', // {**REQUIRED**} Socket Address
+            platformHost: 'https://api.pod.ir/srv/core', // {**REQUIRED**} Platform Core Address
+            fileServer: 'https://core.pod.ir', // {**REQUIRED**} File Server Address
+            podSpaceFileServer: 'https://podspace.pod.ir', // {**REQUIRED**} File Server Address
+            serverName: 'chat-server', // {**REQUIRED**} Server to to register on
 
             /**
              * Sand Box
              */
-            socketAddress: "wss://chat-sandbox.pod.ir/ws",
-            ssoHost: "https://accounts.pod.ir",
-            platformHost: "https://sandbox.pod.ir:8043/srv/basic-platform",
-            fileServer: 'https://core.pod.ir',
-            podSpaceFileServer: 'https://podspace.pod.ir',
-            serverName: "chat-server",
+            // socketAddress: "wss://chat-sandbox.pod.ir/ws",
+            // ssoHost: "https://accounts.pod.ir",
+            // platformHost: "https://sandbox.pod.ir:8043/srv/basic-platform",
+            // fileServer: 'https://core.pod.ir',
+            // podSpaceFileServer: 'https://podspace.pod.ir',
+            // serverName: "chat-server",
 
             /**
              * Integration
@@ -76,7 +76,7 @@
             fullResponseObject: false,
             mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
             // typeCode: "talk",
-            token: "1b823276a4154ef29dcb80e0e1fd5c14",
+            token: "25efcd6ea910444ba9289408b088273b",
             // token: "3dd6895c8dc64f93bcd43b58dcc2aab3", // Masoud Amjadi
             // token: "9c627a9125d04ebf8455bf57bb33d2a9", // Pooria Pahlevani
             // token: "f6464d4e0f044314b1a668f90287ba26", // Nadia Anvari
@@ -94,6 +94,7 @@
             httpUploadRequestTimeout: 0, // 0 means No timeout
             asyncLogging: {
                 onFunction: true, // log main actions on console
+                consoleLogging: true, // log action results in console
                 // onMessageReceive: true, // log received messages on console
                 // onMessageSend: true, // log sent messaged on console
                 // actualTiming: true // log actual functions running time
@@ -595,28 +596,27 @@
             //   console.log(result);
             // });
 
-            // var sendLocationMessageInstantResponse = chatAgent.sendLocationMessage({
-            //     mapType: "standard-night",
-            //     mapZoom: 16,
-            //     mapCenter: {
-            //         lat: 35.73229,
-            //         lng: 51.90794
-            //     },
-            //     mapWidth: 1200,
-            //     mapHeight: 500,
-            //     threadId: 148737,
-            //     userGroupHash: 'A6ULVAUYM1E1G9',
-            //     systemMetadata: {
-            //         time: new Date()
-            //     }
-            // }, function(result) {
-            //     console.log(result);
-            // });
-            //
-            // console.log('sendLocationMessageInstantResponse', sendLocationMessageInstantResponse);
-            // setTimeout(function() {
-            //     sendLocationMessageInstantResponse.cancel();
-            // }, 2000)
+            var sendLocationMessageInstantResponse = chatAgent.sendLocationMessage({
+                mapType: "standard-night",
+                mapZoom: 16,
+                mapCenter: {
+                    lat: 35.73229,
+                    lng: 51.90794
+                },
+                mapWidth: 1200,
+                mapHeight: 500,
+                threadId: 148737,
+                userGroupHash: 'A6ULVAUYM1E1G9',
+                systemMetadata: {
+                    time: new Date()
+                }
+            }, function(result) {
+                console.log(result);
+            });
+
+            setTimeout(function() {
+                sendLocationMessageInstantResponse.cancel();
+            }, 1000);
 
 
             /*
