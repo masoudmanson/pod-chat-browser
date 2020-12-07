@@ -76,7 +76,7 @@
             fullResponseObject: false,
             mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
             // typeCode: "talk",
-            token: "25efcd6ea910444ba9289408b088273b",
+            token: "02ed193c4e7545baa8161530343b670a",
             // token: "3dd6895c8dc64f93bcd43b58dcc2aab3", // Masoud Amjadi
             // token: "9c627a9125d04ebf8455bf57bb33d2a9", // Pooria Pahlevani
             // token: "f6464d4e0f044314b1a668f90287ba26", // Nadia Anvari
@@ -442,14 +442,14 @@
              * @param messageId  325 editable: false
              * @param newMessage
              */
-            // editMessage(881909, "New message content goes here.");
+            // editMessage(919202, "New message content goes here.");
 
             /**
              * DELETE MESSAGE IN THREAD
              * @param {int}      messageId
              * @param {boolean}  deleteForAll
              */
-            // deleteMessage(883308, true);
+            // deleteMessage(919192, true);
 
             /**
              * REPLY TO MESSAGE
@@ -596,27 +596,27 @@
             //   console.log(result);
             // });
 
-            var sendLocationMessageInstantResponse = chatAgent.sendLocationMessage({
-                mapType: "standard-night",
-                mapZoom: 16,
-                mapCenter: {
-                    lat: 35.73229,
-                    lng: 51.90794
-                },
-                mapWidth: 1200,
-                mapHeight: 500,
-                threadId: 148737,
-                userGroupHash: 'A6ULVAUYM1E1G9',
-                systemMetadata: {
-                    time: new Date()
-                }
-            }, function(result) {
-                console.log(result);
-            });
-
-            setTimeout(function() {
-                sendLocationMessageInstantResponse.cancel();
-            }, 1000);
+            // var sendLocationMessageInstantResponse = chatAgent.sendLocationMessage({
+            //     mapType: "standard-night",
+            //     mapZoom: 16,
+            //     mapCenter: {
+            //         lat: 35.73229,
+            //         lng: 51.90794
+            //     },
+            //     mapWidth: 1200,
+            //     mapHeight: 500,
+            //     threadId: 148737,
+            //     userGroupHash: 'A6ULVAUYM1E1G9',
+            //     systemMetadata: {
+            //         time: new Date()
+            //     }
+            // }, function(result) {
+            //     console.log(result);
+            // });
+            //
+            // setTimeout(function() {
+            //     sendLocationMessageInstantResponse.cancel();
+            // }, 1000);
 
 
             /*
@@ -1920,9 +1920,10 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
             var instantResult = chatAgent.sendTextMessage({
                 threadId: thread,
                 textMessage: message,
-                messageType: 'STICKER'
+                messageType: 'TEXT'
             }, {
                 onSent: function (result) {
+                    console.log({result});
                     console.log(result.uniqueId + " \t has been Sent!");
                 },
                 onDeliver: function (result) {
@@ -1997,6 +1998,7 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
                 }
             }, {
                 onSent: function (result) {
+                    console.log(result);
                     console.log(result.uniqueId + " \t has been Sent!");
                 },
                 onDeliver: function (result) {
