@@ -1,272 +1,7 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
-// shim for using process in browser
-var process = module.exports = {};
-
-// cached from whatever global is present so that test runners that stub it
-// don't break things.  But we need to wrap it in a try catch in case it is
-// wrapped in strict mode code which doesn't define any globals.  It's inside a
-// function because try/catches deoptimize in certain engines.
-
-var cachedSetTimeout;
-var cachedClearTimeout;
-
-function defaultSetTimout() {
-    throw new Error('setTimeout has not been defined');
-}
-function defaultClearTimeout () {
-    throw new Error('clearTimeout has not been defined');
-}
-(function () {
-    try {
-        if (typeof setTimeout === 'function') {
-            cachedSetTimeout = setTimeout;
-        } else {
-            cachedSetTimeout = defaultSetTimout;
-        }
-    } catch (e) {
-        cachedSetTimeout = defaultSetTimout;
-    }
-    try {
-        if (typeof clearTimeout === 'function') {
-            cachedClearTimeout = clearTimeout;
-        } else {
-            cachedClearTimeout = defaultClearTimeout;
-        }
-    } catch (e) {
-        cachedClearTimeout = defaultClearTimeout;
-    }
-} ())
-function runTimeout(fun) {
-    if (cachedSetTimeout === setTimeout) {
-        //normal enviroments in sane situations
-        return setTimeout(fun, 0);
-    }
-    // if setTimeout wasn't available but was latter defined
-    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
-        cachedSetTimeout = setTimeout;
-        return setTimeout(fun, 0);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedSetTimeout(fun, 0);
-    } catch(e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
-            return cachedSetTimeout.call(null, fun, 0);
-        } catch(e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
-            return cachedSetTimeout.call(this, fun, 0);
-        }
-    }
-
-
-}
-function runClearTimeout(marker) {
-    if (cachedClearTimeout === clearTimeout) {
-        //normal enviroments in sane situations
-        return clearTimeout(marker);
-    }
-    // if clearTimeout wasn't available but was latter defined
-    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
-        cachedClearTimeout = clearTimeout;
-        return clearTimeout(marker);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedClearTimeout(marker);
-    } catch (e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
-            return cachedClearTimeout.call(null, marker);
-        } catch (e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
-            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
-            return cachedClearTimeout.call(this, marker);
-        }
-    }
-
-
-
-}
-var queue = [];
-var draining = false;
-var currentQueue;
-var queueIndex = -1;
-
-function cleanUpNextTick() {
-    if (!draining || !currentQueue) {
-        return;
-    }
-    draining = false;
-    if (currentQueue.length) {
-        queue = currentQueue.concat(queue);
-    } else {
-        queueIndex = -1;
-    }
-    if (queue.length) {
-        drainQueue();
-    }
-}
-
-function drainQueue() {
-    if (draining) {
-        return;
-    }
-    var timeout = runTimeout(cleanUpNextTick);
-    draining = true;
-
-    var len = queue.length;
-    while(len) {
-        currentQueue = queue;
-        queue = [];
-        while (++queueIndex < len) {
-            if (currentQueue) {
-                currentQueue[queueIndex].run();
-            }
-        }
-        queueIndex = -1;
-        len = queue.length;
-    }
-    currentQueue = null;
-    draining = false;
-    runClearTimeout(timeout);
-}
-
-process.nextTick = function (fun) {
-    var args = new Array(arguments.length - 1);
-    if (arguments.length > 1) {
-        for (var i = 1; i < arguments.length; i++) {
-            args[i - 1] = arguments[i];
-        }
-    }
-    queue.push(new Item(fun, args));
-    if (queue.length === 1 && !draining) {
-        runTimeout(drainQueue);
-    }
-};
-
-// v8 likes predictible objects
-function Item(fun, array) {
-    this.fun = fun;
-    this.array = array;
-}
-Item.prototype.run = function () {
-    this.fun.apply(null, this.array);
-};
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-process.version = ''; // empty string to avoid regexp issues
-process.versions = {};
-
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-process.prependListener = noop;
-process.prependOnceListener = noop;
-
-process.listeners = function (name) { return [] }
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-};
-
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-process.umask = function() { return 0; };
-
-},{}],2:[function(require,module,exports){
-(function (setImmediate,clearImmediate){
-var nextTick = require('process/browser.js').nextTick;
-var apply = Function.prototype.apply;
-var slice = Array.prototype.slice;
-var immediateIds = {};
-var nextImmediateId = 0;
-
-// DOM APIs, for completeness
-
-exports.setTimeout = function() {
-  return new Timeout(apply.call(setTimeout, window, arguments), clearTimeout);
-};
-exports.setInterval = function() {
-  return new Timeout(apply.call(setInterval, window, arguments), clearInterval);
-};
-exports.clearTimeout =
-exports.clearInterval = function(timeout) { timeout.close(); };
-
-function Timeout(id, clearFn) {
-  this._id = id;
-  this._clearFn = clearFn;
-}
-Timeout.prototype.unref = Timeout.prototype.ref = function() {};
-Timeout.prototype.close = function() {
-  this._clearFn.call(window, this._id);
-};
-
-// Does not start the time, just sets up the members needed.
-exports.enroll = function(item, msecs) {
-  clearTimeout(item._idleTimeoutId);
-  item._idleTimeout = msecs;
-};
-
-exports.unenroll = function(item) {
-  clearTimeout(item._idleTimeoutId);
-  item._idleTimeout = -1;
-};
-
-exports._unrefActive = exports.active = function(item) {
-  clearTimeout(item._idleTimeoutId);
-
-  var msecs = item._idleTimeout;
-  if (msecs >= 0) {
-    item._idleTimeoutId = setTimeout(function onTimeout() {
-      if (item._onTimeout)
-        item._onTimeout();
-    }, msecs);
-  }
-};
-
-// That's not how node.js implements it but the exposed api is the same.
-exports.setImmediate = typeof setImmediate === "function" ? setImmediate : function(fn) {
-  var id = nextImmediateId++;
-  var args = arguments.length < 2 ? false : slice.call(arguments, 1);
-
-  immediateIds[id] = true;
-
-  nextTick(function onNextTick() {
-    if (immediateIds[id]) {
-      // fn.call() is faster so we optimize for the common use-case
-      // @see http://jsperf.com/call-apply-segu
-      if (args) {
-        fn.apply(null, args);
-      } else {
-        fn.call(null);
-      }
-      // Prevent ids from leaking
-      exports.clearImmediate(id);
-    }
-  });
-
-  return id;
-};
-
-exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate : function(id) {
-  delete immediateIds[id];
-};
-}).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":1,"timers":2}],3:[function(require,module,exports){
 window.PodChat = require('./src/chat.js');
 
-},{"./src/chat.js":43}],4:[function(require,module,exports){
+},{"./src/chat.js":41}],2:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -499,7 +234,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.AES;
 
 }));
-},{"./cipher-core":5,"./core":6,"./enc-base64":7,"./evpkdf":9,"./md5":14}],5:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4,"./enc-base64":5,"./evpkdf":7,"./md5":12}],3:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -1380,7 +1115,7 @@ window.PodChat = require('./src/chat.js');
 
 
 }));
-},{"./core":6,"./evpkdf":9}],6:[function(require,module,exports){
+},{"./core":4,"./evpkdf":7}],4:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2141,7 +1876,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS;
 
 }));
-},{}],7:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2277,7 +2012,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.enc.Base64;
 
 }));
-},{"./core":6}],8:[function(require,module,exports){
+},{"./core":4}],6:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2427,7 +2162,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.enc.Utf16;
 
 }));
-},{"./core":6}],9:[function(require,module,exports){
+},{"./core":4}],7:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2560,7 +2295,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.EvpKDF;
 
 }));
-},{"./core":6,"./hmac":11,"./sha1":30}],10:[function(require,module,exports){
+},{"./core":4,"./hmac":9,"./sha1":28}],8:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2627,7 +2362,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.format.Hex;
 
 }));
-},{"./cipher-core":5,"./core":6}],11:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],9:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2771,7 +2506,7 @@ window.PodChat = require('./src/chat.js');
 
 
 }));
-},{"./core":6}],12:[function(require,module,exports){
+},{"./core":4}],10:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2790,7 +2525,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS;
 
 }));
-},{"./aes":4,"./cipher-core":5,"./core":6,"./enc-base64":7,"./enc-utf16":8,"./evpkdf":9,"./format-hex":10,"./hmac":11,"./lib-typedarrays":13,"./md5":14,"./mode-cfb":15,"./mode-ctr":17,"./mode-ctr-gladman":16,"./mode-ecb":18,"./mode-ofb":19,"./pad-ansix923":20,"./pad-iso10126":21,"./pad-iso97971":22,"./pad-nopadding":23,"./pad-zeropadding":24,"./pbkdf2":25,"./rabbit":27,"./rabbit-legacy":26,"./rc4":28,"./ripemd160":29,"./sha1":30,"./sha224":31,"./sha256":32,"./sha3":33,"./sha384":34,"./sha512":35,"./tripledes":36,"./x64-core":37}],13:[function(require,module,exports){
+},{"./aes":2,"./cipher-core":3,"./core":4,"./enc-base64":5,"./enc-utf16":6,"./evpkdf":7,"./format-hex":8,"./hmac":9,"./lib-typedarrays":11,"./md5":12,"./mode-cfb":13,"./mode-ctr":15,"./mode-ctr-gladman":14,"./mode-ecb":16,"./mode-ofb":17,"./pad-ansix923":18,"./pad-iso10126":19,"./pad-iso97971":20,"./pad-nopadding":21,"./pad-zeropadding":22,"./pbkdf2":23,"./rabbit":25,"./rabbit-legacy":24,"./rc4":26,"./ripemd160":27,"./sha1":28,"./sha224":29,"./sha256":30,"./sha3":31,"./sha384":32,"./sha512":33,"./tripledes":34,"./x64-core":35}],11:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2867,7 +2602,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.lib.WordArray;
 
 }));
-},{"./core":6}],14:[function(require,module,exports){
+},{"./core":4}],12:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3136,7 +2871,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.MD5;
 
 }));
-},{"./core":6}],15:[function(require,module,exports){
+},{"./core":4}],13:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3215,7 +2950,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.mode.CFB;
 
 }));
-},{"./cipher-core":5,"./core":6}],16:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],14:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3332,7 +3067,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.mode.CTRGladman;
 
 }));
-},{"./cipher-core":5,"./core":6}],17:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],15:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3391,7 +3126,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.mode.CTR;
 
 }));
-},{"./cipher-core":5,"./core":6}],18:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],16:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3432,7 +3167,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.mode.ECB;
 
 }));
-},{"./cipher-core":5,"./core":6}],19:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],17:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3487,7 +3222,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.mode.OFB;
 
 }));
-},{"./cipher-core":5,"./core":6}],20:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],18:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3537,7 +3272,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.pad.Ansix923;
 
 }));
-},{"./cipher-core":5,"./core":6}],21:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],19:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3582,7 +3317,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.pad.Iso10126;
 
 }));
-},{"./cipher-core":5,"./core":6}],22:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],20:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3623,7 +3358,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.pad.Iso97971;
 
 }));
-},{"./cipher-core":5,"./core":6}],23:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],21:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3654,7 +3389,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.pad.NoPadding;
 
 }));
-},{"./cipher-core":5,"./core":6}],24:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],22:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3700,7 +3435,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.pad.ZeroPadding;
 
 }));
-},{"./cipher-core":5,"./core":6}],25:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],23:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3846,7 +3581,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.PBKDF2;
 
 }));
-},{"./core":6,"./hmac":11,"./sha1":30}],26:[function(require,module,exports){
+},{"./core":4,"./hmac":9,"./sha1":28}],24:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -4037,7 +3772,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.RabbitLegacy;
 
 }));
-},{"./cipher-core":5,"./core":6,"./enc-base64":7,"./evpkdf":9,"./md5":14}],27:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4,"./enc-base64":5,"./evpkdf":7,"./md5":12}],25:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -4230,7 +3965,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.Rabbit;
 
 }));
-},{"./cipher-core":5,"./core":6,"./enc-base64":7,"./evpkdf":9,"./md5":14}],28:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4,"./enc-base64":5,"./evpkdf":7,"./md5":12}],26:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -4370,7 +4105,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.RC4;
 
 }));
-},{"./cipher-core":5,"./core":6,"./enc-base64":7,"./evpkdf":9,"./md5":14}],29:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4,"./enc-base64":5,"./evpkdf":7,"./md5":12}],27:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -4638,7 +4373,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.RIPEMD160;
 
 }));
-},{"./core":6}],30:[function(require,module,exports){
+},{"./core":4}],28:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -4789,7 +4524,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.SHA1;
 
 }));
-},{"./core":6}],31:[function(require,module,exports){
+},{"./core":4}],29:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -4870,7 +4605,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.SHA224;
 
 }));
-},{"./core":6,"./sha256":32}],32:[function(require,module,exports){
+},{"./core":4,"./sha256":30}],30:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -5070,7 +4805,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.SHA256;
 
 }));
-},{"./core":6}],33:[function(require,module,exports){
+},{"./core":4}],31:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -5394,7 +5129,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.SHA3;
 
 }));
-},{"./core":6,"./x64-core":37}],34:[function(require,module,exports){
+},{"./core":4,"./x64-core":35}],32:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -5478,7 +5213,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.SHA384;
 
 }));
-},{"./core":6,"./sha512":35,"./x64-core":37}],35:[function(require,module,exports){
+},{"./core":4,"./sha512":33,"./x64-core":35}],33:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -5802,7 +5537,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.SHA512;
 
 }));
-},{"./core":6,"./x64-core":37}],36:[function(require,module,exports){
+},{"./core":4,"./x64-core":35}],34:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -6573,7 +6308,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.TripleDES;
 
 }));
-},{"./cipher-core":5,"./core":6,"./enc-base64":7,"./evpkdf":9,"./md5":14}],37:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4,"./enc-base64":5,"./evpkdf":7,"./md5":12}],35:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -6878,8 +6613,8 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS;
 
 }));
-},{"./core":6}],38:[function(require,module,exports){
-(function (global,setImmediate){
+},{"./core":4}],36:[function(require,module,exports){
+(function (global){
 /*
  * Dexie.js - a minimalistic wrapper for IndexedDB
  * ===============================================
@@ -11355,8 +11090,8 @@ return Dexie;
 })));
 
 
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("timers").setImmediate)
-},{"timers":2}],39:[function(require,module,exports){
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],37:[function(require,module,exports){
 (function (global){
 // https://github.com/maxogden/websocket-stream/blob/48dc3ddf943e5ada668c31ccd94e9186f02fafbd/ws-fallback.js
 
@@ -11377,7 +11112,7 @@ if (typeof WebSocket !== 'undefined') {
 module.exports = ws
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],40:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 (function () {
     /*
      * Async module to handle async messaging
@@ -12090,7 +11825,7 @@ module.exports = ws
     }
 })();
 
-},{"../utility/utility.js":42,"./socket.js":41}],41:[function(require,module,exports){
+},{"../utility/utility.js":40,"./socket.js":39}],39:[function(require,module,exports){
 (function() {
   /*
    * Socket Module to connect and handle Socket functionalities
@@ -12311,7 +12046,7 @@ module.exports = ws
 
 })();
 
-},{"isomorphic-ws":39}],42:[function(require,module,exports){
+},{"isomorphic-ws":37}],40:[function(require,module,exports){
 (function (global){
 (function() {
   /**
@@ -12630,7 +12365,7 @@ module.exports = ws
 })();
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],43:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 (function () {
     /*
      * Pod Chat Browser Module
@@ -15012,7 +14747,7 @@ module.exports = ws
                                         type: 'THREAD_UNREAD_COUNT_UPDATED',
                                         result: {
                                             thread: threads[0],
-                                            unreadCount: messageContent.unreadCount
+                                            unreadCount: (messageContent.unreadCount) ? messageContent.unreadCount : 0
                                         }
                                     });
 
@@ -15029,7 +14764,7 @@ module.exports = ws
                                 type: 'THREAD_UNREAD_COUNT_UPDATED',
                                 result: {
                                     thread: threadId,
-                                    unreadCount: messageContent.unreadCount
+                                    unreadCount: (messageContent.unreadCount) ? messageContent.unreadCount : 0
                                 }
                             });
 
@@ -15426,28 +15161,62 @@ module.exports = ws
                      * Type 66    Last Message Deleted
                      */
                     case chatMessageVOTypes.LAST_MESSAGE_DELETED:
-                        var thread = formatDataToMakeConversation(messageContent);
+                        if (fullResponseObject) {
+                            getThreads({
+                                threadIds: [messageContent.id]
+                            }, function (threadsResult) {
+                                var threads = threadsResult.result.threads;
 
-                        fireEvent('threadEvents', {
-                            type: 'THREAD_INFO_UPDATED',
-                            result: {
-                                thread: thread
-                            }
-                        });
+                                if (!threadsResult.cache) {
+                                    fireEvent('threadEvents', {
+                                        type: 'THREAD_INFO_UPDATED',
+                                        result: {
+                                            thread: threads[0]
+                                        }
+                                    });
+                                }
+                            });
+                        } else {
+                            var thread = formatDataToMakeConversation(messageContent);
+
+                            fireEvent('threadEvents', {
+                                type: 'THREAD_INFO_UPDATED',
+                                result: {
+                                    thread: thread
+                                }
+                            });
+                        }
                         break;
 
                     /**
                      * Type 67    Last Message Edited
                      */
                     case chatMessageVOTypes.LAST_MESSAGE_EDITED:
-                        var thread = formatDataToMakeConversation(messageContent);
+                        if (fullResponseObject) {
+                            getThreads({
+                                threadIds: [messageContent.id]
+                            }, function (threadsResult) {
+                                var threads = threadsResult.result.threads;
 
-                        fireEvent('threadEvents', {
-                            type: 'THREAD_INFO_UPDATED',
-                            result: {
-                                thread: thread
-                            }
-                        });
+                                if (!threadsResult.cache) {
+                                    fireEvent('threadEvents', {
+                                        type: 'THREAD_INFO_UPDATED',
+                                        result: {
+                                            thread: threads[0]
+                                        }
+                                    });
+                                }
+                            });
+                        } else {
+                            var thread = formatDataToMakeConversation(messageContent);
+
+                            fireEvent('threadEvents', {
+                                type: 'THREAD_INFO_UPDATED',
+                                result: {
+                                    thread: thread
+                                }
+                            });
+                        }
                         break;
 
                     /**
@@ -15722,7 +15491,7 @@ module.exports = ws
                             type: 'THREAD_UNREAD_COUNT_UPDATED',
                             result: {
                                 thread: threads[0],
-                                unreadCount: threads[0].unreadCount
+                                unreadCount: (threads[0].unreadCount) ? threads[0].unreadCount : 0
                             }
                         });
 
@@ -15746,7 +15515,7 @@ module.exports = ws
                         type: 'THREAD_UNREAD_COUNT_UPDATED',
                         result: {
                             thread: messageContent.id,
-                            unreadCount: messageContent.conversation.unreadCount
+                            unreadCount: (messageContent.conversation.unreadCount) ? messageContent.conversation.unreadCount : 0
                         }
                     });
                 }
@@ -24139,7 +23908,7 @@ module.exports = ws
     }
 })();
 
-},{"./utility/utility.js":44,"dexie":38,"podasync-ws-only":40}],44:[function(require,module,exports){
+},{"./utility/utility.js":42,"dexie":36,"podasync-ws-only":38}],42:[function(require,module,exports){
 (function (global){
 (function() {
 
@@ -24681,4 +24450,4 @@ module.exports = ws
 })();
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"crypto-js":12}]},{},[3]);
+},{"crypto-js":10}]},{},[1]);
