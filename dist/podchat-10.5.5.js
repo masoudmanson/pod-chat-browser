@@ -12758,6 +12758,8 @@ module.exports = ws
                 DEFINE_BOT_COMMAND: 63,
                 START_BOT: 64,
                 STOP_BOT: 65,
+                LAST_MESSAGE_DELETED: 66,
+                LAST_MESSAGE_EDITED: 67,
                 BOT_COMMANDS: 68,
                 THREAD_ALL_BOTS: 69,
                 CONTACT_SYNCED: 90,
@@ -15418,6 +15420,34 @@ module.exports = ws
                         if (messagesCallbacks[uniqueId]) {
                             messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
                         }
+                        break;
+
+                    /**
+                     * Type 66    Last Message Deleted
+                     */
+                    case chatMessageVOTypes.LAST_MESSAGE_DELETED:
+                        var thread = formatDataToMakeConversation(messageContent);
+
+                        fireEvent('threadEvents', {
+                            type: 'THREAD_INFO_UPDATED',
+                            result: {
+                                thread: thread
+                            }
+                        });
+                        break;
+
+                    /**
+                     * Type 67    Last Message Edited
+                     */
+                    case chatMessageVOTypes.LAST_MESSAGE_EDITED:
+                        var thread = formatDataToMakeConversation(messageContent);
+
+                        fireEvent('threadEvents', {
+                            type: 'THREAD_INFO_UPDATED',
+                            result: {
+                                thread: thread
+                            }
+                        });
                         break;
 
                     /**
@@ -20603,11 +20633,11 @@ module.exports = ws
                                     newMetadata = JSON.parse(metadata);
                                 var finalMetaData = objectDeepMerger(newMetadata, oldMetadata);
 
-                                if (typeof message !== 'undefined' && typeof message.content === 'object' && message.content.hasOwnProperty('message')) {
+                                if (typeof message !== 'undefined' && typeof message.content !== 'undefined' && message.content.hasOwnProperty('message')) {
                                     message.content.message['metadata'] = JSON.stringify(finalMetaData);
                                 }
 
-                                if (typeof message !== 'undefined' && typeof message.content === 'object' && message.content.hasOwnProperty('metadata')) {
+                                if (typeof message !== 'undefined' && typeof message.content !== 'undefined' && message.content.hasOwnProperty('metadata')) {
                                     message.content['metadata'] = JSON.stringify(finalMetaData);
                                 }
 
@@ -22111,7 +22141,7 @@ module.exports = ws
                 threadId: params.threadId,
                 participant: userInfo,
                 cancel: function () {
-                    if (!!getImageFromLinkObjects && getImageFromLinkObjects.hasOwnProperty(fileUniqueId)) {
+                    if (typeof getImageFromLinkObjects !== 'undefined' && getImageFromLinkObjects.hasOwnProperty(fileUniqueId)) {
                         getImageFromLinkObjects[fileUniqueId].onload = function(){};
                         delete getImageFromLinkObjects[fileUniqueId];
                         consoleLogging && console.log(`"${fileUniqueId}" - Downloading Location Map has been canceled!`);

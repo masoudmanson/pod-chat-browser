@@ -442,14 +442,14 @@
              * @param messageId  325 editable: false
              * @param newMessage
              */
-            // editMessage(881909, "New message content goes here.");
+            // editMessage(919202, "New message content goes here.");
 
             /**
              * DELETE MESSAGE IN THREAD
              * @param {int}      messageId
              * @param {boolean}  deleteForAll
              */
-            // deleteMessage(883308, true);
+            // deleteMessage(919192, true);
 
             /**
              * REPLY TO MESSAGE
@@ -1920,9 +1920,10 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
             var instantResult = chatAgent.sendTextMessage({
                 threadId: thread,
                 textMessage: message,
-                messageType: 'STICKER'
+                messageType: 'TEXT'
             }, {
                 onSent: function (result) {
+                    console.log({result});
                     console.log(result.uniqueId + " \t has been Sent!");
                 },
                 onDeliver: function (result) {
@@ -1997,6 +1998,7 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
                 }
             }, {
                 onSent: function (result) {
+                    console.log(result);
                     console.log(result.uniqueId + " \t has been Sent!");
                 },
                 onDeliver: function (result) {

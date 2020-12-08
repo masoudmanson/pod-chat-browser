@@ -12699,6 +12699,7 @@ module.exports = ws
             messagesCallbacks = {},
             sendMessageCallbacks = {},
             threadCallbacks = {},
+            getImageFromLinkObjects = {},
             chatMessageVOTypes = {
                 CREATE_THREAD: 1,
                 MESSAGE: 2,
@@ -12757,6 +12758,8 @@ module.exports = ws
                 DEFINE_BOT_COMMAND: 63,
                 START_BOT: 64,
                 STOP_BOT: 65,
+                LAST_MESSAGE_DELETED: 66,
+                LAST_MESSAGE_EDITED: 67,
                 BOT_COMMANDS: 68,
                 THREAD_ALL_BOTS: 69,
                 CONTACT_SYNCED: 90,
@@ -12920,6 +12923,9 @@ module.exports = ws
             actualTimingLog = (params.asyncLogging.actualTiming && typeof params.asyncLogging.actualTiming === 'boolean')
                 ? params.asyncLogging.actualTiming
                 : false,
+            consoleLogging = (params.asyncLogging.consoleLogging && typeof params.asyncLogging.consoleLogging === 'boolean')
+                ? params.asyncLogging.consoleLogging
+                : false,
             minIntegerValue = Number.MAX_SAFE_INTEGER * -1,
             maxIntegerValue = Number.MAX_SAFE_INTEGER,
             chatSendQueue = [],
@@ -13043,7 +13049,7 @@ module.exports = ws
                                                                         });
                                                                     }
                                                                 } catch (e) {
-                                                                    console.log(e);
+                                                                    consoleLogging && console.log(e);
                                                                 }
                                                             }
                                                         }
@@ -13248,7 +13254,7 @@ module.exports = ws
                         try {
                             var response = JSON.parse(result.result.responseText);
                         } catch (e) {
-                            console.log(e);
+                            consoleLogging && console.log(e);
                         }
 
                         /**
@@ -13327,7 +13333,7 @@ module.exports = ws
                                 try {
                                     var response = JSON.parse(result.result.responseText);
                                 } catch (e) {
-                                    console.log(e);
+                                    consoleLogging && console.log(e);
                                 }
 
                                 callback && callback({
@@ -15417,6 +15423,34 @@ module.exports = ws
                         break;
 
                     /**
+                     * Type 66    Last Message Deleted
+                     */
+                    case chatMessageVOTypes.LAST_MESSAGE_DELETED:
+                        var thread = formatDataToMakeConversation(messageContent);
+
+                        fireEvent('threadEvents', {
+                            type: 'THREAD_INFO_UPDATED',
+                            result: {
+                                thread: thread
+                            }
+                        });
+                        break;
+
+                    /**
+                     * Type 67    Last Message Edited
+                     */
+                    case chatMessageVOTypes.LAST_MESSAGE_EDITED:
+                        var thread = formatDataToMakeConversation(messageContent);
+
+                        fireEvent('threadEvents', {
+                            type: 'THREAD_INFO_UPDATED',
+                            result: {
+                                thread: thread
+                            }
+                        });
+                        break;
+
+                    /**
                      * Type 68    Get Bot Commands List
                      */
                     case chatMessageVOTypes.BOT_COMMANDS:
@@ -16491,7 +16525,7 @@ module.exports = ws
                     editable: pushMessageVO.editable,
                     deletable: pushMessageVO.deletable,
                     delivered: pushMessageVO.delivered,
-                    sseen: pushMessageVO.seen,
+                    seen: pushMessageVO.seen,
                     mentioned: pushMessageVO.mentioned,
                     pinned: pushMessageVO.pinned,
                     participant: undefined,
@@ -16942,7 +16976,7 @@ module.exports = ws
                                 };
 
                                 cacheSyncWorker.onerror = function (event) {
-                                    console.log(event);
+                                    consoleLogging && console.log(event);
                                 };
                             }
 
@@ -18963,7 +18997,7 @@ module.exports = ws
                             cancelFileDownload({
                                 uniqueId: downloadUniqueId
                             }, function () {
-                                console.log(`"${downloadUniqueId}" - File download has been canceled!`);
+                                consoleLogging && console.log(`"${downloadUniqueId}" - File download has been canceled!`);
                             });
                         }
                     };
@@ -19047,7 +19081,7 @@ module.exports = ws
                                 cancelFileDownload({
                                     uniqueId: downloadUniqueId
                                 }, function () {
-                                    console.log(`"${downloadUniqueId}" - Image download has been canceled!`);
+                                    consoleLogging && console.log(`"${downloadUniqueId}" - Image download has been canceled!`);
                                 });
                             }
                         };
@@ -19082,7 +19116,7 @@ module.exports = ws
                                 cancelFileDownload({
                                     uniqueId: downloadUniqueId
                                 }, function () {
-                                    console.log(`"${downloadUniqueId}" - Image download has been canceled!`);
+                                    consoleLogging && console.log(`"${downloadUniqueId}" - Image download has been canceled!`);
                                 });
                             }
                         };
@@ -19771,7 +19805,7 @@ module.exports = ws
                                         });
                                     }
                                 } catch (e) {
-                                    console.log(e)
+                                    consoleLogging && console.log(e)
                                     callback({
                                         hasError: true,
                                         errorCode: 6300,
@@ -19926,7 +19960,7 @@ module.exports = ws
                                         });
                                     }
                                 } catch (e) {
-                                    console.log(e)
+                                    consoleLogging && console.log(e)
                                     callback({
                                         hasError: true,
                                         errorCode: 6300,
@@ -20075,9 +20109,9 @@ module.exports = ws
             fireEvent = function (eventName, param) {
                 if (eventName === "chatReady") {
                     if (typeof navigator === "undefined") {
-                        console.log("\x1b[90m    ☰ \x1b[0m\x1b[90m%s\x1b[0m", "Chat is Ready 😉");
+                        consoleLogging && console.log("\x1b[90m    ☰ \x1b[0m\x1b[90m%s\x1b[0m", "Chat is Ready 😉");
                     } else {
-                        console.log("%c   Chat is Ready 😉", 'border-left: solid #666 10px; color: #666;');
+                        consoleLogging && console.log("%c   Chat is Ready 😉", 'border-left: solid #666 10px; color: #666;');
                     }
                 }
                 for (var id in eventCallbacks[eventName]) {
@@ -20108,22 +20142,22 @@ module.exports = ws
                 if (chatCacheDB) {
                     chatCacheDB.delete()
                         .then(function () {
-                            console.log('PodChat Database successfully deleted!');
+                            consoleLogging && console.log('PodChat Database successfully deleted!');
 
                             var queueDb = new Dexie('podQueues');
                             if (queueDb) {
                                 queueDb.delete()
                                     .then(function () {
-                                        console.log('PodQueues Database successfully deleted!');
+                                        consoleLogging && console.log('PodQueues Database successfully deleted!');
                                         startCacheDatabases();
                                     })
                                     .catch(function (err) {
-                                        console.log(err);
+                                        consoleLogging && console.log(err);
                                     });
                             }
                         })
                         .catch(function (err) {
-                            console.log(err);
+                            consoleLogging && console.log(err);
                         });
                 }
             },
@@ -20146,35 +20180,35 @@ module.exports = ws
                         .equals(parseInt(userInfo.id))
                         .delete()
                         .then(function () {
-                            console.log('Threads table deleted');
+                            consoleLogging && console.log('Threads table deleted');
 
                             db.contacts
                                 .where('owner')
                                 .equals(parseInt(userInfo.id))
                                 .delete()
                                 .then(function () {
-                                    console.log('Contacts table deleted');
+                                    consoleLogging && console.log('Contacts table deleted');
 
                                     db.messages
                                         .where('owner')
                                         .equals(parseInt(userInfo.id))
                                         .delete()
                                         .then(function () {
-                                            console.log('Messages table deleted');
+                                            consoleLogging && console.log('Messages table deleted');
 
                                             db.participants
                                                 .where('owner')
                                                 .equals(parseInt(userInfo.id))
                                                 .delete()
                                                 .then(function () {
-                                                    console.log('Participants table deleted');
+                                                    consoleLogging && console.log('Participants table deleted');
 
                                                     db.messageGaps
                                                         .where('owner')
                                                         .equals(parseInt(userInfo.id))
                                                         .delete()
                                                         .then(function () {
-                                                            console.log('MessageGaps table deleted');
+                                                            consoleLogging && console.log('MessageGaps table deleted');
                                                             cacheDeletingInProgress = false;
                                                             callback && callback();
                                                         });
@@ -20227,7 +20261,7 @@ module.exports = ws
 
                         db.open()
                             .catch(function (e) {
-                                console.log('Open failed: ' + e.stack);
+                                consoleLogging && console.log('Open failed: ' + e.stack);
                             });
 
                         db.on('ready', function () {
@@ -20242,7 +20276,7 @@ module.exports = ws
                         callback && callback();
                     }
                 } else {
-                    console.log(CHAT_ERRORS[6600]);
+                    consoleLogging && console.log(CHAT_ERRORS[6600]);
                 }
             },
 
@@ -20599,11 +20633,11 @@ module.exports = ws
                                     newMetadata = JSON.parse(metadata);
                                 var finalMetaData = objectDeepMerger(newMetadata, oldMetadata);
 
-                                if (typeof message !== 'undefined' && typeof message.content === 'object' && message.content.hasOwnProperty('message')) {
+                                if (typeof message !== 'undefined' && typeof message.content !== 'undefined' && message.content.hasOwnProperty('message')) {
                                     message.content.message['metadata'] = JSON.stringify(finalMetaData);
                                 }
 
-                                if (typeof message !== 'undefined' && typeof message.content === 'object' && message.content.hasOwnProperty('metadata')) {
+                                if (typeof message !== 'undefined' && typeof message.content !== 'undefined' && message.content.hasOwnProperty('metadata')) {
                                     message.content['metadata'] = JSON.stringify(finalMetaData);
                                 }
 
@@ -20619,7 +20653,7 @@ module.exports = ws
 
                                 message.metadata = JSON.stringify(finalMetaData);
                             } catch (e) {
-                                console.log(e);
+                                consoleLogging && console.log(e);
                             }
                             deleteFromChatUploadQueue(uploadQueue[i],
                                 function () {
@@ -20671,12 +20705,12 @@ module.exports = ws
                                 .then(function (threadsCount) {
                                     if (threadsCount > 0) {
                                         clearCacheDatabasesOfUser(function () {
-                                            console.log('All cache databases have been cleared.');
+                                            consoleLogging && console.log('All cache databases have been cleared.');
                                         });
                                     }
                                 })
                                 .catch(function (e) {
-                                    console.log(e);
+                                    consoleLogging && console.log(e);
                                 });
                         }
                     }
@@ -21030,7 +21064,7 @@ module.exports = ws
                         if (parseFloat(params.origin.lat) > 0 && parseFloat(params.origin.lng)) {
                             data.origin = params.origin.lat + ',' + parseFloat(params.origin.lng);
                         } else {
-                            console.log('No origin has been selected!');
+                            consoleLogging && console.log('No origin has been selected!');
                         }
                     }
 
@@ -21038,7 +21072,7 @@ module.exports = ws
                         if (parseFloat(params.destination.lat) > 0 && parseFloat(params.destination.lng)) {
                             data.destination = params.destination.lat + ',' + parseFloat(params.destination.lng);
                         } else {
-                            console.log('No destination has been selected!');
+                            consoleLogging && console.log('No destination has been selected!');
                         }
                     }
 
@@ -21159,32 +21193,36 @@ module.exports = ws
             },
 
             //TODO Change Node Version
-            getImageFormUrl = function (url, callback) {
-                var img = new Image();
-                img.setAttribute('crossOrigin', 'anonymous');
-                img.onload = function () {
+            getImageFormUrl = function (url, uniqueId, callback) {
+                getImageFromLinkObjects[uniqueId] = new Image();
+                getImageFromLinkObjects[uniqueId].setAttribute('crossOrigin', 'anonymous');
+
+                getImageFromLinkObjects[uniqueId].onload = function () {
                     var canvas = document.createElement("canvas");
                     canvas.width = this.width;
                     canvas.height = this.height;
                     var ctx = canvas.getContext("2d");
                     ctx.drawImage(this, 0, 0);
                     var dataURI = canvas.toDataURL("image/jpg");
-                    // convert base64/URLEncoded data component to raw binary data held in a string
+
                     var byteString;
                     if (dataURI.split(',')[0].indexOf('base64') >= 0)
                         byteString = atob(dataURI.split(',')[1]);
                     else
                         byteString = unescape(dataURI.split(',')[1]);
-                    // separate out the mime component
+
                     var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
-                    // write the bytes of the string to a typed array
+
                     var ia = new Uint8Array(byteString.length);
                     for (var i = 0; i < byteString.length; i++) {
                         ia[i] = byteString.charCodeAt(i);
                     }
+
+                    delete getImageFromLinkObjects[uniqueId];
                     return callback(new Blob([ia], {type: mimeString}));
                 }
-                img.src = url;
+
+                getImageFromLinkObjects[uniqueId].src = url;
             };
 
         /******************************************************
@@ -21804,7 +21842,7 @@ module.exports = ws
                     try {
                         content.metadata = JSON.stringify(params.metadata);
                     } catch (e) {
-                        console.log(e);
+                        consoleLogging && console.log(e);
                     }
                 }
 
@@ -21983,7 +22021,7 @@ module.exports = ws
                     try {
                         content.metadata = JSON.stringify(params.metadata);
                     } catch (e) {
-                        console.log(e);
+                        consoleLogging && console.log(e);
                     }
                 }
             }
@@ -22082,7 +22120,7 @@ module.exports = ws
                     lng: parseFloat(params.mapCenter.lng),
                     lat: parseFloat(params.mapCenter.lat)
                 }, function (address) {
-                    getImageFormUrl(url, function (blobImage) {
+                    getImageFormUrl(url, fileUniqueId, function (blobImage) {
                         sendFileMessage({
                             threadId: params.threadId,
                             fileUniqueId: fileUniqueId,
@@ -22103,10 +22141,16 @@ module.exports = ws
                 threadId: params.threadId,
                 participant: userInfo,
                 cancel: function () {
+                    if (typeof getImageFromLinkObjects !== 'undefined' && getImageFromLinkObjects.hasOwnProperty(fileUniqueId)) {
+                        getImageFromLinkObjects[fileUniqueId].onload = function(){};
+                        delete getImageFromLinkObjects[fileUniqueId];
+                        consoleLogging && console.log(`"${fileUniqueId}" - Downloading Location Map has been canceled!`);
+                    }
+
                     cancelFileUpload({
                         uniqueId: fileUniqueId
                     }, function () {
-                        console.log(`"${fileUniqueId}" - Sending Location Message has been canceled!`);
+                        consoleLogging && console.log(`"${fileUniqueId}" - Sending Location Message has been canceled!`);
                     });
                 }
             };
