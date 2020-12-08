@@ -2379,7 +2379,7 @@
                                         type: 'THREAD_UNREAD_COUNT_UPDATED',
                                         result: {
                                             thread: threads[0],
-                                            unreadCount: messageContent.unreadCount
+                                            unreadCount: (messageContent.unreadCount) ? messageContent.unreadCount : 0
                                         }
                                     });
 
@@ -2396,7 +2396,7 @@
                                 type: 'THREAD_UNREAD_COUNT_UPDATED',
                                 result: {
                                     thread: threadId,
-                                    unreadCount: messageContent.unreadCount
+                                    unreadCount: (messageContent.unreadCount) ? messageContent.unreadCount : 0
                                 }
                             });
 
@@ -2793,28 +2793,62 @@
                      * Type 66    Last Message Deleted
                      */
                     case chatMessageVOTypes.LAST_MESSAGE_DELETED:
-                        var thread = formatDataToMakeConversation(messageContent);
+                        if (fullResponseObject) {
+                            getThreads({
+                                threadIds: [messageContent.id]
+                            }, function (threadsResult) {
+                                var threads = threadsResult.result.threads;
 
-                        fireEvent('threadEvents', {
-                            type: 'THREAD_INFO_UPDATED',
-                            result: {
-                                thread: thread
-                            }
-                        });
+                                if (!threadsResult.cache) {
+                                    fireEvent('threadEvents', {
+                                        type: 'THREAD_INFO_UPDATED',
+                                        result: {
+                                            thread: threads[0]
+                                        }
+                                    });
+                                }
+                            });
+                        } else {
+                            var thread = formatDataToMakeConversation(messageContent);
+
+                            fireEvent('threadEvents', {
+                                type: 'THREAD_INFO_UPDATED',
+                                result: {
+                                    thread: thread
+                                }
+                            });
+                        }
                         break;
 
                     /**
                      * Type 67    Last Message Edited
                      */
                     case chatMessageVOTypes.LAST_MESSAGE_EDITED:
-                        var thread = formatDataToMakeConversation(messageContent);
+                        if (fullResponseObject) {
+                            getThreads({
+                                threadIds: [messageContent.id]
+                            }, function (threadsResult) {
+                                var threads = threadsResult.result.threads;
 
-                        fireEvent('threadEvents', {
-                            type: 'THREAD_INFO_UPDATED',
-                            result: {
-                                thread: thread
-                            }
-                        });
+                                if (!threadsResult.cache) {
+                                    fireEvent('threadEvents', {
+                                        type: 'THREAD_INFO_UPDATED',
+                                        result: {
+                                            thread: threads[0]
+                                        }
+                                    });
+                                }
+                            });
+                        } else {
+                            var thread = formatDataToMakeConversation(messageContent);
+
+                            fireEvent('threadEvents', {
+                                type: 'THREAD_INFO_UPDATED',
+                                result: {
+                                    thread: thread
+                                }
+                            });
+                        }
                         break;
 
                     /**
@@ -3089,7 +3123,7 @@
                             type: 'THREAD_UNREAD_COUNT_UPDATED',
                             result: {
                                 thread: threads[0],
-                                unreadCount: threads[0].unreadCount
+                                unreadCount: (threads[0].unreadCount) ? threads[0].unreadCount : 0
                             }
                         });
 
@@ -3113,7 +3147,7 @@
                         type: 'THREAD_UNREAD_COUNT_UPDATED',
                         result: {
                             thread: messageContent.id,
-                            unreadCount: messageContent.conversation.unreadCount
+                            unreadCount: (messageContent.conversation.unreadCount) ? messageContent.conversation.unreadCount : 0
                         }
                     });
                 }
