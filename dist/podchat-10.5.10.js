@@ -12700,6 +12700,7 @@ module.exports = ws
             sendMessageCallbacks = {},
             threadCallbacks = {},
             getImageFromLinkObjects = {},
+            asyncRequestTimeouts = {},
             chatMessageVOTypes = {
                 CREATE_THREAD: 1,
                 MESSAGE: 2,
@@ -12919,6 +12920,7 @@ module.exports = ws
             connectionCheckTimeout = params.connectionCheckTimeout,
             connectionCheckTimeoutThreshold = params.connectionCheckTimeoutThreshold,
             httpRequestTimeout = (params.httpRequestTimeout >= 0) ? params.httpRequestTimeout : 0,
+            asyncRequestTimeout = (typeof params.asyncRequestTimeout === 'number' && params.asyncRequestTimeout >= 0) ? params.asyncRequestTimeout : 0,
             httpUploadRequestTimeout = (params.httpUploadRequestTimeout >= 0) ? params.httpUploadRequestTimeout : 0,
             actualTimingLog = (params.asyncLogging.actualTiming && typeof params.asyncLogging.actualTiming === 'boolean')
                 ? params.asyncLogging.actualTiming
@@ -13583,9 +13585,20 @@ module.exports = ws
                         if (httpRequestObject[eval('fileUploadUniqueId')].status === 200) {
                             if (hasFile) {
                                 hasError = false;
+                                var fileHashCode = '';
+                                try {
+                                    var fileUploadResult = JSON.parse(httpRequestObject[eval('fileUploadUniqueId')].response);
+                                    if (!!fileUploadResult && fileUploadResult.hasOwnProperty('result')) {
+                                        fileHashCode = fileUploadResult.result.hashCode;
+                                    }
+                                } catch (e) {
+                                    console.log(e)
+                                }
+
                                 fireEvent('fileUploadEvents', {
                                     threadId: threadId,
                                     uniqueId: fileUniqueId,
+                                    fileHash: fileHashCode,
                                     state: 'UPLOADED',
                                     progress: 100,
                                     fileInfo: {
@@ -13926,6 +13939,37 @@ module.exports = ws
                     }
                 });
 
+                if (asyncRequestTimeout > 0) {
+                    asyncRequestTimeouts[uniqueId] && clearTimeout(asyncRequestTimeouts[uniqueId]);
+                    asyncRequestTimeouts[uniqueId] = setTimeout(function () {
+                        if (typeof callbacks == 'function') {
+                            callbacks({
+                                hasError: true,
+                                errorCode: 408,
+                                errorMessage: 'Async Request Timed Out!'
+                            });
+                        } else if (typeof callbacks == 'object' && typeof callbacks.onResult == 'function') {
+                            callbacks.onResult({
+                                hasError: true,
+                                errorCode: 408,
+                                errorMessage: 'Async Request Timed Out!'
+                            });
+                        }
+
+                        if (messagesCallbacks[uniqueId]) {
+                            delete messagesCallbacks[uniqueId];
+                        }
+                        if (sendMessageCallbacks[uniqueId]) {
+                            delete sendMessageCallbacks[uniqueId];
+                        }
+                        if (!!threadCallbacks[threadId] && threadCallbacks[threadId][uniqueId]) {
+                            threadCallbacks[threadId][uniqueId] = {};
+                            delete threadCallbacks[threadId][uniqueId];
+                        }
+
+                    }, asyncRequestTimeout);
+                }
+
                 sendPingTimeout && clearTimeout(sendPingTimeout);
                 sendPingTimeout = setTimeout(function () {
                     ping();
@@ -14111,6 +14155,8 @@ module.exports = ws
                     uniqueId = chatMessage.uniqueId,
                     time = chatMessage.time;
 
+                asyncRequestTimeouts[uniqueId] && clearTimeout(asyncRequestTimeouts[uniqueId]);
+
                 switch (type) {
                     /**
                      * Type 1    Get Threads
@@ -14140,7 +14186,8 @@ module.exports = ws
                     case chatMessageVOTypes.SENT:
                         if (sendMessageCallbacks[uniqueId] && sendMessageCallbacks[uniqueId].onSent) {
                             sendMessageCallbacks[uniqueId].onSent({
-                                uniqueId: uniqueId
+                                uniqueId: uniqueId,
+                                messageId: messageContent
                             });
                             delete (sendMessageCallbacks[uniqueId].onSent);
                             threadCallbacks[threadId][uniqueId].onSent = true;
@@ -20054,6 +20101,18 @@ module.exports = ws
                             if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
                                 uploadImageToPodspaceUserGroup(fileUploadParams, function (result) {
                                     if (!result.hasError) {
+                                        // Send onFileUpload callback result
+                                        if (typeof callbacks === 'object' && callbacks.hasOwnProperty('onFileUpload')) {
+                                            callbacks.onFileUpload && callbacks.onFileUpload({
+                                                name: result.result.name,
+                                                hashCode: result.result.hashCode,
+                                                parentHash: result.result.parentHash,
+                                                size: result.result.size,
+                                                actualHeight: result.result.actualHeight,
+                                                actualWidth: result.result.actualWidth,
+                                                link: `https://podspace.pod.ir/nzh/drive/downloadImage?hash=${result.result.hashCode}`
+                                            });
+                                        }
                                         metadata['name'] = result.result.name;
                                         metadata['fileHash'] = result.result.hashCode;
                                         metadata['file']['name'] = result.result.name;
@@ -22142,7 +22201,8 @@ module.exports = ws
                 participant: userInfo,
                 cancel: function () {
                     if (typeof getImageFromLinkObjects !== 'undefined' && getImageFromLinkObjects.hasOwnProperty(fileUniqueId)) {
-                        getImageFromLinkObjects[fileUniqueId].onload = function(){};
+                        getImageFromLinkObjects[fileUniqueId].onload = function () {
+                        };
                         delete getImageFromLinkObjects[fileUniqueId];
                         consoleLogging && console.log(`"${fileUniqueId}" - Downloading Location Map has been canceled!`);
                     }
