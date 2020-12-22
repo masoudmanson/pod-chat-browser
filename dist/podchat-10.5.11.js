@@ -21844,7 +21844,7 @@ module.exports = ws
                     };
                 } else {
                     sendMessageParams.content = {
-                        clearHistory: false
+                        clearHistory: true
                     };
                 }
             }

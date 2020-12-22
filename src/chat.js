@@ -9211,7 +9211,7 @@
                     };
                 } else {
                     sendMessageParams.content = {
-                        clearHistory: false
+                        clearHistory: true
                     };
                 }
             }
