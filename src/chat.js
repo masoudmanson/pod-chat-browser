@@ -4295,7 +4295,7 @@
                                                 threads: cacheData,
                                                 contentCount: threadsCount,
                                                 hasNext: !(threads.length < count),
-                                                nextOffset: offset + threads.length
+                                                nextOffset: offset * 1 + threads.length
                                             }
                                         };
 
@@ -4342,7 +4342,7 @@
                                     threads: [],
                                     contentCount: result.contentCount,
                                     hasNext: (offset + count < result.contentCount && messageLength > 0),
-                                    nextOffset: offset + messageLength
+                                    nextOffset: offset * 1 + messageLength * 1
                                 },
                                 threadData;
 
@@ -4927,7 +4927,7 @@
                                                                             history: cacheData,
                                                                             contentCount: contentCount,
                                                                             hasNext: hasNext,
-                                                                            nextOffset: offset + messages.length
+                                                                            nextOffset: offset * 1 + messages.length
                                                                         }
                                                                     };
 
@@ -5617,7 +5617,7 @@
                                         contentCount: result.contentCount,
                                         hasNext: (sendMessageParams.content.offset + sendMessageParams.content.count < result.contentCount &&
                                             messageLength > 0),
-                                        nextOffset: sendMessageParams.content.offset + messageLength
+                                        nextOffset: sendMessageParams.content.offset * 1 + messageLength * 1
                                     };
 
                                     if (sendingQueue) {
@@ -6100,7 +6100,7 @@
                                                         participants: cacheData,
                                                         contentCount: participantsCount,
                                                         hasNext: !(participants.length < count),
-                                                        nextOffset: offset + participants.length
+                                                        nextOffset: offset * 1 + participants.length
                                                     }
                                                 };
 
@@ -6151,7 +6151,7 @@
                                     participants: reformatThreadParticipants(messageContent, params.threadId),
                                     contentCount: result.contentCount,
                                     hasNext: (sendMessageParams.content.offset + sendMessageParams.content.count < result.contentCount && messageLength > 0),
-                                    nextOffset: sendMessageParams.content.offset + messageLength
+                                    nextOffset: sendMessageParams.content.offset * 1 + messageLength * 1
                                 };
 
                             returnData.result = resultData;
@@ -8093,11 +8093,11 @@
                                     newMetadata = JSON.parse(metadata);
                                 var finalMetaData = objectDeepMerger(newMetadata, oldMetadata);
 
-                                if (typeof message !== 'undefined' && typeof message.content !== 'undefined' && message.content.hasOwnProperty('message')) {
+                                if (typeof message !== 'undefined' && message && typeof message.content !== 'undefined' && message.content && message.content.hasOwnProperty('message')) {
                                     message.content.message['metadata'] = JSON.stringify(finalMetaData);
                                 }
 
-                                if (typeof message !== 'undefined' && typeof message.content !== 'undefined' && message.content.hasOwnProperty('metadata')) {
+                                if (typeof message !== 'undefined' && message && typeof message.content !== 'undefined' && message.content && message.content.hasOwnProperty('metadata')) {
                                     message.content['metadata'] = JSON.stringify(finalMetaData);
                                 }
 
@@ -8758,8 +8758,7 @@
                 cache: false,
                 queues: {
                     uploading: false,
-                    sending: false,
-                    uploading: false
+                    sending: false
                 }
             }, callback);
         };
@@ -8774,8 +8773,7 @@
                 cache: false,
                 queues: {
                     uploading: false,
-                    sending: false,
-                    uploading: false
+                    sending: false
                 }
             }, callback);
         };
@@ -8921,7 +8919,7 @@
                                                     contacts: cacheData,
                                                     contentCount: contactsCount,
                                                     hasNext: !(contacts.length < count),
-                                                    nextOffset: offset + contacts.length
+                                                    nextOffset: offset * 1 + contacts.length
                                                 }
                                             };
 
@@ -8976,7 +8974,7 @@
                                 contacts: [],
                                 contentCount: result.contentCount,
                                 hasNext: (offset + count < result.contentCount && messageLength > 0),
-                                nextOffset: offset + messageLength
+                                nextOffset: offset * 1 + messageLength * 1
                             },
                             contactData;
 
@@ -10484,7 +10482,7 @@
                                 blockedUsers: [],
                                 contentCount: result.contentCount,
                                 hasNext: (offset + count < result.contentCount && messageLength > 0),
-                                nextOffset: offset + messageLength
+                                nextOffset: offset * 1 + messageLength * 1
                             },
                             blockedUser;
 
@@ -11089,7 +11087,7 @@
                                                     contacts: cacheData,
                                                     contentCount: contactsCount,
                                                     hasNext: !(contacts.length < data.size),
-                                                    nextOffset: data.offset + contacts.length
+                                                    nextOffset: data.offset * 1 + contacts.length
                                                 }
                                             };
 
