@@ -67,6 +67,7 @@
             sendMessageCallbacks = {},
             threadCallbacks = {},
             getImageFromLinkObjects = {},
+            asyncRequestTimeouts = {},
             chatMessageVOTypes = {
                 CREATE_THREAD: 1,
                 MESSAGE: 2,
@@ -286,6 +287,7 @@
             connectionCheckTimeout = params.connectionCheckTimeout,
             connectionCheckTimeoutThreshold = params.connectionCheckTimeoutThreshold,
             httpRequestTimeout = (params.httpRequestTimeout >= 0) ? params.httpRequestTimeout : 0,
+            asyncRequestTimeout = (typeof params.asyncRequestTimeout === 'number' && params.asyncRequestTimeout >= 0) ? params.asyncRequestTimeout : 0,
             httpUploadRequestTimeout = (params.httpUploadRequestTimeout >= 0) ? params.httpUploadRequestTimeout : 0,
             actualTimingLog = (params.asyncLogging.actualTiming && typeof params.asyncLogging.actualTiming === 'boolean')
                 ? params.asyncLogging.actualTiming
@@ -950,9 +952,20 @@
                         if (httpRequestObject[eval('fileUploadUniqueId')].status === 200) {
                             if (hasFile) {
                                 hasError = false;
+                                var fileHashCode = '';
+                                try {
+                                    var fileUploadResult = JSON.parse(httpRequestObject[eval('fileUploadUniqueId')].response);
+                                    if (!!fileUploadResult && fileUploadResult.hasOwnProperty('result')) {
+                                        fileHashCode = fileUploadResult.result.hashCode;
+                                    }
+                                } catch (e) {
+                                    console.log(e)
+                                }
+
                                 fireEvent('fileUploadEvents', {
                                     threadId: threadId,
                                     uniqueId: fileUniqueId,
+                                    fileHash: fileHashCode,
                                     state: 'UPLOADED',
                                     progress: 100,
                                     fileInfo: {
@@ -1293,6 +1306,37 @@
                     }
                 });
 
+                if (asyncRequestTimeout > 0) {
+                    asyncRequestTimeouts[uniqueId] && clearTimeout(asyncRequestTimeouts[uniqueId]);
+                    asyncRequestTimeouts[uniqueId] = setTimeout(function () {
+                        if (typeof callbacks == 'function') {
+                            callbacks({
+                                hasError: true,
+                                errorCode: 408,
+                                errorMessage: 'Async Request Timed Out!'
+                            });
+                        } else if (typeof callbacks == 'object' && typeof callbacks.onResult == 'function') {
+                            callbacks.onResult({
+                                hasError: true,
+                                errorCode: 408,
+                                errorMessage: 'Async Request Timed Out!'
+                            });
+                        }
+
+                        if (messagesCallbacks[uniqueId]) {
+                            delete messagesCallbacks[uniqueId];
+                        }
+                        if (sendMessageCallbacks[uniqueId]) {
+                            delete sendMessageCallbacks[uniqueId];
+                        }
+                        if (!!threadCallbacks[threadId] && threadCallbacks[threadId][uniqueId]) {
+                            threadCallbacks[threadId][uniqueId] = {};
+                            delete threadCallbacks[threadId][uniqueId];
+                        }
+
+                    }, asyncRequestTimeout);
+                }
+
                 sendPingTimeout && clearTimeout(sendPingTimeout);
                 sendPingTimeout = setTimeout(function () {
                     ping();
@@ -1478,6 +1522,8 @@
                     uniqueId = chatMessage.uniqueId,
                     time = chatMessage.time;
 
+                asyncRequestTimeouts[uniqueId] && clearTimeout(asyncRequestTimeouts[uniqueId]);
+
                 switch (type) {
                     /**
                      * Type 1    Get Threads
@@ -1507,7 +1553,8 @@
                     case chatMessageVOTypes.SENT:
                         if (sendMessageCallbacks[uniqueId] && sendMessageCallbacks[uniqueId].onSent) {
                             sendMessageCallbacks[uniqueId].onSent({
-                                uniqueId: uniqueId
+                                uniqueId: uniqueId,
+                                messageId: messageContent
                             });
                             delete (sendMessageCallbacks[uniqueId].onSent);
                             threadCallbacks[threadId][uniqueId].onSent = true;
@@ -4248,7 +4295,7 @@
                                                 threads: cacheData,
                                                 contentCount: threadsCount,
                                                 hasNext: !(threads.length < count),
-                                                nextOffset: offset + threads.length
+                                                nextOffset: offset * 1 + threads.length
                                             }
                                         };
 
@@ -4295,7 +4342,7 @@
                                     threads: [],
                                     contentCount: result.contentCount,
                                     hasNext: (offset + count < result.contentCount && messageLength > 0),
-                                    nextOffset: offset + messageLength
+                                    nextOffset: offset * 1 + messageLength * 1
                                 },
                                 threadData;
 
@@ -4880,7 +4927,7 @@
                                                                             history: cacheData,
                                                                             contentCount: contentCount,
                                                                             hasNext: hasNext,
-                                                                            nextOffset: offset + messages.length
+                                                                            nextOffset: offset * 1 + messages.length
                                                                         }
                                                                     };
 
@@ -5570,7 +5617,7 @@
                                         contentCount: result.contentCount,
                                         hasNext: (sendMessageParams.content.offset + sendMessageParams.content.count < result.contentCount &&
                                             messageLength > 0),
-                                        nextOffset: sendMessageParams.content.offset + messageLength
+                                        nextOffset: sendMessageParams.content.offset * 1 + messageLength * 1
                                     };
 
                                     if (sendingQueue) {
@@ -6053,7 +6100,7 @@
                                                         participants: cacheData,
                                                         contentCount: participantsCount,
                                                         hasNext: !(participants.length < count),
-                                                        nextOffset: offset + participants.length
+                                                        nextOffset: offset * 1 + participants.length
                                                     }
                                                 };
 
@@ -6104,7 +6151,7 @@
                                     participants: reformatThreadParticipants(messageContent, params.threadId),
                                     contentCount: result.contentCount,
                                     hasNext: (sendMessageParams.content.offset + sendMessageParams.content.count < result.contentCount && messageLength > 0),
-                                    nextOffset: sendMessageParams.content.offset + messageLength
+                                    nextOffset: sendMessageParams.content.offset * 1 + messageLength * 1
                                 };
 
                             returnData.result = resultData;
@@ -7455,6 +7502,18 @@
                             if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
                                 uploadImageToPodspaceUserGroup(fileUploadParams, function (result) {
                                     if (!result.hasError) {
+                                        // Send onFileUpload callback result
+                                        if (typeof callbacks === 'object' && callbacks.hasOwnProperty('onFileUpload')) {
+                                            callbacks.onFileUpload && callbacks.onFileUpload({
+                                                name: result.result.name,
+                                                hashCode: result.result.hashCode,
+                                                parentHash: result.result.parentHash,
+                                                size: result.result.size,
+                                                actualHeight: result.result.actualHeight,
+                                                actualWidth: result.result.actualWidth,
+                                                link: `https://podspace.pod.ir/nzh/drive/downloadImage?hash=${result.result.hashCode}`
+                                            });
+                                        }
                                         metadata['name'] = result.result.name;
                                         metadata['fileHash'] = result.result.hashCode;
                                         metadata['file']['name'] = result.result.name;
@@ -8034,11 +8093,11 @@
                                     newMetadata = JSON.parse(metadata);
                                 var finalMetaData = objectDeepMerger(newMetadata, oldMetadata);
 
-                                if (typeof message !== 'undefined' && typeof message.content !== 'undefined' && message.content.hasOwnProperty('message')) {
+                                if (typeof message !== 'undefined' && message && typeof message.content !== 'undefined' && message.content && message.content.hasOwnProperty('message')) {
                                     message.content.message['metadata'] = JSON.stringify(finalMetaData);
                                 }
 
-                                if (typeof message !== 'undefined' && typeof message.content !== 'undefined' && message.content.hasOwnProperty('metadata')) {
+                                if (typeof message !== 'undefined' && message && typeof message.content !== 'undefined' && message.content && message.content.hasOwnProperty('metadata')) {
                                     message.content['metadata'] = JSON.stringify(finalMetaData);
                                 }
 
@@ -8699,8 +8758,7 @@
                 cache: false,
                 queues: {
                     uploading: false,
-                    sending: false,
-                    uploading: false
+                    sending: false
                 }
             }, callback);
         };
@@ -8715,8 +8773,7 @@
                 cache: false,
                 queues: {
                     uploading: false,
-                    sending: false,
-                    uploading: false
+                    sending: false
                 }
             }, callback);
         };
@@ -8862,7 +8919,7 @@
                                                     contacts: cacheData,
                                                     contentCount: contactsCount,
                                                     hasNext: !(contacts.length < count),
-                                                    nextOffset: offset + contacts.length
+                                                    nextOffset: offset * 1 + contacts.length
                                                 }
                                             };
 
@@ -8917,7 +8974,7 @@
                                 contacts: [],
                                 contentCount: result.contentCount,
                                 hasNext: (offset + count < result.contentCount && messageLength > 0),
-                                nextOffset: offset + messageLength
+                                nextOffset: offset * 1 + messageLength * 1
                             },
                             contactData;
 
@@ -9152,7 +9209,7 @@
                     };
                 } else {
                     sendMessageParams.content = {
-                        clearHistory: false
+                        clearHistory: true
                     };
                 }
             }
@@ -9543,7 +9600,8 @@
                 participant: userInfo,
                 cancel: function () {
                     if (typeof getImageFromLinkObjects !== 'undefined' && getImageFromLinkObjects.hasOwnProperty(fileUniqueId)) {
-                        getImageFromLinkObjects[fileUniqueId].onload = function(){};
+                        getImageFromLinkObjects[fileUniqueId].onload = function () {
+                        };
                         delete getImageFromLinkObjects[fileUniqueId];
                         consoleLogging && console.log(`"${fileUniqueId}" - Downloading Location Map has been canceled!`);
                     }
@@ -10424,7 +10482,7 @@
                                 blockedUsers: [],
                                 contentCount: result.contentCount,
                                 hasNext: (offset + count < result.contentCount && messageLength > 0),
-                                nextOffset: offset + messageLength
+                                nextOffset: offset * 1 + messageLength * 1
                             },
                             blockedUser;
 
@@ -11029,7 +11087,7 @@
                                                     contacts: cacheData,
                                                     contentCount: contactsCount,
                                                     hasNext: !(contacts.length < data.size),
-                                                    nextOffset: data.offset + contacts.length
+                                                    nextOffset: data.offset * 1 + contacts.length
                                                 }
                                             };
 

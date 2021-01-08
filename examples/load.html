@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>PodChat Load Tester</title>
+    <link href="https://talk.pod.ir/styles/images/_common/favicon-32x32.png" rel="icon" type="image/x-icon"/>
+
+    <!-- Development Mode -->
+    <script type="text/javascript" src="../src/utility/utility.js"></script>
+    <script type="text/javascript" src="../node_modules/podasync-ws-only/src/utility/utility.js"></script>
+    <script type="text/javascript" src="../node_modules/podasync-ws-only/src/network/socket.js"></script>
+    <script type="text/javascript" src="../node_modules/podasync-ws-only/src/network/async.js"></script>
+    <script type="text/javascript" src="../node_modules/crypto-js/crypto-js.js"></script>
+    <script type="text/javascript" src="../node_modules/dexie/dist/dexie.min.js"></script>
+    <script type="text/javascript" src="../src/chat.js"></script>
+
+    <!-- Production Mode -->
+    <!--<script type="text/javascript" src="podchat.js"></script>-->
+    <!--<script type="text/javascript" src="podchat-browser.min.js"></script>-->
+
+    <script type="text/javascript">
+        // Developement
+        var PodChat = window.POD.Chat;
+
+        var params = {
+            appId: new Date().getTime(),
+
+            /**
+             * Main Server
+             */
+            socketAddress: 'wss://msg.pod.ir/ws', // {**REQUIRED**} Socket Address
+            ssoHost: 'https://accounts.pod.ir', // {**REQUIRED**} Socket Address
+            platformHost: 'https://api.pod.ir/srv/core', // {**REQUIRED**} Platform Core Address
+            fileServer: 'https://core.pod.ir', // {**REQUIRED**} File Server Address
+            podSpaceFileServer: 'https://podspace.pod.ir', // {**REQUIRED**} File Server Address
+            serverName: 'chat-server', // {**REQUIRED**} Server to to register on
+
+            /**
+             * Sand Box
+             */
+            // socketAddress: "wss://chat-sandbox.pod.ir/ws",
+            // ssoHost: "https://accounts.pod.ir",
+            // platformHost: "https://sandbox.pod.ir:8043/srv/basic-platform",
+            // fileServer: 'https://core.pod.ir',
+            // podSpaceFileServer: 'https://podspace.pod.ir',
+            // serverName: "chat-server",
+
+            /**
+             * Integration
+             */
+            // socketAddress: "ws://172.16.110.235:8003/ws",
+            // ssoHost: "http://172.16.110.76",
+            // platformHost: "http://172.16.110.235:8003/srv/bptest-core",
+            // fileServer: 'https://core.pod.ir',
+            // podSpaceFileServer: 'http://172.16.110.61:8780/podspace',
+            // serverName: "chatlocal",
+
+            token: "948a7f23534340909d34dc5544b800b2",
+
+            grantDeviceIdFromSSO: false,
+            enableCache: false,
+            fullResponseObject: true,
+            mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
+            reconnectOnClose: true,
+            httpRequestTimeout: 30000,
+            httpUploadRequestTimeout: 0,
+            asyncRequestTimeout: 60 * 1000,
+            asyncLogging: {
+                onFunction: true,
+                consoleLogging: true,
+                onMessageReceive: false,
+                onMessageSend: false,
+                actualTiming: false
+            }
+        };
+
+        var chatAgent = new PodChat(params),
+            PID;
+
+        var chatReadyInstance = chatAgent.on("chatReady", function () {
+
+            var count = 1;
+
+            function runner() {
+                if (count <= 200) {
+                    console.log(`# Message Sent => ${count}`);
+                    chatAgent.sendTextMessage({
+                        threadId: 204777,
+                        textMessage: `${count}`,
+                        messageType: 'TEXT',
+                        systemMetadata: {
+                            date: new Date().getTime(),
+                            owner: 'Talk',
+                            type: 'Load Test'
+                        }
+                    }, {
+                        onSent: function (result) {
+                        },
+                        onDeliver: function (result) {
+                        },
+                        onSeen: function (result) {
+                        }
+                    });
+                    count++;
+
+                    setTimeout(runner, 50);
+                }
+            }
+
+            runner();
+
+        });
+
+        /**
+         * Listen to Error Messages
+         */
+        chatAgent.on("error", function (error) {
+            console.log("Error ", error);
+        });
+
+        /**
+         * Listen to Chat State Changes
+         */
+        chatAgent.on("chatState", function (chatState) {
+            // console.log(chatState);
+        });
+
+        /**
+         * Listen to File Upload Events
+         */
+        chatAgent.on("fileUploadEvents", function (event) {
+            console.log(event);
+        });
+
+        chatAgent.on("contactEvents", function (event) {
+            if (event.type == 'CONTACTS_SYNCED') {
+                console.log('Core contacts have been successfully synced with chat server.');
+            }
+        });
+
+        /**
+         * Listen to Thread Events
+         */
+        chatAgent.on("threadEvents", function (event) {
+            var type = event.type;
+            // console.log(event);
+
+            switch (type) {
+                case "THREAD_LAST_ACTIVITY_TIME":
+                    break;
+
+                case "THREAD_NEW":
+
+                    break;
+
+                case "THREAD_ADD_PARTICIPANTS":
+                    break;
+
+                case "THREAD_REMOVE_PARTICIPANTS":
+                    break;
+
+                case "THREAD_LEAVE_PARTICIPANT":
+                    break;
+
+                case "THREAD_REMOVED_FROM":
+                    break;
+
+                case "THREAD_RENAME":
+                    break;
+
+                case "THREAD_MUTE":
+                    break;
+
+                case "THREAD_UNMUTE":
+                    break;
+
+                case "THREAD_INFO_UPDATED":
+                    break;
+
+                case "THREAD_UNREAD_COUNT_UPDATED":
+                    break;
+
+                default:
+                    break;
+            }
+        });
+
+        /**
+         * Listen to Message Events
+         */
+        var chatOnMessageEventsObject = chatAgent.on("messageEvents", function (event) {
+            var type = event.type,
+                message = event.result.message;
+
+            // console.log(event);
+
+            switch (type) {
+                case "MESSAGE_NEW":
+                    /**
+                     * Sending Message Seen to Sender after 5 secs
+                     */
+                    // setTimeout(function () {
+                    //     chatAgent.seen({
+                    //         messageId: message.id,
+                    //         ownerId: message.ownerId
+                    //     });
+                    // }, 5000);
+                    // console.log('# Message Received => ' + message.message);
+
+                    break;
+
+                case "MESSAGE_EDIT":
+                    break;
+
+                case "MESSAGE_DELIVERY":
+                    break;
+
+                case "MESSAGE_SEEN":
+                    break;
+
+                default:
+                    break;
+            }
+        });
+
+        /**
+         * Listen to System Events
+         */
+        chatAgent.on("systemEvents", function (event) {
+            var type = event.type;
+            console.log(event);
+
+            switch (type) {
+                case "IS_TYPING":
+                    // console.log(event.result.user.user + " is typing in thread #" + event.result.thread);
+                    break;
+
+                default:
+                    break;
+            }
+        });
+
+        /**
+         * Listen to User Events
+         */
+        chatAgent.on('userEvents', function (event) {
+            var type = event.type;
+            console.log(event);
+
+            switch (type) {
+                case 'CHAT_PROFILE_UPDATED':
+                    console.log('Chat Profile Has Been Updated', event);
+                    break;
+
+                default:
+                    break;
+            }
+        });
+    </script>
+</head>
+
+<body style="max-width: 600px;">
+<p>POD CHAT <span id="reconnect">Reconnect...</span> | <span id="clearCache">Clear User Cache</span> | <span
+        id="deleteCache">Delete Cache</span></p>
+Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
+<button id="tokenInputSet">Set Token</button>
+
+</body>
+
+<script>
+    document.getElementById("reconnect")
+        .addEventListener("click", function () {
+            chatAgent.reconnect();
+        });
+
+    document.getElementById("clearCache")
+        .addEventListener("click", function () {
+            chatAgent.clearCacheDatabasesOfUser();
+        });
+
+    document.getElementById("deleteCache")
+        .addEventListener("click", function () {
+            chatAgent.deleteCacheDatabases({
+                storage: true,
+                queues: true
+            });
+        });
+
+    document.getElementById('tokenInputSet').addEventListener('click', function (e) {
+        console.log('New Token Has been set: ', document.getElementById('tokenInput').value);
+        chatAgent.setToken(document.getElementById('tokenInput').value);
+    });
+</script>
+
+</html>
