@@ -1358,7 +1358,7 @@
                     subjectId: params.threadId,
                     content: params.content,
                     uniqueId: params.uniqueId,
-                    pushMsgType: 4
+                    pushMsgType: 3
                 });
             },
 
@@ -1430,7 +1430,7 @@
                      */
                     sendMessage({
                         chatMessageVOType: chatMessageVOTypes.PING,
-                        pushMsgType: 5
+                        pushMsgType: 3
                     });
                 } else {
                     sendPingTimeout && clearTimeout(sendPingTimeout);
@@ -1450,7 +1450,7 @@
             clearChatServerCaches = function () {
                 sendMessage({
                     chatMessageVOType: chatMessageVOTypes.LOGOUT,
-                    pushMsgType: 4
+                    pushMsgType: 3
                 });
             },
 
@@ -3746,6 +3746,8 @@
                  *    - pin                                 {boolean}
                  *    - uniqueName                          {string}
                  *    - userGroupHash                       {string}
+                 *    - leftWithHistory                     {boolean}
+                 *    - closed                              {boolean}
                  */
 
                 var conversation = {
@@ -3789,7 +3791,9 @@
                     mentioned: messageContent.mentioned,
                     pin: messageContent.pin,
                     uniqueName: messageContent.uniqueName,
-                    userGroupHash: messageContent.userGroupHash
+                    userGroupHash: messageContent.userGroupHash,
+                    leftWithHistory: messageContent.leftWithHistory,
+                    closed: messageContent.closed
                 };
 
                 // Add inviter if exist
@@ -5767,7 +5771,7 @@
                         chatMessageVOType: chatMessageVOTypes.UPDATE_THREAD_INFO,
                         typeCode: params.typeCode,
                         content: {},
-                        pushMsgType: 4,
+                        pushMsgType: 3,
                         token: token
                     },
                     threadInfoContent = {},
@@ -5836,7 +5840,7 @@
                                     content: threadInfoContent,
                                     metadata: threadInfoContent.metadata,
                                     uniqueId: fileUniqueId,
-                                    pushMsgType: 4,
+                                    pushMsgType: 3,
                                     token: token
                                 },
                                 callbacks: callback
@@ -5887,7 +5891,7 @@
                             content: threadInfoContent,
                             metadata: threadInfoContent.metadata,
                             uniqueId: fileUniqueId,
-                            pushMsgType: 4,
+                            pushMsgType: 3,
                             token: token
                         }, {
                             onResult: function (result) {
@@ -5906,7 +5910,7 @@
                             content: threadInfoContent,
                             metadata: threadInfoContent.metadata,
                             uniqueId: fileUniqueId,
-                            pushMsgType: 4,
+                            pushMsgType: 3,
                             token: token
                         }, {
                             onResult: function (result) {
@@ -5937,7 +5941,7 @@
                 var updateChatProfileData = {
                     chatMessageVOType: chatMessageVOTypes.UPDATE_CHAT_PROFILE,
                     content: {},
-                    pushMsgType: 4,
+                    pushMsgType: 3,
                     token: token
                 };
                 if (params) {
@@ -5973,7 +5977,7 @@
             getCurrentUserRoles = function (params, callback) {
                 var updateChatProfileData = {
                     chatMessageVOType: chatMessageVOTypes.GET_PARTICIPANT_ROLES,
-                    pushMsgType: 4,
+                    pushMsgType: 3,
                     subjectId: params.threadId,
                     token: token
                 };
@@ -7495,7 +7499,7 @@
                                 metadata: JSON.stringify(objectDeepMerger(uploadHandlerMetadata, params.metadata)),
                                 systemMetadata: JSON.stringify(params.systemMetadata),
                                 uniqueId: fileUniqueId,
-                                pushMsgType: 4
+                                pushMsgType: 3
                             },
                             callbacks: callbacks
                         }, function () {
@@ -8203,7 +8207,7 @@
                     chatMessageVOType: chatMessageVOTypes.SET_ROLE_TO_USER,
                     typeCode: params.typeCode,
                     content: [],
-                    pushMsgType: 4,
+                    pushMsgType: 3,
                     token: token
                 };
 
@@ -8242,7 +8246,7 @@
                     chatMessageVOType: chatMessageVOTypes.REMOVE_ROLE_FROM_USER,
                     typeCode: params.typeCode,
                     content: [],
-                    pushMsgType: 4,
+                    pushMsgType: 3,
                     token: token
                 };
 
@@ -8284,7 +8288,7 @@
                     content: JSON.stringify({
                         'notifyAll': (typeof params.notifyAll === 'boolean') ? params.notifyAll : false
                     }),
-                    pushMsgType: 4,
+                    pushMsgType: 3,
                     token: token
                 }, {
                     onResult: function (result) {
@@ -8785,7 +8789,7 @@
                 content: JSON.stringify({
                     'mute': (typeof params.countMuteThreads === 'boolean') ? params.countMuteThreads : false
                 }),
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             }, {
                 onResult: function (result) {
@@ -9396,7 +9400,7 @@
                     uniqueId: uniqueId,
                     systemMetadata: JSON.stringify(params.systemMetadata),
                     metadata: JSON.stringify(metadata),
-                    pushMsgType: 5
+                    pushMsgType: 3
                 },
                 callbacks: callbacks
             }, function () {
@@ -9421,7 +9425,7 @@
                 content: params.content,
                 uniqueId: params.uniqueId,
                 metadata: metadata,
-                pushMsgType: 4
+                pushMsgType: 3
             }, callbacks);
         };
 
@@ -9749,7 +9753,7 @@
                 uniqueId: params.uniqueId,
                 metadata: params.metadata,
                 systemMetadata: params.systemMetadata,
-                pushMsgType: 4
+                pushMsgType: 3
             }, {
                 onResult: function (result) {
                     var returnData = {
@@ -9825,7 +9829,7 @@
                 content: JSON.stringify({
                     'deleteForAll': (typeof params.deleteForAll === 'boolean') ? params.deleteForAll : false
                 }),
-                pushMsgType: 4
+                pushMsgType: 3
             }, {
                 onResult: function (result) {
                     var returnData = {
@@ -9946,7 +9950,7 @@
                     ids: messageIdsList,
                     deleteForAll: (typeof params.deleteForAll === 'boolean') ? params.deleteForAll : false
                 },
-                pushMsgType: 4
+                pushMsgType: 3
             });
         };
 
@@ -9970,7 +9974,7 @@
                     uniqueId: uniqueId,
                     systemMetadata: JSON.stringify(params.systemMetadata),
                     metadata: JSON.stringify(params.metadata),
-                    pushMsgType: 5
+                    pushMsgType: 3
                 },
                 callbacks: callbacks
             }, function () {
@@ -10015,7 +10019,7 @@
                         metadata: JSON.stringify(uploadHandlerMetadata),
                         systemMetadata: JSON.stringify(params.systemMetadata),
                         uniqueId: fileUniqueId,
-                        pushMsgType: 4
+                        pushMsgType: 3
                     },
                     callbacks: callbacks
                 }, function () {
@@ -10104,7 +10108,7 @@
                     content: messageIdsList,
                     uniqueId: uniqueIdsList,
                     metadata: JSON.stringify(params.metadata),
-                    pushMsgType: 5
+                    pushMsgType: 3
                 },
                 callbacks: callbacks
             }, function () {
@@ -10154,7 +10158,7 @@
                 chatMessageVOType: chatMessageVOTypes.GET_MESSAGE_DELEVERY_PARTICIPANTS,
                 typeCode: params.typeCode,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token,
                 timeout: params.timeout
             };
@@ -10182,7 +10186,7 @@
                 chatMessageVOType: chatMessageVOTypes.GET_MESSAGE_SEEN_PARTICIPANTS,
                 typeCode: params.typeCode,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token,
                 timeout: params.timeout
             };
@@ -10215,7 +10219,7 @@
                 typeCode: params.typeCode,
                 subjectId: params.threadId,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             }, {
                 onResult: function (result) {
@@ -10230,7 +10234,7 @@
                 typeCode: params.typeCode,
                 subjectId: params.threadId,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             }, {
                 onResult: function (result) {
@@ -10245,7 +10249,7 @@
                 typeCode: params.typeCode,
                 subjectId: params.threadId,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             }, {
                 onResult: function (result) {
@@ -10259,7 +10263,7 @@
                 chatMessageVOType: chatMessageVOTypes.JOIN_THREAD,
                 typeCode: params.typeCode,
                 content: '',
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             };
             if (params) {
@@ -10279,7 +10283,7 @@
                 chatMessageVOType: chatMessageVOTypes.IS_NAME_AVAILABLE,
                 typeCode: params.typeCode,
                 content: '',
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             };
             if (params) {
@@ -10300,7 +10304,7 @@
                 typeCode: params.typeCode,
                 subjectId: params.threadId,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             }, {
                 onResult: function (result) {
@@ -10315,7 +10319,7 @@
                 typeCode: params.typeCode,
                 subjectId: params.threadId,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             }, {
                 onResult: function (result) {
@@ -10332,7 +10336,7 @@
                 content: JSON.stringify({
                     'notifyAll': (typeof params.notifyAll === 'boolean') ? params.notifyAll : false
                 }),
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             }, {
                 onResult: function (result) {
@@ -10347,7 +10351,7 @@
             var spamData = {
                 chatMessageVOType: chatMessageVOTypes.SPAM_PV_THREAD,
                 typeCode: params.typeCode,
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token,
                 timeout: params.timeout
             };
@@ -10371,7 +10375,7 @@
                 chatMessageVOType: chatMessageVOTypes.BLOCK,
                 typeCode: params.typeCode,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token,
                 timeout: params.timeout
             };
@@ -10404,7 +10408,7 @@
             var unblockData = {
                 chatMessageVOType: chatMessageVOTypes.UNBLOCK,
                 typeCode: params.typeCode,
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token,
                 content: {},
                 timeout: params.timeout
@@ -10461,7 +10465,7 @@
                 chatMessageVOType: chatMessageVOTypes.GET_BLOCKED,
                 typeCode: params.typeCode,
                 content: content,
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token,
                 timeout: params.timeout
             };
@@ -10514,7 +10518,7 @@
                 chatMessageVOType: chatMessageVOTypes.GET_NOT_SEEN_DURATION,
                 typeCode: params.typeCode,
                 content: content,
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token,
                 timeout: params.timeout
             };
@@ -11241,7 +11245,7 @@
                 chatMessageVOType: chatMessageVOTypes.CREATE_BOT,
                 typeCode: params.typeCode,
                 content: '',
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             };
             if (params) {
@@ -11281,7 +11285,7 @@
                 chatMessageVOType: chatMessageVOTypes.DEFINE_BOT_COMMAND,
                 typeCode: params.typeCode,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             }, commandList = [];
             if (params) {
@@ -11326,7 +11330,7 @@
                 chatMessageVOType: chatMessageVOTypes.REMOVE_BOT_COMMANDS,
                 typeCode: params.typeCode,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             }, commandList = [];
 
@@ -11376,7 +11380,7 @@
                 chatMessageVOType: chatMessageVOTypes.START_BOT,
                 typeCode: params.typeCode,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             };
             if (params) {
@@ -11417,7 +11421,7 @@
                 chatMessageVOType: chatMessageVOTypes.STOP_BOT,
                 typeCode: params.typeCode,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             };
             if (params) {
@@ -11458,7 +11462,7 @@
                 chatMessageVOType: chatMessageVOTypes.BOT_COMMANDS,
                 typeCode: params.typeCode,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             };
 
@@ -11495,7 +11499,7 @@
                 chatMessageVOType: chatMessageVOTypes.THREAD_ALL_BOTS,
                 typeCode: params.typeCode,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             };
 

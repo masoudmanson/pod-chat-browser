@@ -73,10 +73,10 @@
 
             grantDeviceIdFromSSO: false,
             enableCache: false, // Enable Client side caching
-            fullResponseObject: true,
+            fullResponseObject: false,
             mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
             // typeCode: "talk",
-            token: "05119e91ebff48c68376b98a910cea80",
+            token: "aa4184ffdc284eeba35113df9a7210b0",
             // token: "3dd6895c8dc64f93bcd43b58dcc2aab3", // Masoud Amjadi
             // token: "9c627a9125d04ebf8455bf57bb33d2a9", // Pooria Pahlevani
             // token: "f6464d4e0f044314b1a668f90287ba26", // Nadia Anvari
@@ -96,9 +96,9 @@
             asyncLogging: {
                 onFunction: true, // log main actions on console
                 consoleLogging: true, // log action results in console
-                // onMessageReceive: true, // log received messages on console
-                // onMessageSend: true, // log sent messaged on console
-                // actualTiming: true // log actual functions running time
+            //     onMessageReceive: true, // log received messages on console
+            //     onMessageSend: true, // log sent messaged on console
+            //     actualTiming: true // log actual functions running time
             }
         };
 
@@ -712,7 +712,7 @@
          */
         chatAgent.on("threadEvents", function (event) {
             var type = event.type;
-            console.log(event);
+            // console.log(event);
 
             switch (type) {
                 case "THREAD_LAST_ACTIVITY_TIME":
@@ -761,20 +761,20 @@
             var type = event.type,
                 message = event.result.message;
 
-            console.log(event);
+            // console.log(event);
 
             switch (type) {
                 case "MESSAGE_NEW":
                     /**
                      * Sending Message Seen to Sender after 5 secs
                      */
-                    setTimeout(function () {
-                        chatAgent.seen({
-                            messageId: message.id,
-                            ownerId: message.ownerId
-                        });
-                    }, 5000);
-
+                    // setTimeout(function () {
+                    //     chatAgent.seen({
+                    //         messageId: message.id,
+                    //         ownerId: message.ownerId
+                    //     });
+                    // }, 5000);
+                    console.log('# MSG Received -=>' + message.message);
                     break;
 
                 case "MESSAGE_EDIT":
@@ -927,16 +927,23 @@
         }
 
         function getHistory(params) {
-            var test = chatAgent.getHistory(params, function (historyResult) {
+
+            var getHistoryParams = {
+                threadId: params.threadId,
+                count: params.count,
+                offset: params.offset,
+                queues: {
+                    sending: false,
+                    uploading: false,
+                    failed: false
+                }
+            };
+
+            chatAgent.getHistory(getHistoryParams, function (historyResult) {
                 if (!historyResult.hasError) {
                     console.log(historyResult);
-
-                    //                    for(var i=0; i<historyResult.result.history.length; i++) {
-                    //                        console.log(historyResult.result.history[i].id, historyResult.result.history[i].systemMetadata);
-                    //                    }
                 }
             });
-            console.log(test);
         }
 
         function sendMessage(threadId, message, metadata) {

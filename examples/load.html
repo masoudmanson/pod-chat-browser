@@ -55,11 +55,11 @@
             // podSpaceFileServer: 'http://172.16.110.61:8780/podspace',
             // serverName: "chatlocal",
 
-            token: "948a7f23534340909d34dc5544b800b2",
+            token: "aa4184ffdc284eeba35113df9a7210b0",
 
             grantDeviceIdFromSSO: false,
             enableCache: false,
-            fullResponseObject: true,
+            fullResponseObject: false,
             mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
             reconnectOnClose: true,
             httpRequestTimeout: 30000,
@@ -82,7 +82,7 @@
             var count = 1;
 
             function runner() {
-                if (count <= 200) {
+                if (count <= 1000) {
                     console.log(`# Message Sent => ${count}`);
                     chatAgent.sendTextMessage({
                         threadId: 204777,
