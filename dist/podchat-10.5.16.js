@@ -1,272 +1,7 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
-// shim for using process in browser
-var process = module.exports = {};
-
-// cached from whatever global is present so that test runners that stub it
-// don't break things.  But we need to wrap it in a try catch in case it is
-// wrapped in strict mode code which doesn't define any globals.  It's inside a
-// function because try/catches deoptimize in certain engines.
-
-var cachedSetTimeout;
-var cachedClearTimeout;
-
-function defaultSetTimout() {
-    throw new Error('setTimeout has not been defined');
-}
-function defaultClearTimeout () {
-    throw new Error('clearTimeout has not been defined');
-}
-(function () {
-    try {
-        if (typeof setTimeout === 'function') {
-            cachedSetTimeout = setTimeout;
-        } else {
-            cachedSetTimeout = defaultSetTimout;
-        }
-    } catch (e) {
-        cachedSetTimeout = defaultSetTimout;
-    }
-    try {
-        if (typeof clearTimeout === 'function') {
-            cachedClearTimeout = clearTimeout;
-        } else {
-            cachedClearTimeout = defaultClearTimeout;
-        }
-    } catch (e) {
-        cachedClearTimeout = defaultClearTimeout;
-    }
-} ())
-function runTimeout(fun) {
-    if (cachedSetTimeout === setTimeout) {
-        //normal enviroments in sane situations
-        return setTimeout(fun, 0);
-    }
-    // if setTimeout wasn't available but was latter defined
-    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
-        cachedSetTimeout = setTimeout;
-        return setTimeout(fun, 0);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedSetTimeout(fun, 0);
-    } catch(e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
-            return cachedSetTimeout.call(null, fun, 0);
-        } catch(e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
-            return cachedSetTimeout.call(this, fun, 0);
-        }
-    }
-
-
-}
-function runClearTimeout(marker) {
-    if (cachedClearTimeout === clearTimeout) {
-        //normal enviroments in sane situations
-        return clearTimeout(marker);
-    }
-    // if clearTimeout wasn't available but was latter defined
-    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
-        cachedClearTimeout = clearTimeout;
-        return clearTimeout(marker);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedClearTimeout(marker);
-    } catch (e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
-            return cachedClearTimeout.call(null, marker);
-        } catch (e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
-            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
-            return cachedClearTimeout.call(this, marker);
-        }
-    }
-
-
-
-}
-var queue = [];
-var draining = false;
-var currentQueue;
-var queueIndex = -1;
-
-function cleanUpNextTick() {
-    if (!draining || !currentQueue) {
-        return;
-    }
-    draining = false;
-    if (currentQueue.length) {
-        queue = currentQueue.concat(queue);
-    } else {
-        queueIndex = -1;
-    }
-    if (queue.length) {
-        drainQueue();
-    }
-}
-
-function drainQueue() {
-    if (draining) {
-        return;
-    }
-    var timeout = runTimeout(cleanUpNextTick);
-    draining = true;
-
-    var len = queue.length;
-    while(len) {
-        currentQueue = queue;
-        queue = [];
-        while (++queueIndex < len) {
-            if (currentQueue) {
-                currentQueue[queueIndex].run();
-            }
-        }
-        queueIndex = -1;
-        len = queue.length;
-    }
-    currentQueue = null;
-    draining = false;
-    runClearTimeout(timeout);
-}
-
-process.nextTick = function (fun) {
-    var args = new Array(arguments.length - 1);
-    if (arguments.length > 1) {
-        for (var i = 1; i < arguments.length; i++) {
-            args[i - 1] = arguments[i];
-        }
-    }
-    queue.push(new Item(fun, args));
-    if (queue.length === 1 && !draining) {
-        runTimeout(drainQueue);
-    }
-};
-
-// v8 likes predictible objects
-function Item(fun, array) {
-    this.fun = fun;
-    this.array = array;
-}
-Item.prototype.run = function () {
-    this.fun.apply(null, this.array);
-};
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-process.version = ''; // empty string to avoid regexp issues
-process.versions = {};
-
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-process.prependListener = noop;
-process.prependOnceListener = noop;
-
-process.listeners = function (name) { return [] }
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-};
-
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-process.umask = function() { return 0; };
-
-},{}],2:[function(require,module,exports){
-(function (setImmediate,clearImmediate){
-var nextTick = require('process/browser.js').nextTick;
-var apply = Function.prototype.apply;
-var slice = Array.prototype.slice;
-var immediateIds = {};
-var nextImmediateId = 0;
-
-// DOM APIs, for completeness
-
-exports.setTimeout = function() {
-  return new Timeout(apply.call(setTimeout, window, arguments), clearTimeout);
-};
-exports.setInterval = function() {
-  return new Timeout(apply.call(setInterval, window, arguments), clearInterval);
-};
-exports.clearTimeout =
-exports.clearInterval = function(timeout) { timeout.close(); };
-
-function Timeout(id, clearFn) {
-  this._id = id;
-  this._clearFn = clearFn;
-}
-Timeout.prototype.unref = Timeout.prototype.ref = function() {};
-Timeout.prototype.close = function() {
-  this._clearFn.call(window, this._id);
-};
-
-// Does not start the time, just sets up the members needed.
-exports.enroll = function(item, msecs) {
-  clearTimeout(item._idleTimeoutId);
-  item._idleTimeout = msecs;
-};
-
-exports.unenroll = function(item) {
-  clearTimeout(item._idleTimeoutId);
-  item._idleTimeout = -1;
-};
-
-exports._unrefActive = exports.active = function(item) {
-  clearTimeout(item._idleTimeoutId);
-
-  var msecs = item._idleTimeout;
-  if (msecs >= 0) {
-    item._idleTimeoutId = setTimeout(function onTimeout() {
-      if (item._onTimeout)
-        item._onTimeout();
-    }, msecs);
-  }
-};
-
-// That's not how node.js implements it but the exposed api is the same.
-exports.setImmediate = typeof setImmediate === "function" ? setImmediate : function(fn) {
-  var id = nextImmediateId++;
-  var args = arguments.length < 2 ? false : slice.call(arguments, 1);
-
-  immediateIds[id] = true;
-
-  nextTick(function onNextTick() {
-    if (immediateIds[id]) {
-      // fn.call() is faster so we optimize for the common use-case
-      // @see http://jsperf.com/call-apply-segu
-      if (args) {
-        fn.apply(null, args);
-      } else {
-        fn.call(null);
-      }
-      // Prevent ids from leaking
-      exports.clearImmediate(id);
-    }
-  });
-
-  return id;
-};
-
-exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate : function(id) {
-  delete immediateIds[id];
-};
-}).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":1,"timers":2}],3:[function(require,module,exports){
 window.PodChat = require('./src/chat.js');
 
-},{"./src/chat.js":43}],4:[function(require,module,exports){
+},{"./src/chat.js":41}],2:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -499,7 +234,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.AES;
 
 }));
-},{"./cipher-core":5,"./core":6,"./enc-base64":7,"./evpkdf":9,"./md5":14}],5:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4,"./enc-base64":5,"./evpkdf":7,"./md5":12}],3:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -1380,7 +1115,7 @@ window.PodChat = require('./src/chat.js');
 
 
 }));
-},{"./core":6,"./evpkdf":9}],6:[function(require,module,exports){
+},{"./core":4,"./evpkdf":7}],4:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2141,7 +1876,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS;
 
 }));
-},{}],7:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2277,7 +2012,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.enc.Base64;
 
 }));
-},{"./core":6}],8:[function(require,module,exports){
+},{"./core":4}],6:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2427,7 +2162,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.enc.Utf16;
 
 }));
-},{"./core":6}],9:[function(require,module,exports){
+},{"./core":4}],7:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2560,7 +2295,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.EvpKDF;
 
 }));
-},{"./core":6,"./hmac":11,"./sha1":30}],10:[function(require,module,exports){
+},{"./core":4,"./hmac":9,"./sha1":28}],8:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2627,7 +2362,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.format.Hex;
 
 }));
-},{"./cipher-core":5,"./core":6}],11:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],9:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2771,7 +2506,7 @@ window.PodChat = require('./src/chat.js');
 
 
 }));
-},{"./core":6}],12:[function(require,module,exports){
+},{"./core":4}],10:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2790,7 +2525,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS;
 
 }));
-},{"./aes":4,"./cipher-core":5,"./core":6,"./enc-base64":7,"./enc-utf16":8,"./evpkdf":9,"./format-hex":10,"./hmac":11,"./lib-typedarrays":13,"./md5":14,"./mode-cfb":15,"./mode-ctr":17,"./mode-ctr-gladman":16,"./mode-ecb":18,"./mode-ofb":19,"./pad-ansix923":20,"./pad-iso10126":21,"./pad-iso97971":22,"./pad-nopadding":23,"./pad-zeropadding":24,"./pbkdf2":25,"./rabbit":27,"./rabbit-legacy":26,"./rc4":28,"./ripemd160":29,"./sha1":30,"./sha224":31,"./sha256":32,"./sha3":33,"./sha384":34,"./sha512":35,"./tripledes":36,"./x64-core":37}],13:[function(require,module,exports){
+},{"./aes":2,"./cipher-core":3,"./core":4,"./enc-base64":5,"./enc-utf16":6,"./evpkdf":7,"./format-hex":8,"./hmac":9,"./lib-typedarrays":11,"./md5":12,"./mode-cfb":13,"./mode-ctr":15,"./mode-ctr-gladman":14,"./mode-ecb":16,"./mode-ofb":17,"./pad-ansix923":18,"./pad-iso10126":19,"./pad-iso97971":20,"./pad-nopadding":21,"./pad-zeropadding":22,"./pbkdf2":23,"./rabbit":25,"./rabbit-legacy":24,"./rc4":26,"./ripemd160":27,"./sha1":28,"./sha224":29,"./sha256":30,"./sha3":31,"./sha384":32,"./sha512":33,"./tripledes":34,"./x64-core":35}],11:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2867,7 +2602,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.lib.WordArray;
 
 }));
-},{"./core":6}],14:[function(require,module,exports){
+},{"./core":4}],12:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3136,7 +2871,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.MD5;
 
 }));
-},{"./core":6}],15:[function(require,module,exports){
+},{"./core":4}],13:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3215,7 +2950,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.mode.CFB;
 
 }));
-},{"./cipher-core":5,"./core":6}],16:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],14:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3332,7 +3067,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.mode.CTRGladman;
 
 }));
-},{"./cipher-core":5,"./core":6}],17:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],15:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3391,7 +3126,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.mode.CTR;
 
 }));
-},{"./cipher-core":5,"./core":6}],18:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],16:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3432,7 +3167,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.mode.ECB;
 
 }));
-},{"./cipher-core":5,"./core":6}],19:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],17:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3487,7 +3222,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.mode.OFB;
 
 }));
-},{"./cipher-core":5,"./core":6}],20:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],18:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3537,7 +3272,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.pad.Ansix923;
 
 }));
-},{"./cipher-core":5,"./core":6}],21:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],19:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3582,7 +3317,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.pad.Iso10126;
 
 }));
-},{"./cipher-core":5,"./core":6}],22:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],20:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3623,7 +3358,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.pad.Iso97971;
 
 }));
-},{"./cipher-core":5,"./core":6}],23:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],21:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3654,7 +3389,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.pad.NoPadding;
 
 }));
-},{"./cipher-core":5,"./core":6}],24:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],22:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3700,7 +3435,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.pad.ZeroPadding;
 
 }));
-},{"./cipher-core":5,"./core":6}],25:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4}],23:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -3846,7 +3581,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.PBKDF2;
 
 }));
-},{"./core":6,"./hmac":11,"./sha1":30}],26:[function(require,module,exports){
+},{"./core":4,"./hmac":9,"./sha1":28}],24:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -4037,7 +3772,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.RabbitLegacy;
 
 }));
-},{"./cipher-core":5,"./core":6,"./enc-base64":7,"./evpkdf":9,"./md5":14}],27:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4,"./enc-base64":5,"./evpkdf":7,"./md5":12}],25:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -4230,7 +3965,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.Rabbit;
 
 }));
-},{"./cipher-core":5,"./core":6,"./enc-base64":7,"./evpkdf":9,"./md5":14}],28:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4,"./enc-base64":5,"./evpkdf":7,"./md5":12}],26:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -4370,7 +4105,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.RC4;
 
 }));
-},{"./cipher-core":5,"./core":6,"./enc-base64":7,"./evpkdf":9,"./md5":14}],29:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4,"./enc-base64":5,"./evpkdf":7,"./md5":12}],27:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -4638,7 +4373,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.RIPEMD160;
 
 }));
-},{"./core":6}],30:[function(require,module,exports){
+},{"./core":4}],28:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -4789,7 +4524,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.SHA1;
 
 }));
-},{"./core":6}],31:[function(require,module,exports){
+},{"./core":4}],29:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -4870,7 +4605,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.SHA224;
 
 }));
-},{"./core":6,"./sha256":32}],32:[function(require,module,exports){
+},{"./core":4,"./sha256":30}],30:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -5070,7 +4805,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.SHA256;
 
 }));
-},{"./core":6}],33:[function(require,module,exports){
+},{"./core":4}],31:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -5394,7 +5129,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.SHA3;
 
 }));
-},{"./core":6,"./x64-core":37}],34:[function(require,module,exports){
+},{"./core":4,"./x64-core":35}],32:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -5478,7 +5213,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.SHA384;
 
 }));
-},{"./core":6,"./sha512":35,"./x64-core":37}],35:[function(require,module,exports){
+},{"./core":4,"./sha512":33,"./x64-core":35}],33:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -5802,7 +5537,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.SHA512;
 
 }));
-},{"./core":6,"./x64-core":37}],36:[function(require,module,exports){
+},{"./core":4,"./x64-core":35}],34:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -6573,7 +6308,7 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS.TripleDES;
 
 }));
-},{"./cipher-core":5,"./core":6,"./enc-base64":7,"./evpkdf":9,"./md5":14}],37:[function(require,module,exports){
+},{"./cipher-core":3,"./core":4,"./enc-base64":5,"./evpkdf":7,"./md5":12}],35:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -6878,8 +6613,8 @@ window.PodChat = require('./src/chat.js');
 	return CryptoJS;
 
 }));
-},{"./core":6}],38:[function(require,module,exports){
-(function (global,setImmediate){
+},{"./core":4}],36:[function(require,module,exports){
+(function (global){
 /*
  * Dexie.js - a minimalistic wrapper for IndexedDB
  * ===============================================
@@ -11355,8 +11090,8 @@ return Dexie;
 })));
 
 
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("timers").setImmediate)
-},{"timers":2}],39:[function(require,module,exports){
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],37:[function(require,module,exports){
 (function (global){
 // https://github.com/maxogden/websocket-stream/blob/48dc3ddf943e5ada668c31ccd94e9186f02fafbd/ws-fallback.js
 
@@ -11377,7 +11112,7 @@ if (typeof WebSocket !== 'undefined') {
 module.exports = ws
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],40:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 (function () {
     /*
      * Async module to handle async messaging
@@ -12090,7 +11825,7 @@ module.exports = ws
     }
 })();
 
-},{"../utility/utility.js":42,"./socket.js":41}],41:[function(require,module,exports){
+},{"../utility/utility.js":40,"./socket.js":39}],39:[function(require,module,exports){
 (function() {
   /*
    * Socket Module to connect and handle Socket functionalities
@@ -12311,7 +12046,7 @@ module.exports = ws
 
 })();
 
-},{"isomorphic-ws":39}],42:[function(require,module,exports){
+},{"isomorphic-ws":37}],40:[function(require,module,exports){
 (function (global){
 (function() {
   /**
@@ -12630,7 +12365,7 @@ module.exports = ws
 })();
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],43:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 (function () {
     /*
      * Pod Chat Browser Module
@@ -12697,6 +12432,12 @@ module.exports = ws
                 chatState: {}
             },
             messagesCallbacks = {},
+            messagesDelivery = {},
+            messagesSeen = {},
+            deliveryInterval,
+            deliveryIntervalPitch = params.deliveryIntervalPitch || 2000,
+            seenInterval,
+            seenIntervalPitch = params.seenIntervalPitch || 2000,
             sendMessageCallbacks = {},
             threadCallbacks = {},
             getImageFromLinkObjects = {},
@@ -12933,7 +12674,6 @@ module.exports = ws
             chatSendQueue = [],
             chatWaitQueue = [],
             chatUploadQueue = [],
-            chatSendQueueHandlerTimeout,
             fullResponseObject = params.fullResponseObject || false;
 
         /*******************************************************
@@ -13093,6 +12833,22 @@ module.exports = ws
                         fireEvent('chatReady');
                         chatSendQueueHandler();
                     }
+
+                    deliveryInterval && clearInterval(deliveryInterval);
+
+                    deliveryInterval = setInterval(function () {
+                        if (Object.keys(messagesDelivery).length) {
+                            messagesDeliveryQueueHandler();
+                        }
+                    }, deliveryIntervalPitch);
+
+                    seenInterval && clearInterval(seenInterval);
+
+                    seenInterval = setInterval(function () {
+                        if (Object.keys(messagesSeen).length) {
+                            messagesSeenQueueHandler();
+                        }
+                    }, seenIntervalPitch);
                 });
 
                 asyncClient.on('stateChange', function (state) {
@@ -13991,7 +13747,7 @@ module.exports = ws
                     subjectId: params.threadId,
                     content: params.content,
                     uniqueId: params.uniqueId,
-                    pushMsgType: 4
+                    pushMsgType: 3
                 });
             },
 
@@ -14007,7 +13763,6 @@ module.exports = ws
              * @return {undefined}
              */
             chatSendQueueHandler = function () {
-                chatSendQueueHandlerTimeout && clearTimeout(chatSendQueueHandlerTimeout);
                 if (chatSendQueue.length) {
                     var messageToBeSend = chatSendQueue[0];
 
@@ -14044,6 +13799,80 @@ module.exports = ws
                 }
             },
 
+            putInMessagesDeliveryQueue = function (threadId, messageId) {
+                if (messagesDelivery.hasOwnProperty(threadId)
+                    && typeof messagesDelivery[threadId] === 'number'
+                    && !!messagesDelivery[threadId]) {
+                    if (messagesDelivery[threadId] < messageId) {
+                        messagesDelivery[threadId] = messageId;
+                    }
+                } else {
+                    messagesDelivery[threadId] = messageId;
+                }
+            },
+
+            putInMessagesSeenQueue = function (threadId, messageId) {
+                if (messagesSeen.hasOwnProperty(threadId)
+                    && typeof messagesSeen[threadId] === 'number'
+                    && !!messagesSeen[threadId]) {
+                    if (messagesSeen[threadId] < messageId) {
+                        messagesSeen[threadId] = messageId;
+                    }
+                } else {
+                    messagesSeen[threadId] = messageId;
+                }
+            },
+
+            /**
+             * Messages Delivery Queue Handler
+             *
+             * Whenever something pushes into messagesDelivery
+             * this function invokes and does the message
+             * delivery progress throught async
+             *
+             * @access private
+             *
+             * @return {undefined}
+             */
+            messagesDeliveryQueueHandler = function () {
+                if (Object.keys(messagesDelivery).length) {
+                    if (chatState) {
+                        for (var key in messagesDelivery) {
+                            deliver({
+                                messageId: messagesDelivery[key]
+                            });
+
+                            delete messagesDelivery[key];
+                        }
+                    }
+                }
+            },
+
+            /**
+             * Messages Seen Queue Handler
+             *
+             * Whenever something pushes into messagesSeen
+             * this function invokes and does the message
+             * seen progress throught async
+             *
+             * @access private
+             *
+             * @return {undefined}
+             */
+            messagesSeenQueueHandler = function () {
+                if (Object.keys(messagesSeen).length) {
+                    if (chatState) {
+                        for (var key in messagesSeen) {
+                            seen({
+                                messageId: messagesSeen[key]
+                            });
+
+                            delete messagesSeen[key];
+                        }
+                    }
+                }
+            },
+
             /**
              * Ping
              *
@@ -14063,7 +13892,7 @@ module.exports = ws
                      */
                     sendMessage({
                         chatMessageVOType: chatMessageVOTypes.PING,
-                        pushMsgType: 5
+                        pushMsgType: 3
                     });
                 } else {
                     sendPingTimeout && clearTimeout(sendPingTimeout);
@@ -14083,7 +13912,7 @@ module.exports = ws
             clearChatServerCaches = function () {
                 sendMessage({
                     chatMessageVOType: chatMessageVOTypes.LOGOUT,
-                    pushMsgType: 4
+                    pushMsgType: 3
                 });
             },
 
@@ -15734,10 +15563,11 @@ module.exports = ws
             newMessageHandler = function (threadId, messageContent) {
 
                 var message = formatDataToMakeMessage(threadId, messageContent);
-                deliver({
-                    messageId: message.id,
-                    ownerId: message.participant.id
-                });
+                /*
+                 * Send Message delivery for the last message
+                 * has been received while being online
+                 */
+                putInMessagesDeliveryQueue(threadId, message.id);
 
                 /**
                  * Add New Messages into cache database
@@ -16379,6 +16209,8 @@ module.exports = ws
                  *    - pin                                 {boolean}
                  *    - uniqueName                          {string}
                  *    - userGroupHash                       {string}
+                 *    - leftWithHistory                     {boolean}
+                 *    - closed                              {boolean}
                  */
 
                 var conversation = {
@@ -16422,7 +16254,9 @@ module.exports = ws
                     mentioned: messageContent.mentioned,
                     pin: messageContent.pin,
                     uniqueName: messageContent.uniqueName,
-                    userGroupHash: messageContent.userGroupHash
+                    userGroupHash: messageContent.userGroupHash,
+                    leftWithHistory: messageContent.leftWithHistory,
+                    closed: messageContent.closed
                 };
 
                 // Add inviter if exist
@@ -16928,7 +16762,7 @@ module.exports = ws
                                                 threads: cacheData,
                                                 contentCount: threadsCount,
                                                 hasNext: !(threads.length < count),
-                                                nextOffset: offset + threads.length
+                                                nextOffset: offset * 1 + threads.length
                                             }
                                         };
 
@@ -16975,7 +16809,7 @@ module.exports = ws
                                     threads: [],
                                     contentCount: result.contentCount,
                                     hasNext: (offset + count < result.contentCount && messageLength > 0),
-                                    nextOffset: offset + messageLength
+                                    nextOffset: offset * 1 + messageLength * 1
                                 },
                                 threadData;
 
@@ -17560,7 +17394,7 @@ module.exports = ws
                                                                             history: cacheData,
                                                                             contentCount: contentCount,
                                                                             hasNext: hasNext,
-                                                                            nextOffset: offset + messages.length
+                                                                            nextOffset: offset * 1 + messages.length
                                                                         }
                                                                     };
 
@@ -17644,11 +17478,8 @@ module.exports = ws
                                         /**
                                          * Sending Delivery for Last Message of Thread
                                          */
-                                        if (lastMessage.id > 0 && !lastMessage.delivered) {
-                                            deliver({
-                                                messageId: lastMessage.id,
-                                                ownerId: lastMessage.participant.id
-                                            });
+                                        if (userInfo.id !== firstMessage.participant.id && !firstMessage.delivered) {
+                                            putInMessagesDeliveryQueue(params.threadId, firstMessage.id);
                                         }
                                     }
 
@@ -18250,7 +18081,7 @@ module.exports = ws
                                         contentCount: result.contentCount,
                                         hasNext: (sendMessageParams.content.offset + sendMessageParams.content.count < result.contentCount &&
                                             messageLength > 0),
-                                        nextOffset: sendMessageParams.content.offset + messageLength
+                                        nextOffset: sendMessageParams.content.offset * 1 + messageLength * 1
                                     };
 
                                     if (sendingQueue) {
@@ -18400,7 +18231,7 @@ module.exports = ws
                         chatMessageVOType: chatMessageVOTypes.UPDATE_THREAD_INFO,
                         typeCode: params.typeCode,
                         content: {},
-                        pushMsgType: 4,
+                        pushMsgType: 3,
                         token: token
                     },
                     threadInfoContent = {},
@@ -18469,7 +18300,7 @@ module.exports = ws
                                     content: threadInfoContent,
                                     metadata: threadInfoContent.metadata,
                                     uniqueId: fileUniqueId,
-                                    pushMsgType: 4,
+                                    pushMsgType: 3,
                                     token: token
                                 },
                                 callbacks: callback
@@ -18520,7 +18351,7 @@ module.exports = ws
                             content: threadInfoContent,
                             metadata: threadInfoContent.metadata,
                             uniqueId: fileUniqueId,
-                            pushMsgType: 4,
+                            pushMsgType: 3,
                             token: token
                         }, {
                             onResult: function (result) {
@@ -18539,7 +18370,7 @@ module.exports = ws
                             content: threadInfoContent,
                             metadata: threadInfoContent.metadata,
                             uniqueId: fileUniqueId,
-                            pushMsgType: 4,
+                            pushMsgType: 3,
                             token: token
                         }, {
                             onResult: function (result) {
@@ -18570,7 +18401,7 @@ module.exports = ws
                 var updateChatProfileData = {
                     chatMessageVOType: chatMessageVOTypes.UPDATE_CHAT_PROFILE,
                     content: {},
-                    pushMsgType: 4,
+                    pushMsgType: 3,
                     token: token
                 };
                 if (params) {
@@ -18606,7 +18437,7 @@ module.exports = ws
             getCurrentUserRoles = function (params, callback) {
                 var updateChatProfileData = {
                     chatMessageVOType: chatMessageVOTypes.GET_PARTICIPANT_ROLES,
-                    pushMsgType: 4,
+                    pushMsgType: 3,
                     subjectId: params.threadId,
                     token: token
                 };
@@ -18733,7 +18564,7 @@ module.exports = ws
                                                         participants: cacheData,
                                                         contentCount: participantsCount,
                                                         hasNext: !(participants.length < count),
-                                                        nextOffset: offset + participants.length
+                                                        nextOffset: offset * 1 + participants.length
                                                     }
                                                 };
 
@@ -18784,7 +18615,7 @@ module.exports = ws
                                     participants: reformatThreadParticipants(messageContent, params.threadId),
                                     contentCount: result.contentCount,
                                     hasNext: (sendMessageParams.content.offset + sendMessageParams.content.count < result.contentCount && messageLength > 0),
-                                    nextOffset: sendMessageParams.content.offset + messageLength
+                                    nextOffset: sendMessageParams.content.offset * 1 + messageLength * 1
                                 };
 
                             returnData.result = resultData;
@@ -18868,20 +18699,37 @@ module.exports = ws
              *
              * @access private
              *
-             * @param {int}    ownerId    Id of Message owner
              * @param {int}   messageId  Id of Message
              *
              * @return {object} Instant sendMessage result
              */
             deliver = function (params) {
-                if (userInfo && params.ownerId !== userInfo.id) {
-                    return sendMessage({
-                        chatMessageVOType: chatMessageVOTypes.DELIVERY,
-                        typeCode: params.typeCode,
-                        content: params.messageId,
-                        pushMsgType: 3
-                    });
-                }
+                return sendMessage({
+                    chatMessageVOType: chatMessageVOTypes.DELIVERY,
+                    typeCode: params.typeCode,
+                    content: params.messageId,
+                    pushMsgType: 3
+                });
+            },
+
+            /**
+             * Seen
+             *
+             * This functions sends seen acknowledge for a message
+             *
+             * @access private
+             *
+             * @param {int}   messageId  Id of Message
+             *
+             * @return {object} Instant sendMessage result
+             */
+            seen = function (params) {
+                return sendMessage({
+                    chatMessageVOType: chatMessageVOTypes.SEEN,
+                    typeCode: params.typeCode,
+                    content: params.messageId,
+                    pushMsgType: 3
+                });
             },
 
             /**
@@ -20128,7 +19976,7 @@ module.exports = ws
                                 metadata: JSON.stringify(objectDeepMerger(uploadHandlerMetadata, params.metadata)),
                                 systemMetadata: JSON.stringify(params.systemMetadata),
                                 uniqueId: fileUniqueId,
-                                pushMsgType: 4
+                                pushMsgType: 3
                             },
                             callbacks: callbacks
                         }, function () {
@@ -20726,11 +20574,11 @@ module.exports = ws
                                     newMetadata = JSON.parse(metadata);
                                 var finalMetaData = objectDeepMerger(newMetadata, oldMetadata);
 
-                                if (typeof message !== 'undefined' && typeof message.content !== 'undefined' && message.content.hasOwnProperty('message')) {
+                                if (typeof message !== 'undefined' && message && typeof message.content !== 'undefined' && message.content && message.content.hasOwnProperty('message')) {
                                     message.content.message['metadata'] = JSON.stringify(finalMetaData);
                                 }
 
-                                if (typeof message !== 'undefined' && typeof message.content !== 'undefined' && message.content.hasOwnProperty('metadata')) {
+                                if (typeof message !== 'undefined' && message && typeof message.content !== 'undefined' && message.content && message.content.hasOwnProperty('metadata')) {
                                     message.content['metadata'] = JSON.stringify(finalMetaData);
                                 }
 
@@ -20836,7 +20684,7 @@ module.exports = ws
                     chatMessageVOType: chatMessageVOTypes.SET_ROLE_TO_USER,
                     typeCode: params.typeCode,
                     content: [],
-                    pushMsgType: 4,
+                    pushMsgType: 3,
                     token: token
                 };
 
@@ -20875,7 +20723,7 @@ module.exports = ws
                     chatMessageVOType: chatMessageVOTypes.REMOVE_ROLE_FROM_USER,
                     typeCode: params.typeCode,
                     content: [],
-                    pushMsgType: 4,
+                    pushMsgType: 3,
                     token: token
                 };
 
@@ -20917,7 +20765,7 @@ module.exports = ws
                     content: JSON.stringify({
                         'notifyAll': (typeof params.notifyAll === 'boolean') ? params.notifyAll : false
                     }),
-                    pushMsgType: 4,
+                    pushMsgType: 3,
                     token: token
                 }, {
                     onResult: function (result) {
@@ -21391,8 +21239,7 @@ module.exports = ws
                 cache: false,
                 queues: {
                     uploading: false,
-                    sending: false,
-                    uploading: false
+                    sending: false
                 }
             }, callback);
         };
@@ -21407,8 +21254,7 @@ module.exports = ws
                 cache: false,
                 queues: {
                     uploading: false,
-                    sending: false,
-                    uploading: false
+                    sending: false
                 }
             }, callback);
         };
@@ -21420,7 +21266,7 @@ module.exports = ws
                 content: JSON.stringify({
                     'mute': (typeof params.countMuteThreads === 'boolean') ? params.countMuteThreads : false
                 }),
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             }, {
                 onResult: function (result) {
@@ -21554,7 +21400,7 @@ module.exports = ws
                                                     contacts: cacheData,
                                                     contentCount: contactsCount,
                                                     hasNext: !(contacts.length < count),
-                                                    nextOffset: offset + contacts.length
+                                                    nextOffset: offset * 1 + contacts.length
                                                 }
                                             };
 
@@ -21609,7 +21455,7 @@ module.exports = ws
                                 contacts: [],
                                 contentCount: result.contentCount,
                                 hasNext: (offset + count < result.contentCount && messageLength > 0),
-                                nextOffset: offset + messageLength
+                                nextOffset: offset * 1 + messageLength * 1
                             },
                             contactData;
 
@@ -21783,7 +21629,7 @@ module.exports = ws
 
             var sendMessageParams = {
                 chatMessageVOType: chatMessageVOTypes.REMOVE_PARTICIPANT,
-                typeCode: params.typeCodes
+                typeCode: params.typeCode
             };
 
             if (params) {
@@ -22031,7 +21877,7 @@ module.exports = ws
                     uniqueId: uniqueId,
                     systemMetadata: JSON.stringify(params.systemMetadata),
                     metadata: JSON.stringify(metadata),
-                    pushMsgType: 5
+                    pushMsgType: 3
                 },
                 callbacks: callbacks
             }, function () {
@@ -22056,7 +21902,7 @@ module.exports = ws
                 content: params.content,
                 uniqueId: params.uniqueId,
                 metadata: metadata,
-                pushMsgType: 4
+                pushMsgType: 3
             }, callbacks);
         };
 
@@ -22384,7 +22230,7 @@ module.exports = ws
                 uniqueId: params.uniqueId,
                 metadata: params.metadata,
                 systemMetadata: params.systemMetadata,
-                pushMsgType: 4
+                pushMsgType: 3
             }, {
                 onResult: function (result) {
                     var returnData = {
@@ -22460,7 +22306,7 @@ module.exports = ws
                 content: JSON.stringify({
                     'deleteForAll': (typeof params.deleteForAll === 'boolean') ? params.deleteForAll : false
                 }),
-                pushMsgType: 4
+                pushMsgType: 3
             }, {
                 onResult: function (result) {
                     var returnData = {
@@ -22581,7 +22427,7 @@ module.exports = ws
                     ids: messageIdsList,
                     deleteForAll: (typeof params.deleteForAll === 'boolean') ? params.deleteForAll : false
                 },
-                pushMsgType: 4
+                pushMsgType: 3
             });
         };
 
@@ -22605,7 +22451,7 @@ module.exports = ws
                     uniqueId: uniqueId,
                     systemMetadata: JSON.stringify(params.systemMetadata),
                     metadata: JSON.stringify(params.metadata),
-                    pushMsgType: 5
+                    pushMsgType: 3
                 },
                 callbacks: callbacks
             }, function () {
@@ -22650,7 +22496,7 @@ module.exports = ws
                         metadata: JSON.stringify(uploadHandlerMetadata),
                         systemMetadata: JSON.stringify(params.systemMetadata),
                         uniqueId: fileUniqueId,
-                        pushMsgType: 4
+                        pushMsgType: 3
                     },
                     callbacks: callbacks
                 }, function () {
@@ -22739,7 +22585,7 @@ module.exports = ws
                     content: messageIdsList,
                     uniqueId: uniqueIdsList,
                     metadata: JSON.stringify(params.metadata),
-                    pushMsgType: 5
+                    pushMsgType: 3
                 },
                 callbacks: callbacks
             }, function () {
@@ -22747,17 +22593,12 @@ module.exports = ws
             });
         };
 
-        this.deliver = deliver(params);
+        this.deliver = function (params) {
+            return putInMessagesDeliveryQueue(params.threadId, params.messageId);
+        };
 
         this.seen = function (params) {
-            if (userInfo && params.ownerId !== userInfo.id) {
-                return sendMessage({
-                    chatMessageVOType: chatMessageVOTypes.SEEN,
-                    typeCode: params.typeCode,
-                    content: params.messageId,
-                    pushMsgType: 3
-                });
-            }
+            return putInMessagesSeenQueue(params.threadId, params.messageId);
         };
 
         this.startTyping = function (params) {
@@ -22789,7 +22630,7 @@ module.exports = ws
                 chatMessageVOType: chatMessageVOTypes.GET_MESSAGE_DELEVERY_PARTICIPANTS,
                 typeCode: params.typeCode,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token,
                 timeout: params.timeout
             };
@@ -22817,7 +22658,7 @@ module.exports = ws
                 chatMessageVOType: chatMessageVOTypes.GET_MESSAGE_SEEN_PARTICIPANTS,
                 typeCode: params.typeCode,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token,
                 timeout: params.timeout
             };
@@ -22850,7 +22691,7 @@ module.exports = ws
                 typeCode: params.typeCode,
                 subjectId: params.threadId,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             }, {
                 onResult: function (result) {
@@ -22865,7 +22706,7 @@ module.exports = ws
                 typeCode: params.typeCode,
                 subjectId: params.threadId,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             }, {
                 onResult: function (result) {
@@ -22880,7 +22721,7 @@ module.exports = ws
                 typeCode: params.typeCode,
                 subjectId: params.threadId,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             }, {
                 onResult: function (result) {
@@ -22894,7 +22735,7 @@ module.exports = ws
                 chatMessageVOType: chatMessageVOTypes.JOIN_THREAD,
                 typeCode: params.typeCode,
                 content: '',
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             };
             if (params) {
@@ -22914,7 +22755,7 @@ module.exports = ws
                 chatMessageVOType: chatMessageVOTypes.IS_NAME_AVAILABLE,
                 typeCode: params.typeCode,
                 content: '',
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             };
             if (params) {
@@ -22935,7 +22776,7 @@ module.exports = ws
                 typeCode: params.typeCode,
                 subjectId: params.threadId,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             }, {
                 onResult: function (result) {
@@ -22950,7 +22791,7 @@ module.exports = ws
                 typeCode: params.typeCode,
                 subjectId: params.threadId,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             }, {
                 onResult: function (result) {
@@ -22967,7 +22808,7 @@ module.exports = ws
                 content: JSON.stringify({
                     'notifyAll': (typeof params.notifyAll === 'boolean') ? params.notifyAll : false
                 }),
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             }, {
                 onResult: function (result) {
@@ -22982,7 +22823,7 @@ module.exports = ws
             var spamData = {
                 chatMessageVOType: chatMessageVOTypes.SPAM_PV_THREAD,
                 typeCode: params.typeCode,
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token,
                 timeout: params.timeout
             };
@@ -23006,7 +22847,7 @@ module.exports = ws
                 chatMessageVOType: chatMessageVOTypes.BLOCK,
                 typeCode: params.typeCode,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token,
                 timeout: params.timeout
             };
@@ -23039,7 +22880,7 @@ module.exports = ws
             var unblockData = {
                 chatMessageVOType: chatMessageVOTypes.UNBLOCK,
                 typeCode: params.typeCode,
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token,
                 content: {},
                 timeout: params.timeout
@@ -23096,7 +22937,7 @@ module.exports = ws
                 chatMessageVOType: chatMessageVOTypes.GET_BLOCKED,
                 typeCode: params.typeCode,
                 content: content,
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token,
                 timeout: params.timeout
             };
@@ -23117,7 +22958,7 @@ module.exports = ws
                                 blockedUsers: [],
                                 contentCount: result.contentCount,
                                 hasNext: (offset + count < result.contentCount && messageLength > 0),
-                                nextOffset: offset + messageLength
+                                nextOffset: offset * 1 + messageLength * 1
                             },
                             blockedUser;
 
@@ -23149,7 +22990,7 @@ module.exports = ws
                 chatMessageVOType: chatMessageVOTypes.GET_NOT_SEEN_DURATION,
                 typeCode: params.typeCode,
                 content: content,
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token,
                 timeout: params.timeout
             };
@@ -23722,7 +23563,7 @@ module.exports = ws
                                                     contacts: cacheData,
                                                     contentCount: contactsCount,
                                                     hasNext: !(contacts.length < data.size),
-                                                    nextOffset: data.offset + contacts.length
+                                                    nextOffset: data.offset * 1 + contacts.length
                                                 }
                                             };
 
@@ -23876,7 +23717,7 @@ module.exports = ws
                 chatMessageVOType: chatMessageVOTypes.CREATE_BOT,
                 typeCode: params.typeCode,
                 content: '',
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             };
             if (params) {
@@ -23916,7 +23757,7 @@ module.exports = ws
                 chatMessageVOType: chatMessageVOTypes.DEFINE_BOT_COMMAND,
                 typeCode: params.typeCode,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             }, commandList = [];
             if (params) {
@@ -23961,7 +23802,7 @@ module.exports = ws
                 chatMessageVOType: chatMessageVOTypes.REMOVE_BOT_COMMANDS,
                 typeCode: params.typeCode,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             }, commandList = [];
 
@@ -24011,7 +23852,7 @@ module.exports = ws
                 chatMessageVOType: chatMessageVOTypes.START_BOT,
                 typeCode: params.typeCode,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             };
             if (params) {
@@ -24052,7 +23893,7 @@ module.exports = ws
                 chatMessageVOType: chatMessageVOTypes.STOP_BOT,
                 typeCode: params.typeCode,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             };
             if (params) {
@@ -24093,7 +23934,7 @@ module.exports = ws
                 chatMessageVOType: chatMessageVOTypes.BOT_COMMANDS,
                 typeCode: params.typeCode,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             };
 
@@ -24130,7 +23971,7 @@ module.exports = ws
                 chatMessageVOType: chatMessageVOTypes.THREAD_ALL_BOTS,
                 typeCode: params.typeCode,
                 content: {},
-                pushMsgType: 4,
+                pushMsgType: 3,
                 token: token
             };
 
@@ -24233,7 +24074,7 @@ module.exports = ws
     }
 })();
 
-},{"./utility/utility.js":44,"dexie":38,"podasync-ws-only":40}],44:[function(require,module,exports){
+},{"./utility/utility.js":42,"dexie":36,"podasync-ws-only":38}],42:[function(require,module,exports){
 (function (global){
 (function() {
 
@@ -24775,4 +24616,4 @@ module.exports = ws
 })();
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"crypto-js":12}]},{},[3]);
+},{"crypto-js":10}]},{},[1]);

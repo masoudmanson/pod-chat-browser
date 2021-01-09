@@ -5112,9 +5112,6 @@
                                          */
                                         if (userInfo.id !== firstMessage.participant.id && !firstMessage.delivered) {
                                             putInMessagesDeliveryQueue(params.threadId, firstMessage.id);
-                                            // deliver({
-                                            //     messageId: firstMessage.id
-                                            // });
                                         }
                                     }
 
@@ -6334,7 +6331,6 @@
              *
              * @access private
              *
-             * @param {int}    ownerId    Id of Message owner
              * @param {int}   messageId  Id of Message
              *
              * @return {object} Instant sendMessage result
@@ -6348,15 +6344,24 @@
                 });
             },
 
+            /**
+             * Seen
+             *
+             * This functions sends seen acknowledge for a message
+             *
+             * @access private
+             *
+             * @param {int}   messageId  Id of Message
+             *
+             * @return {object} Instant sendMessage result
+             */
             seen = function (params) {
-                if (userInfo && params.ownerId !== userInfo.id) {
-                    return sendMessage({
-                        chatMessageVOType: chatMessageVOTypes.SEEN,
-                        typeCode: params.typeCode,
-                        content: params.messageId,
-                        pushMsgType: 3
-                    });
-                }
+                return sendMessage({
+                    chatMessageVOType: chatMessageVOTypes.SEEN,
+                    typeCode: params.typeCode,
+                    content: params.messageId,
+                    pushMsgType: 3
+                });
             },
 
             /**
@@ -9256,7 +9261,7 @@
 
             var sendMessageParams = {
                 chatMessageVOType: chatMessageVOTypes.REMOVE_PARTICIPANT,
-                typeCode: params.typeCodes
+                typeCode: params.typeCode
             };
 
             if (params) {
@@ -10220,12 +10225,12 @@
             });
         };
 
-        this.deliver = function(params) {
+        this.deliver = function (params) {
             return putInMessagesDeliveryQueue(params.threadId, params.messageId);
         };
 
-        this.seen = function(params) {
-            return putInMessagesSeenQueue(params.threadId, params.messageId, params.ownerId);
+        this.seen = function (params) {
+            return putInMessagesSeenQueue(params.threadId, params.messageId);
         };
 
         this.startTyping = function (params) {
