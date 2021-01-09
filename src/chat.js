@@ -64,6 +64,12 @@
                 chatState: {}
             },
             messagesCallbacks = {},
+            messagesDelivery = {},
+            messagesSeen = {},
+            deliveryInterval,
+            deliveryIntervalPitch = params.deliveryIntervalPitch || 2000,
+            seenInterval,
+            seenIntervalPitch = params.seenIntervalPitch || 2000,
             sendMessageCallbacks = {},
             threadCallbacks = {},
             getImageFromLinkObjects = {},
@@ -300,7 +306,6 @@
             chatSendQueue = [],
             chatWaitQueue = [],
             chatUploadQueue = [],
-            chatSendQueueHandlerTimeout,
             fullResponseObject = params.fullResponseObject || false;
 
         /*******************************************************
@@ -460,6 +465,22 @@
                         fireEvent('chatReady');
                         chatSendQueueHandler();
                     }
+
+                    deliveryInterval && clearInterval(deliveryInterval);
+
+                    deliveryInterval = setInterval(function () {
+                        if (Object.keys(messagesDelivery).length) {
+                            messagesDeliveryQueueHandler();
+                        }
+                    }, deliveryIntervalPitch);
+
+                    seenInterval && clearInterval(seenInterval);
+
+                    seenInterval = setInterval(function () {
+                        if (Object.keys(messagesSeen).length) {
+                            messagesSeenQueueHandler();
+                        }
+                    }, seenIntervalPitch);
                 });
 
                 asyncClient.on('stateChange', function (state) {
@@ -1374,7 +1395,6 @@
              * @return {undefined}
              */
             chatSendQueueHandler = function () {
-                chatSendQueueHandlerTimeout && clearTimeout(chatSendQueueHandlerTimeout);
                 if (chatSendQueue.length) {
                     var messageToBeSend = chatSendQueue[0];
 
@@ -1407,6 +1427,80 @@
                                     });
                                 });
                         });
+                    }
+                }
+            },
+
+            putInMessagesDeliveryQueue = function (threadId, messageId) {
+                if (messagesDelivery.hasOwnProperty(threadId)
+                    && typeof messagesDelivery[threadId] === 'number'
+                    && !!messagesDelivery[threadId]) {
+                    if (messagesDelivery[threadId] < messageId) {
+                        messagesDelivery[threadId] = messageId;
+                    }
+                } else {
+                    messagesDelivery[threadId] = messageId;
+                }
+            },
+
+            putInMessagesSeenQueue = function (threadId, messageId) {
+                if (messagesSeen.hasOwnProperty(threadId)
+                    && typeof messagesSeen[threadId] === 'number'
+                    && !!messagesSeen[threadId]) {
+                    if (messagesSeen[threadId] < messageId) {
+                        messagesSeen[threadId] = messageId;
+                    }
+                } else {
+                    messagesSeen[threadId] = messageId;
+                }
+            },
+
+            /**
+             * Messages Delivery Queue Handler
+             *
+             * Whenever something pushes into messagesDelivery
+             * this function invokes and does the message
+             * delivery progress throught async
+             *
+             * @access private
+             *
+             * @return {undefined}
+             */
+            messagesDeliveryQueueHandler = function () {
+                if (Object.keys(messagesDelivery).length) {
+                    if (chatState) {
+                        for (var key in messagesDelivery) {
+                            deliver({
+                                messageId: messagesDelivery[key]
+                            });
+
+                            delete messagesDelivery[key];
+                        }
+                    }
+                }
+            },
+
+            /**
+             * Messages Seen Queue Handler
+             *
+             * Whenever something pushes into messagesSeen
+             * this function invokes and does the message
+             * seen progress throught async
+             *
+             * @access private
+             *
+             * @return {undefined}
+             */
+            messagesSeenQueueHandler = function () {
+                if (Object.keys(messagesSeen).length) {
+                    if (chatState) {
+                        for (var key in messagesSeen) {
+                            seen({
+                                messageId: messagesSeen[key]
+                            });
+
+                            delete messagesSeen[key];
+                        }
                     }
                 }
             },
@@ -3101,10 +3195,11 @@
             newMessageHandler = function (threadId, messageContent) {
 
                 var message = formatDataToMakeMessage(threadId, messageContent);
-                deliver({
-                    messageId: message.id,
-                    ownerId: message.participant.id
-                });
+                /*
+                 * Send Message delivery for the last message
+                 * has been received while being online
+                 */
+                putInMessagesDeliveryQueue(threadId, message.id);
 
                 /**
                  * Add New Messages into cache database
@@ -5015,11 +5110,11 @@
                                         /**
                                          * Sending Delivery for Last Message of Thread
                                          */
-                                        if (lastMessage.id > 0 && !lastMessage.delivered) {
-                                            deliver({
-                                                messageId: lastMessage.id,
-                                                ownerId: lastMessage.participant.id
-                                            });
+                                        if (userInfo.id !== firstMessage.participant.id && !firstMessage.delivered) {
+                                            putInMessagesDeliveryQueue(params.threadId, firstMessage.id);
+                                            // deliver({
+                                            //     messageId: firstMessage.id
+                                            // });
                                         }
                                     }
 
@@ -6245,9 +6340,18 @@
              * @return {object} Instant sendMessage result
              */
             deliver = function (params) {
+                return sendMessage({
+                    chatMessageVOType: chatMessageVOTypes.DELIVERY,
+                    typeCode: params.typeCode,
+                    content: params.messageId,
+                    pushMsgType: 3
+                });
+            },
+
+            seen = function (params) {
                 if (userInfo && params.ownerId !== userInfo.id) {
                     return sendMessage({
-                        chatMessageVOType: chatMessageVOTypes.DELIVERY,
+                        chatMessageVOType: chatMessageVOTypes.SEEN,
                         typeCode: params.typeCode,
                         content: params.messageId,
                         pushMsgType: 3
@@ -10116,17 +10220,12 @@
             });
         };
 
-        this.deliver = deliver(params);
+        this.deliver = function(params) {
+            return putInMessagesDeliveryQueue(params.threadId, params.messageId);
+        };
 
-        this.seen = function (params) {
-            if (userInfo && params.ownerId !== userInfo.id) {
-                return sendMessage({
-                    chatMessageVOType: chatMessageVOTypes.SEEN,
-                    typeCode: params.typeCode,
-                    content: params.messageId,
-                    pushMsgType: 3
-                });
-            }
+        this.seen = function(params) {
+            return putInMessagesSeenQueue(params.threadId, params.messageId, params.ownerId);
         };
 
         this.startTyping = function (params) {

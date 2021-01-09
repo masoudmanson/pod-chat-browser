@@ -44,22 +44,22 @@
             /**
              * Main Server
              */
-            socketAddress: 'wss://msg.pod.ir/ws', // {**REQUIRED**} Socket Address
-            ssoHost: 'https://accounts.pod.ir', // {**REQUIRED**} Socket Address
-            platformHost: 'https://api.pod.ir/srv/core', // {**REQUIRED**} Platform Core Address
-            fileServer: 'https://core.pod.ir', // {**REQUIRED**} File Server Address
-            podSpaceFileServer: 'https://podspace.pod.ir', // {**REQUIRED**} File Server Address
-            serverName: 'chat-server', // {**REQUIRED**} Server to to register on
+            // socketAddress: 'wss://msg.pod.ir/ws', // {**REQUIRED**} Socket Address
+            // ssoHost: 'https://accounts.pod.ir', // {**REQUIRED**} Socket Address
+            // platformHost: 'https://api.pod.ir/srv/core', // {**REQUIRED**} Platform Core Address
+            // fileServer: 'https://core.pod.ir', // {**REQUIRED**} File Server Address
+            // podSpaceFileServer: 'https://podspace.pod.ir', // {**REQUIRED**} File Server Address
+            // serverName: 'chat-server', // {**REQUIRED**} Server to to register on
 
             /**
              * Sand Box
              */
-            // socketAddress: "wss://chat-sandbox.pod.ir/ws",
-            // ssoHost: "https://accounts.pod.ir",
-            // platformHost: "https://sandbox.pod.ir:8043/srv/basic-platform",
-            // fileServer: 'https://core.pod.ir',
-            // podSpaceFileServer: 'https://podspace.pod.ir',
-            // serverName: "chat-server",
+            socketAddress: "wss://chat-sandbox.pod.ir/ws",
+            ssoHost: "https://accounts.pod.ir",
+            platformHost: "https://sandbox.pod.ir:8043/srv/basic-platform",
+            fileServer: 'https://core.pod.ir',
+            podSpaceFileServer: 'https://podspace.pod.ir',
+            serverName: "chat-server",
 
             /**
              * Integration
@@ -76,7 +76,7 @@
             fullResponseObject: false,
             mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
             // typeCode: "talk",
-            token: "aa4184ffdc284eeba35113df9a7210b0",
+            token: "fc7c5706cb3e4df4bb4001174f88ade1",
             // token: "3dd6895c8dc64f93bcd43b58dcc2aab3", // Masoud Amjadi
             // token: "9c627a9125d04ebf8455bf57bb33d2a9", // Pooria Pahlevani
             // token: "f6464d4e0f044314b1a668f90287ba26", // Nadia Anvari
@@ -761,19 +761,19 @@
             var type = event.type,
                 message = event.result.message;
 
-            // console.log(event);
+            console.log(event);
 
             switch (type) {
                 case "MESSAGE_NEW":
                     /**
                      * Sending Message Seen to Sender after 5 secs
                      */
-                    // setTimeout(function () {
-                    //     chatAgent.seen({
-                    //         messageId: message.id,
-                    //         ownerId: message.ownerId
-                    //     });
-                    // }, 5000);
+                    chatAgent.seen({
+                        messageId: message.id,
+                        ownerId: message.ownerId,
+                        threadId: message.threadId
+                    });
+
                     console.log('# MSG Received -=>' + message.message);
                     break;
 
