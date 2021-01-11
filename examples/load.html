@@ -28,22 +28,22 @@
             /**
              * Main Server
              */
-            // socketAddress: 'wss://msg.pod.ir/ws', // {**REQUIRED**} Socket Address
-            // ssoHost: 'https://accounts.pod.ir', // {**REQUIRED**} Socket Address
-            // platformHost: 'https://api.pod.ir/srv/core', // {**REQUIRED**} Platform Core Address
-            // fileServer: 'https://core.pod.ir', // {**REQUIRED**} File Server Address
-            // podSpaceFileServer: 'https://podspace.pod.ir', // {**REQUIRED**} File Server Address
-            // serverName: 'chat-server', // {**REQUIRED**} Server to to register on
+            socketAddress: 'wss://msg.pod.ir/ws', // {**REQUIRED**} Socket Address
+            ssoHost: 'https://accounts.pod.ir', // {**REQUIRED**} Socket Address
+            platformHost: 'https://api.pod.ir/srv/core', // {**REQUIRED**} Platform Core Address
+            fileServer: 'https://core.pod.ir', // {**REQUIRED**} File Server Address
+            podSpaceFileServer: 'https://podspace.pod.ir', // {**REQUIRED**} File Server Address
+            serverName: 'chat-server', // {**REQUIRED**} Server to to register on
 
             /**
              * Sand Box
              */
-            socketAddress: "wss://chat-sandbox.pod.ir/ws",
-            ssoHost: "https://accounts.pod.ir",
-            platformHost: "https://sandbox.pod.ir:8043/srv/basic-platform",
-            fileServer: 'https://core.pod.ir',
-            podSpaceFileServer: 'https://podspace.pod.ir',
-            serverName: "chat-server",
+            // socketAddress: "wss://chat-sandbox.pod.ir/ws",
+            // ssoHost: "https://accounts.pod.ir",
+            // platformHost: "https://sandbox.pod.ir:8043/srv/basic-platform",
+            // fileServer: 'https://core.pod.ir',
+            // podSpaceFileServer: 'https://podspace.pod.ir',
+            // serverName: "chat-server",
 
             /**
              * Integration
@@ -55,7 +55,7 @@
             // podSpaceFileServer: 'http://172.16.110.61:8780/podspace',
             // serverName: "chatlocal",
 
-            token: "9e39249953564a44a8fb137793e787e3",
+            token: "8da109b882f74211b401f82439a9ceef",
 
             grantDeviceIdFromSSO: false,
             enableCache: false,
@@ -82,11 +82,12 @@
             var count = 1;
 
             function runner() {
-                if (count <= 1000) {
-                    console.log(`# Message Sent => ${count}`);
+                if (count <= 5000) {
+                    var currdate = new Date();
+                    console.log(`# Message Sent => ${count} ---- ${('0' + currdate.getHours()).slice(-2)}:${('0' + currdate.getMinutes()).slice(-2)}:${('0' + currdate.getSeconds()).slice(-2)} :: ${currdate.getMilliseconds()}`);
                     chatAgent.sendTextMessage({
-                        threadId: 36038,
-                        textMessage: `${count}`,
+                        threadId: 204777,
+                        textMessage: `${count} <br> ${('0' + currdate.getHours()).slice(-2)}:${('0' + currdate.getMinutes()).slice(-2)}:${('0' + currdate.getSeconds()).slice(-2)}:${currdate.getMilliseconds()}`,
                         messageType: 'TEXT',
                         systemMetadata: {
                             date: new Date().getTime(),

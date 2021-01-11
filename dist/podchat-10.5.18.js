@@ -13395,7 +13395,7 @@ module.exports = ws
                             }
                             callback && callback({
                                 hasError: true,
-                                errorMessage: httpRequestObject[eval('fileUploadUniqueId')].responseText,
+                                errorMessage: (xhrResponseType === 'text') ? httpRequestObject[eval('fileUploadUniqueId')].responseText : 'ُAn error accoured!',
                                 errorCode: httpRequestObject[eval('fileUploadUniqueId')].status
                             });
                         }
@@ -14027,34 +14027,48 @@ module.exports = ws
                      * Type 4    Message Delivery
                      */
                     case chatMessageVOTypes.DELIVERY:
-                        if (fullResponseObject) {
-                            getHistory({
-                                offset: 0,
-                                threadId: threadId,
-                                id: messageContent.messageId,
-                                cache: false
-                            }, function (result) {
-                                if (!result.hasError) {
-                                    fireEvent('messageEvents', {
-                                        type: 'MESSAGE_DELIVERY',
-                                        result: {
-                                            message: result.result.history[0],
-                                            threadId: threadId,
-                                            senderId: messageContent.participantId
-                                        }
-                                    });
-                                }
-                            });
-                        } else {
-                            fireEvent('messageEvents', {
-                                type: 'MESSAGE_DELIVERY',
-                                result: {
-                                    message: messageContent.messageId,
-                                    threadId: threadId,
-                                    senderId: messageContent.participantId
-                                }
-                            });
-                        }
+                        var threadObject = {
+                            id: messageContent.conversationId,
+                            lastSeenMessageId: messageContent.messageId,
+                            lastSeenMessageTime: messageContent.messageTime,
+                            lastParticipantId: messageContent.participantId
+                        };
+
+                        fireEvent('threadEvents', {
+                            type: 'THREAD_LAST_ACTIVITY_TIME',
+                            result: {
+                                thread: threadObject
+                            }
+                        });
+
+                        // if (fullResponseObject) {
+                        //     getHistory({
+                        //         offset: 0,
+                        //         threadId: threadId,
+                        //         id: messageContent.messageId,
+                        //         cache: false
+                        //     }, function (result) {
+                        //         if (!result.hasError) {
+                        //             fireEvent('messageEvents', {
+                        //                 type: 'MESSAGE_DELIVERY',
+                        //                 result: {
+                        //                     message: result.result.history[0],
+                        //                     threadId: threadId,
+                        //                     senderId: messageContent.participantId
+                        //                 }
+                        //             });
+                        //         }
+                        //     });
+                        // } else {
+                        //     fireEvent('messageEvents', {
+                        //         type: 'MESSAGE_DELIVERY',
+                        //         result: {
+                        //             message: messageContent.messageId,
+                        //             threadId: threadId,
+                        //             senderId: messageContent.participantId
+                        //         }
+                        //     });
+                        // }
 
                         sendMessageCallbacksHandler(chatMessageVOTypes.DELIVERY, threadId, uniqueId);
                         break;
@@ -14063,34 +14077,48 @@ module.exports = ws
                      * Type 5    Message Seen
                      */
                     case chatMessageVOTypes.SEEN:
-                        if (fullResponseObject) {
-                            getHistory({
-                                offset: 0,
-                                threadId: threadId,
-                                id: messageContent.messageId,
-                                cache: false
-                            }, function (result) {
-                                if (!result.hasError) {
-                                    fireEvent('messageEvents', {
-                                        type: 'MESSAGE_SEEN',
-                                        result: {
-                                            message: result.result.history[0],
-                                            threadId: threadId,
-                                            senderId: messageContent.participantId
-                                        }
-                                    });
-                                }
-                            });
-                        } else {
-                            fireEvent('messageEvents', {
-                                type: 'MESSAGE_SEEN',
-                                result: {
-                                    message: messageContent.messageId,
-                                    threadId: threadId,
-                                    senderId: messageContent.participantId
-                                }
-                            });
-                        }
+                        var threadObject = {
+                            id: messageContent.conversationId,
+                            lastSeenMessageId: messageContent.messageId,
+                            lastSeenMessageTime: messageContent.messageTime,
+                            lastParticipantId: messageContent.participantId
+                        };
+
+                        fireEvent('threadEvents', {
+                            type: 'THREAD_LAST_ACTIVITY_TIME',
+                            result: {
+                                thread: threadObject
+                            }
+                        });
+
+                        // if (fullResponseObject) {
+                        //     getHistory({
+                        //         offset: 0,
+                        //         threadId: threadId,
+                        //         id: messageContent.messageId,
+                        //         cache: false
+                        //     }, function (result) {
+                        //         if (!result.hasError) {
+                        //             fireEvent('messageEvents', {
+                        //                 type: 'MESSAGE_SEEN',
+                        //                 result: {
+                        //                     message: result.result.history[0],
+                        //                     threadId: threadId,
+                        //                     senderId: messageContent.participantId
+                        //                 }
+                        //             });
+                        //         }
+                        //     });
+                        // } else {
+                        //     fireEvent('messageEvents', {
+                        //         type: 'MESSAGE_SEEN',
+                        //         result: {
+                        //             message: messageContent.messageId,
+                        //             threadId: threadId,
+                        //             senderId: messageContent.participantId
+                        //         }
+                        //     });
+                        // }
 
                         sendMessageCallbacksHandler(chatMessageVOTypes.SEEN, threadId, uniqueId);
                         break;
@@ -14877,45 +14905,56 @@ module.exports = ws
                      * Type 31    Thread Last Seen Updated
                      */
                     case chatMessageVOTypes.LAST_SEEN_UPDATED:
-                        if (fullResponseObject) {
-                            getThreads({
-                                threadIds: [messageContent.id]
-                            }, function (threadsResult) {
-                                var threads = threadsResult.result.threads;
+                        var threadObject = messageContent;
+                        threadObject.unreadCount = (messageContent.unreadCount) ? messageContent.unreadCount : 0;
 
-                                if (!threadsResult.cache) {
-                                    fireEvent('threadEvents', {
-                                        type: 'THREAD_UNREAD_COUNT_UPDATED',
-                                        result: {
-                                            thread: threads[0],
-                                            unreadCount: (messageContent.unreadCount) ? messageContent.unreadCount : 0
-                                        }
-                                    });
+                        fireEvent('threadEvents', {
+                            type: 'THREAD_UNREAD_COUNT_UPDATED',
+                            result: {
+                                thread: threadObject,
+                                unreadCount: (messageContent.unreadCount) ? messageContent.unreadCount : 0
+                            }
+                        });
 
-                                    fireEvent('threadEvents', {
-                                        type: 'THREAD_LAST_ACTIVITY_TIME',
-                                        result: {
-                                            thread: threads[0]
-                                        }
-                                    });
-                                }
-                            });
-                        } else {
-                            fireEvent('threadEvents', {
-                                type: 'THREAD_UNREAD_COUNT_UPDATED',
-                                result: {
-                                    thread: threadId,
-                                    unreadCount: (messageContent.unreadCount) ? messageContent.unreadCount : 0
-                                }
-                            });
-
-                            fireEvent('threadEvents', {
-                                type: 'THREAD_LAST_ACTIVITY_TIME',
-                                result: {
-                                    thread: threadId
-                                }
-                            });
-                        }
+                        // if (fullResponseObject) {
+                        //     getThreads({
+                        //         threadIds: [messageContent.id]
+                        //     }, function (threadsResult) {
+                        //         var threads = threadsResult.result.threads;
+                        //
+                        //         if (!threadsResult.cache) {
+                        //             fireEvent('threadEvents', {
+                        //                 type: 'THREAD_UNREAD_COUNT_UPDATED',
+                        //                 result: {
+                        //                     thread: threads[0],
+                        //                     unreadCount: (messageContent.unreadCount) ? messageContent.unreadCount : 0
+                        //                 }
+                        //             });
+                        //
+                        //             fireEvent('threadEvents', {
+                        //                 type: 'THREAD_LAST_ACTIVITY_TIME',
+                        //                 result: {
+                        //                     thread: threads[0]
+                        //                 }
+                        //             });
+                        //         }
+                        //     });
+                        // } else {
+                        //     fireEvent('threadEvents', {
+                        //         type: 'THREAD_UNREAD_COUNT_UPDATED',
+                        //         result: {
+                        //             thread: threadId,
+                        //             unreadCount: (messageContent.unreadCount) ? messageContent.unreadCount : 0
+                        //         }
+                        //     });
+                        //
+                        //     fireEvent('threadEvents', {
+                        //         type: 'THREAD_LAST_ACTIVITY_TIME',
+                        //         result: {
+                        //             thread: threadId
+                        //         }
+                        //     });
+                        // }
 
                         break;
 
@@ -15567,7 +15606,7 @@ module.exports = ws
                  * Send Message delivery for the last message
                  * has been received while being online
                  */
-                putInMessagesDeliveryQueue(threadId, message.id);
+                // putInMessagesDeliveryQueue(threadId, message.id);
 
                 /**
                  * Add New Messages into cache database
@@ -15624,43 +15663,65 @@ module.exports = ws
                     }
                 });
 
-                if (fullResponseObject) {
-                    getThreads({
-                        threadIds: [threadId]
-                    }, function (threadsResult) {
-                        var threads = threadsResult.result.threads;
-                        fireEvent('threadEvents', {
-                            type: 'THREAD_UNREAD_COUNT_UPDATED',
-                            result: {
-                                thread: threads[0],
-                                unreadCount: (threads[0].unreadCount) ? threads[0].unreadCount : 0
-                            }
-                        });
+                var threadObject = message.conversation;
+                threadObject.lastParticipantImage = (!!message.participant && message.participant.hasOwnProperty('image')) ? message.participant.image : '';
+                threadObject.lastMessageVo = message;
+                threadObject.lastParticipantName = (!!message.participant && message.participant.hasOwnProperty('name')) ? message.participant.name : '';
+                threadObject.lastMessage = (message.hasOwnProperty('message')) ? message.message : '';
 
-                        fireEvent('threadEvents', {
-                            type: 'THREAD_LAST_ACTIVITY_TIME',
-                            result: {
-                                thread: threads[0]
-                            }
-                        });
+                fireEvent('threadEvents', {
+                    type: 'THREAD_UNREAD_COUNT_UPDATED',
+                    result: {
+                        thread: threadObject,
+                        unreadCount: (threadObject.unreadCount) ? threadObject.unreadCount : 0
+                    }
+                });
 
-                    });
-                } else {
-                    fireEvent('threadEvents', {
-                        type: 'THREAD_LAST_ACTIVITY_TIME',
-                        result: {
-                            thread: threadId
-                        }
-                    });
+                fireEvent('threadEvents', {
+                    type: 'THREAD_LAST_ACTIVITY_TIME',
+                    result: {
+                        thread: threadObject
+                    }
+                });
 
-                    fireEvent('threadEvents', {
-                        type: 'THREAD_UNREAD_COUNT_UPDATED',
-                        result: {
-                            thread: messageContent.id,
-                            unreadCount: (messageContent.conversation.unreadCount) ? messageContent.conversation.unreadCount : 0
-                        }
-                    });
-                }
+                // if (fullResponseObject) {
+                //     getThreads({
+                //         threadIds: [threadId]
+                //     }, function (threadsResult) {
+                //         var threads = threadsResult.result.threads;
+                //
+                //         fireEvent('threadEvents', {
+                //             type: 'THREAD_UNREAD_COUNT_UPDATED',
+                //             result: {
+                //                 thread: threads[0],
+                //                 unreadCount: (threads[0].unreadCount) ? threads[0].unreadCount : 0
+                //             }
+                //         });
+                //
+                //         fireEvent('threadEvents', {
+                //             type: 'THREAD_LAST_ACTIVITY_TIME',
+                //             result: {
+                //                 thread: threads[0]
+                //             }
+                //         });
+                //
+                //     });
+                // } else {
+                //     fireEvent('threadEvents', {
+                //         type: 'THREAD_LAST_ACTIVITY_TIME',
+                //         result: {
+                //             thread: threadId
+                //         }
+                //     });
+                //
+                //     fireEvent('threadEvents', {
+                //         type: 'THREAD_UNREAD_COUNT_UPDATED',
+                //         result: {
+                //             thread: messageContent.id,
+                //             unreadCount: (messageContent.conversation.unreadCount) ? messageContent.conversation.unreadCount : 0
+                //         }
+                //     });
+                // }
 
                 /**
                  * Update waitQ and remove sent messages from it

@@ -44,22 +44,22 @@
             /**
              * Main Server
              */
-            // socketAddress: 'wss://msg.pod.ir/ws', // {**REQUIRED**} Socket Address
-            // ssoHost: 'https://accounts.pod.ir', // {**REQUIRED**} Socket Address
-            // platformHost: 'https://api.pod.ir/srv/core', // {**REQUIRED**} Platform Core Address
-            // fileServer: 'https://core.pod.ir', // {**REQUIRED**} File Server Address
-            // podSpaceFileServer: 'https://podspace.pod.ir', // {**REQUIRED**} File Server Address
-            // serverName: 'chat-server', // {**REQUIRED**} Server to to register on
+            socketAddress: 'wss://msg.pod.ir/ws', // {**REQUIRED**} Socket Address
+            ssoHost: 'https://accounts.pod.ir', // {**REQUIRED**} Socket Address
+            platformHost: 'https://api.pod.ir/srv/core', // {**REQUIRED**} Platform Core Address
+            fileServer: 'https://core.pod.ir', // {**REQUIRED**} File Server Address
+            podSpaceFileServer: 'https://podspace.pod.ir', // {**REQUIRED**} File Server Address
+            serverName: 'chat-server', // {**REQUIRED**} Server to to register on
 
             /**
              * Sand Box
              */
-            socketAddress: "wss://chat-sandbox.pod.ir/ws",
-            ssoHost: "https://accounts.pod.ir",
-            platformHost: "https://sandbox.pod.ir:8043/srv/basic-platform",
-            fileServer: 'https://core.pod.ir',
-            podSpaceFileServer: 'https://podspace.pod.ir',
-            serverName: "chat-server",
+            // socketAddress: "wss://chat-sandbox.pod.ir/ws",
+            // ssoHost: "https://accounts.pod.ir",
+            // platformHost: "https://sandbox.pod.ir:8043/srv/basic-platform",
+            // fileServer: 'https://core.pod.ir',
+            // podSpaceFileServer: 'https://podspace.pod.ir',
+            // serverName: "chat-server",
 
             /**
              * Integration
@@ -73,10 +73,10 @@
 
             grantDeviceIdFromSSO: false,
             enableCache: false, // Enable Client side caching
-            fullResponseObject: false,
+            fullResponseObject: true,
             mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
             // typeCode: "talk",
-            token: "916d03a60f3d4d9f8098266f8082ef5c",
+            token: "224aa7460c224ddcb05a002bd25cfc95",
             // token: "3dd6895c8dc64f93bcd43b58dcc2aab3", // Masoud Amjadi
             // token: "9c627a9125d04ebf8455bf57bb33d2a9", // Pooria Pahlevani
             // token: "f6464d4e0f044314b1a668f90287ba26", // Nadia Anvari
@@ -712,7 +712,7 @@
          */
         chatAgent.on("threadEvents", function (event) {
             var type = event.type;
-            // console.log(event);
+            console.log(event);
 
             switch (type) {
                 case "THREAD_LAST_ACTIVITY_TIME":
@@ -768,10 +768,10 @@
                     /**
                      * Sending Message Seen to Sender after 5 secs
                      */
-                    chatAgent.seen({
-                        messageId: message.id,
-                        threadId: message.threadId
-                    });
+                    // chatAgent.seen({
+                    //     messageId: message.id,
+                    //     threadId: message.threadId
+                    // });
 
                     console.log('# MSG Received -=>' + message.message);
                     break;
