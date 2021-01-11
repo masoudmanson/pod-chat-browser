@@ -15665,7 +15665,7 @@ module.exports = ws
 
                 var threadObject = message.conversation;
                 threadObject.lastParticipantImage = (!!message.participant && message.participant.hasOwnProperty('image')) ? message.participant.image : '';
-                threadObject.lastMessageVo = message;
+                threadObject.lastMessageVO = message;
                 threadObject.lastParticipantName = (!!message.participant && message.participant.hasOwnProperty('name')) ? message.participant.name : '';
                 threadObject.lastMessage = (message.hasOwnProperty('message')) ? message.message : '';
 
