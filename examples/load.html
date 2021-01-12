@@ -55,7 +55,7 @@
             // podSpaceFileServer: 'http://172.16.110.61:8780/podspace',
             // serverName: "chatlocal",
 
-            token: "8da109b882f74211b401f82439a9ceef",
+            token: "3a991eb0e9c846aead627feeaa2593e6",
 
             grantDeviceIdFromSSO: false,
             enableCache: false,
@@ -87,7 +87,7 @@
                     console.log(`# Message Sent => ${count} ---- ${('0' + currdate.getHours()).slice(-2)}:${('0' + currdate.getMinutes()).slice(-2)}:${('0' + currdate.getSeconds()).slice(-2)} :: ${currdate.getMilliseconds()}`);
                     chatAgent.sendTextMessage({
                         threadId: 204777,
-                        textMessage: `${count} <br> ${('0' + currdate.getHours()).slice(-2)}:${('0' + currdate.getMinutes()).slice(-2)}:${('0' + currdate.getSeconds()).slice(-2)}:${currdate.getMilliseconds()}`,
+                        textMessage: `${count} <br> ${('0' + currdate.getHours()).slice(-2)}:${('0' + currdate.getMinutes()).slice(-2)}:${('0' + currdate.getSeconds()).slice(-2)}:${currdate.getMilliseconds()}<br>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.`,
                         messageType: 'TEXT',
                         systemMetadata: {
                             date: new Date().getTime(),

@@ -3296,8 +3296,11 @@
                 });
 
                 var threadObject = message.conversation;
+                var lastMessageVoCopy = Object.assign({}, message);
+                lastMessageVoCopy.conversation && delete lastMessageVoCopy.conversation;
+
                 threadObject.lastParticipantImage = (!!message.participant && message.participant.hasOwnProperty('image')) ? message.participant.image : '';
-                threadObject.lastMessageVO = message;
+                threadObject.lastMessageVO = lastMessageVoCopy;
                 threadObject.lastParticipantName = (!!message.participant && message.participant.hasOwnProperty('name')) ? message.participant.name : '';
                 threadObject.lastMessage = (message.hasOwnProperty('message')) ? message.message : '';
 
