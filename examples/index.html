@@ -76,7 +76,7 @@
             fullResponseObject: true,
             mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
             // typeCode: "talk",
-            token: "e9f845c93d574ec38fcd0539a109ae48",
+            token: "fc92b26060374f188bfb56363df8b101",
             // token: "3dd6895c8dc64f93bcd43b58dcc2aab3", // Masoud Amjadi
             // token: "9c627a9125d04ebf8455bf57bb33d2a9", // Pooria Pahlevani
             // token: "f6464d4e0f044314b1a668f90287ba26", // Nadia Anvari
@@ -243,7 +243,9 @@
             // getHistory({
             //     count: 50,
             //     offset: 0,
-            //     threadId: 35943,
+            //     threadId: 149486,
+            //     fromTimeFull: 1611728867161577000,
+            //     order: 'asc',
             //     // firstMessageId: 17035,
             //     // order: "ASC",
             //     // lastMessageId: 17052,
@@ -255,7 +257,7 @@
             //     //     "is": "1534835339446"
             //     //   }]
             //     // },
-            //     query: "666",
+            //     query: "شورع",
             //     // messageType: 'sticker'
             // });
 
@@ -933,20 +935,19 @@
 
         function getHistory(params) {
 
-            var getHistoryParams = {
-                threadId: params.threadId,
-                count: params.count,
-                offset: params.offset,
-                queues: {
-                    sending: false,
-                    uploading: false,
-                    failed: false
-                }
+            var startTime = new Date().getTime();
+
+            params.queues = {
+                sending: false,
+                uploading: false,
+                failed: false
             };
 
-            chatAgent.getHistory(getHistoryParams, function (historyResult) {
+            chatAgent.getHistory(params, function (historyResult) {
                 if (!historyResult.hasError) {
                     console.log(historyResult);
+                    var endTime = new Date().getTime();
+                    console.log(`Get History Duration: ${endTime - startTime} ms`);
                 }
             });
         }

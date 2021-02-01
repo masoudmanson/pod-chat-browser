@@ -76,14 +76,15 @@
          *
          * @return  {object}
          */
-        this.createReturnData = function(hasError, errorMessage, errorCode, result, contentCount) {
+        this.createReturnData = function(hasError, errorMessage, errorCode, result, contentCount, uniqueId) {
             var returnData = {
                 hasError: hasError,
                 errorMessage: typeof errorMessage == 'string'
                     ? errorMessage
                     : '',
                 errorCode: typeof errorCode == 'number' ? errorCode : 0,
-                result: result
+                result: result,
+                uniqueId: uniqueId
             };
 
             if (typeof contentCount == 'number') {

@@ -150,7 +150,8 @@
                 TO_BE_USER_CONTACT_ID: 2,
                 TO_BE_USER_CELLPHONE_NUMBER: 3,
                 TO_BE_USER_USERNAME: 4,
-                TO_BE_USER_ID: 5
+                TO_BE_USER_ID: 5,
+                TO_BE_CORE_USER_ID: 6
             },
             createThreadTypes = {
                 NORMAL: 0,
@@ -2022,7 +2023,7 @@
                      */
                     case chatMessageVOTypes.GET_THREADS:
                         if (messagesCallbacks[uniqueId]) {
-                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount, uniqueId));
                         }
                         break;
 
@@ -4494,7 +4495,8 @@
                             hasError: result.hasError,
                             cache: false,
                             errorMessage: result.errorMessage,
-                            errorCode: result.errorCode
+                            errorCode: result.errorCode,
+                            uniqueId: result.uniqueId
                         };
 
                         if (!returnData.hasError) {
@@ -9289,11 +9291,12 @@
                     for (var i = 0; i < params.coreUserids.length; i++) {
                         sendMessageParams.content.push({
                             id: params.coreUserids[i],
-                            idType: inviteeVOidTypes.TO_BE_USER_ID
+                            idType: inviteeVOidTypes.TO_BE_CORE_USER_ID
                         });
                     }
                 }
             }
+
             return sendMessage(sendMessageParams, {
                 onResult: function (result) {
                     var returnData = {

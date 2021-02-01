@@ -4,6 +4,7 @@
 <head>
     <title>PodChat Load Tester</title>
     <link href="https://talk.pod.ir/styles/images/_common/favicon-32x32.png" rel="icon" type="image/x-icon"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.2/css/bulma.min.css">
 
     <!-- Development Mode -->
     <script type="text/javascript" src="../src/utility/utility.js"></script>
@@ -17,6 +18,11 @@
     <!-- Production Mode -->
     <!--<script type="text/javascript" src="podchat.js"></script>-->
     <!--<script type="text/javascript" src="podchat-browser.min.js"></script>-->
+    <style>
+        button {
+            margin: 10px 0;
+        }
+    </style>
 
     <script type="text/javascript">
         // Developement
@@ -28,22 +34,22 @@
             /**
              * Main Server
              */
-            socketAddress: 'wss://msg.pod.ir/ws', // {**REQUIRED**} Socket Address
-            ssoHost: 'https://accounts.pod.ir', // {**REQUIRED**} Socket Address
-            platformHost: 'https://api.pod.ir/srv/core', // {**REQUIRED**} Platform Core Address
-            fileServer: 'https://core.pod.ir', // {**REQUIRED**} File Server Address
-            podSpaceFileServer: 'https://podspace.pod.ir', // {**REQUIRED**} File Server Address
-            serverName: 'chat-server', // {**REQUIRED**} Server to to register on
+            // socketAddress: 'wss://msg.pod.ir/ws', // {**REQUIRED**} Socket Address
+            // ssoHost: 'https://accounts.pod.ir', // {**REQUIRED**} Socket Address
+            // platformHost: 'https://api.pod.ir/srv/core', // {**REQUIRED**} Platform Core Address
+            // fileServer: 'https://core.pod.ir', // {**REQUIRED**} File Server Address
+            // podSpaceFileServer: 'https://podspace.pod.ir', // {**REQUIRED**} File Server Address
+            // serverName: 'chat-server', // {**REQUIRED**} Server to to register on
 
             /**
              * Sand Box
              */
-            // socketAddress: "wss://chat-sandbox.pod.ir/ws",
-            // ssoHost: "https://accounts.pod.ir",
-            // platformHost: "https://sandbox.pod.ir:8043/srv/basic-platform",
-            // fileServer: 'https://core.pod.ir',
-            // podSpaceFileServer: 'https://podspace.pod.ir',
-            // serverName: "chat-server",
+            socketAddress: "wss://chat-sandbox.pod.ir/ws",
+            ssoHost: "https://accounts.pod.ir",
+            platformHost: "https://sandbox.pod.ir:8043/srv/basic-platform",
+            fileServer: 'https://core.pod.ir',
+            podSpaceFileServer: 'https://podspace.pod.ir',
+            serverName: "chat-server",
 
             /**
              * Integration
@@ -55,7 +61,7 @@
             // podSpaceFileServer: 'http://172.16.110.61:8780/podspace',
             // serverName: "chatlocal",
 
-            token: "3a991eb0e9c846aead627feeaa2593e6",
+            token: "7a7f4d77c1ff4793a258761ac2f9cf8f",
 
             grantDeviceIdFromSSO: false,
             enableCache: false,
@@ -74,28 +80,54 @@
             }
         };
 
-        var chatAgent = new PodChat(params),
-            PID;
+        var chatAgent = new PodChat(params);
+
+        var count = 1,
+            messages = [],
+            longest = {
+                time: 0,
+                uniqueId: ""
+            },
+            globalCount = 1000,
+            globalDelay = 100;
+
+        var globalSendMessagesFunction,
+            globalGetThreadsFunction;
 
         var chatReadyInstance = chatAgent.on("chatReady", function () {
 
-            var count = 1;
-
-            function runner() {
-                if (count <= 5000) {
+            globalSendMessagesFunction = function () {
+                if (count <= globalCount) {
                     var currdate = new Date();
-                    console.log(`# Message Sent => ${count} ---- ${('0' + currdate.getHours()).slice(-2)}:${('0' + currdate.getMinutes()).slice(-2)}:${('0' + currdate.getSeconds()).slice(-2)} :: ${currdate.getMilliseconds()}`);
+                    var uniqueId = chatAgent.generateUUID();
+                    messages[uniqueId] = currdate.getTime();
+
+                    console.log(`[SEND] [${uniqueId}] :: { ${count} } at ${('0' + currdate.getHours()).slice(-2)}:${('0' + currdate.getMinutes()).slice(-2)}:${('0' + currdate.getSeconds()).slice(-2)}:${currdate.getMilliseconds()}`);
+
                     chatAgent.sendTextMessage({
-                        threadId: 204777,
-                        textMessage: `${count} <br> ${('0' + currdate.getHours()).slice(-2)}:${('0' + currdate.getMinutes()).slice(-2)}:${('0' + currdate.getSeconds()).slice(-2)}:${currdate.getMilliseconds()}<br>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.`,
+                        uniqueId: uniqueId,
+                        threadId: 36038,
+                        textMessage: `[SEND] [${uniqueId}] <br/> { ${count} } at ${('0' + currdate.getHours()).slice(-2)}:${('0' + currdate.getMinutes()).slice(-2)}:${('0' + currdate.getSeconds()).slice(-2)}:${currdate.getMilliseconds()}`,
                         messageType: 'TEXT',
                         systemMetadata: {
-                            date: new Date().getTime(),
-                            owner: 'Talk',
+                            time: currdate,
+                            uniqueId: uniqueId,
                             type: 'Load Test'
                         }
                     }, {
                         onSent: function (result) {
+                            var receiveTime = new Date();
+                            var duration = new Date().getTime() - messages[result.uniqueId];
+
+                            if (duration > longest.time) {
+                                longest.time = duration;
+                                longest.uniqueId = result.uniqueId;
+
+                                console.log(longest);
+                            }
+
+                            console.log(`[RECV] [${result.uniqueId}] at ${('0' + receiveTime.getHours()).slice(-2)}:${('0' + receiveTime.getMinutes()).slice(-2)}:${('0' + receiveTime.getSeconds()).slice(-2)}:${receiveTime.getMilliseconds()}`);
+                            console.log(`[TIME] [${result.uniqueId}] = ${duration}`);
                         },
                         onDeliver: function (result) {
                         },
@@ -104,11 +136,37 @@
                     });
                     count++;
 
-                    setTimeout(runner, 50);
+                    setTimeout(globalSendMessagesFunction, globalDelay);
                 }
-            }
+            };
 
-            runner();
+            globalGetThreadsFunction = function () {
+                if (count <= globalCount) {
+                    var currdate = new Date();
+                    var uniqueId = chatAgent.generateUUID();
+                    messages[uniqueId] = currdate.getTime();
+
+                    console.log(`[SEND] [${uniqueId}] :: { ${count} } at ${('0' + currdate.getHours()).slice(-2)}:${('0' + currdate.getMinutes()).slice(-2)}:${('0' + currdate.getSeconds()).slice(-2)}:${currdate.getMilliseconds()}`);
+
+                    chatAgent.getThreads({}, function (result) {
+                        var receiveTime = new Date();
+                        var duration = new Date().getTime() - messages[result.uniqueId];
+
+                        if (duration > longest.time) {
+                            longest.time = duration;
+                            longest.uniqueId = result.uniqueId;
+
+                            console.log(longest);
+                        }
+
+                        console.log(`[RECV] [${result.uniqueId}] at ${('0' + receiveTime.getHours()).slice(-2)}:${('0' + receiveTime.getMinutes()).slice(-2)}:${('0' + receiveTime.getSeconds()).slice(-2)}:${receiveTime.getMilliseconds()}`);
+                        console.log(`[TIME] [${result.uniqueId}] = ${duration}`);
+                    });
+                    count++;
+
+                    setTimeout(globalGetThreadsFunction, globalDelay);
+                }
+            };
 
         });
 
@@ -265,7 +323,12 @@
         id="deleteCache">Delete Cache</span></p>
 Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
 <button id="tokenInputSet">Set Token</button>
-
+<br>
+<h4 id="userName"></h4>
+<br>
+<button id="sendMessageTest">Start Send Message Load Test</button>
+<br>
+<button id="getThreadsTest">Start Get Threads Load Test</button>
 </body>
 
 <script>
@@ -290,6 +353,31 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
     document.getElementById('tokenInputSet').addEventListener('click', function (e) {
         console.log('New Token Has been set: ', document.getElementById('tokenInput').value);
         chatAgent.setToken(document.getElementById('tokenInput').value);
+        chatAgent.getUserInfo(function(result){
+            document.getElementById('userName').innerText = result.result.user.name;
+        });
+    });
+
+    document.getElementById('sendMessageTest').addEventListener('click', function () {
+        count = 1;
+        messages = [];
+        longest = {
+            time: 0,
+            uniqueId: ""
+        };
+
+        globalSendMessagesFunction();
+    });
+
+    document.getElementById('getThreadsTest').addEventListener('click', function () {
+        count = 1;
+        messages = [];
+        longest = {
+            time: 0,
+            uniqueId: ""
+        };
+
+        globalGetThreadsFunction();
     });
 </script>
 

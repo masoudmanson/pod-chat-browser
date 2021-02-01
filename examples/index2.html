@@ -76,7 +76,7 @@
             fullResponseObject: true,
             mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
             // typeCode: "talk",
-            token: "3b86f6d2056945348e45b2ff0414b2d2",
+            token: "f2db729533ab4cd291615d561a9c7c42",
             // token: "3dd6895c8dc64f93bcd43b58dcc2aab3", // Masoud Amjadi
             // token: "9c627a9125d04ebf8455bf57bb33d2a9", // Pooria Pahlevani
             // token: "f6464d4e0f044314b1a668f90287ba26", // Nadia Anvari
@@ -208,7 +208,7 @@
              * @param contacts {Array}  CONTACT ID
              */
             // addParticipants(8088, 'contact', [7741]);
-            // addParticipants(8088, 'username', ['poddraw']);
+            addParticipants(36292, 'username', ['poddraw']);
             // addParticipants(7548, 'coreuserid', [919]); //15508?
 
             /**
@@ -216,7 +216,7 @@
              * @param threadId
              * @param participants {Array}  USER ID
              */
-            // removeParticipants(3, [4]);
+            // removeParticipants(36292, [6862]);
 
             /**
              * LEAVE THREAD
@@ -862,7 +862,7 @@
                 case 'contact':
                     chatAgent.addParticipants({
                         threadId: threadId,
-                        contacts: participants
+                        contactIds: participants
                     }, function (result) {
                         console.log(result);
                     });
@@ -875,6 +875,7 @@
                     }, function (result) {
                         console.log(result);
                     });
+                    break;
 
                 case 'coreUserids':
                     chatAgent.addParticipants({
@@ -884,13 +885,16 @@
                         console.log(result);
                     });
                     break;
+
+                default:
+                    break;
             }
         }
 
         function removeParticipants(threadId, participants) {
             chatAgent.removeParticipants({
                 threadId: threadId,
-                participants: participants
+                participantIds: participants
             }, function (result) {
                 // console.log(result);
             });
