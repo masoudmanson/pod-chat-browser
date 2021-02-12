@@ -185,7 +185,7 @@ process.chdir = function (dir) {
 process.umask = function() { return 0; };
 
 },{}],2:[function(require,module,exports){
-(function (setImmediate,clearImmediate){
+(function (setImmediate,clearImmediate){(function (){
 var nextTick = require('process/browser.js').nextTick;
 var apply = Function.prototype.apply;
 var slice = Array.prototype.slice;
@@ -262,7 +262,7 @@ exports.setImmediate = typeof setImmediate === "function" ? setImmediate : funct
 exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate : function(id) {
   delete immediateIds[id];
 };
-}).call(this,require("timers").setImmediate,require("timers").clearImmediate)
+}).call(this)}).call(this,require("timers").setImmediate,require("timers").clearImmediate)
 },{"process/browser.js":1,"timers":2}],3:[function(require,module,exports){
 window.PodChat = require('./src/chat.js');
 
@@ -6879,7 +6879,7 @@ window.PodChat = require('./src/chat.js');
 
 }));
 },{"./core":6}],38:[function(require,module,exports){
-(function (global,setImmediate){
+(function (global,setImmediate){(function (){
 /*
  * Dexie.js - a minimalistic wrapper for IndexedDB
  * ===============================================
@@ -11355,9 +11355,9 @@ return Dexie;
 })));
 
 
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("timers").setImmediate)
+}).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("timers").setImmediate)
 },{"timers":2}],39:[function(require,module,exports){
-(function (global){
+(function (global){(function (){
 // https://github.com/maxogden/websocket-stream/blob/48dc3ddf943e5ada668c31ccd94e9186f02fafbd/ws-fallback.js
 
 var ws = null
@@ -11376,7 +11376,7 @@ if (typeof WebSocket !== 'undefined') {
 
 module.exports = ws
 
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+}).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}],40:[function(require,module,exports){
 (function () {
     /*
@@ -12312,7 +12312,7 @@ module.exports = ws
 })();
 
 },{"isomorphic-ws":39}],42:[function(require,module,exports){
-(function (global){
+(function (global){(function (){
 (function() {
   /**
    * General Utilities
@@ -12629,7 +12629,7 @@ module.exports = ws
   }
 })();
 
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+}).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}],43:[function(require,module,exports){
 (function () {
     /*
@@ -12670,13 +12670,15 @@ module.exports = ws
             productEnv = (typeof navigator != 'undefined') ? navigator.product : 'undefined',
             db,
             queueDb,
+            forceWaitQueueInMemory = (params.forceWaitQueueInMemory && typeof params.forceWaitQueueInMemory === 'boolean') ? params.forceWaitQueueInMemory : false,
             hasCache = productEnv !== 'ReactNative' && typeof Dexie != 'undefined',
+            cacheInMemory = forceWaitQueueInMemory ? true : !hasCache,
             enableCache = (params.enableCache && typeof params.enableCache === 'boolean') ? params.enableCache : false,
             canUseCache = hasCache && enableCache,
             isCacheReady = false,
             cacheDeletingInProgress = false,
             cacheExpireTime = params.cacheExpireTime || 2 * 24 * 60 * 60 * 1000,
-            cacheSecret = '',
+            cacheSecret = 'VjaaS9YxNdVVAd3cAsRPcU5FyxRcyyV6tG6bFGjjK5RV8JJjLrXNbS5zZxnqUT6Y',
             cacheSyncWorker,
             grantDeviceIdFromSSO = (params.grantDeviceIdFromSSO && typeof params.grantDeviceIdFromSSO === 'boolean')
                 ? params.grantDeviceIdFromSSO
@@ -12783,7 +12785,8 @@ module.exports = ws
                 TO_BE_USER_CONTACT_ID: 2,
                 TO_BE_USER_CELLPHONE_NUMBER: 3,
                 TO_BE_USER_USERNAME: 4,
-                TO_BE_USER_ID: 5
+                TO_BE_USER_ID: 5,
+                TO_BE_CORE_USER_ID: 6
             },
             createThreadTypes = {
                 NORMAL: 0,
@@ -13053,6 +13056,10 @@ module.exports = ws
                                                                         generateEncryptionKey({
                                                                             keyAlgorithm: 'AES',
                                                                             keySize: 256
+                                                                        }, function () {
+                                                                            chatState = true;
+                                                                            fireEvent('chatReady');
+                                                                            chatSendQueueHandler();
                                                                         });
                                                                     }
                                                                 } catch (e) {
@@ -14655,7 +14662,7 @@ module.exports = ws
                      */
                     case chatMessageVOTypes.GET_THREADS:
                         if (messagesCallbacks[uniqueId]) {
-                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount, uniqueId));
                         }
                         break;
 
@@ -15753,6 +15760,23 @@ module.exports = ws
                             // clearChatServerCaches();
                         }
 
+                        /* If the error code is 208, so the user
+                         * has been blocked cause of spam activity
+                         */
+                        if (messageContent.code === 208) {
+                            if (sendMessageCallbacks[uniqueId]) {
+                                getItemFromChatWaitQueue(uniqueId, function (message) {
+                                    fireEvent('messageEvents', {
+                                        type: 'MESSAGE_FAILED',
+                                        cache: false,
+                                        result: {
+                                            message: message
+                                        }
+                                    });
+                                });
+                            }
+                        }
+
                         fireEvent('error', {
                             code: messageContent.code,
                             message: messageContent.message,
@@ -15994,27 +16018,10 @@ module.exports = ws
                 /**
                  * Update waitQ and remove sent messages from it
                  */
-                if (hasCache && typeof queueDb == 'object') {
-                    queueDb.waitQ.where('uniqueId')
-                        .equals(message.uniqueId)
-                        .and(function (item) {
-                            return item.owner === parseInt(userInfo.id);
-                        })
-                        .delete()
-                        .catch(function (error) {
-                            fireEvent('error', {
-                                code: error.code,
-                                message: error.message,
-                                error: error
-                            });
-                        });
-                } else {
-                    for (var i = 0; i < chatSendQueue.length; i++) {
-                        if (chatSendQueue[i].uniqueId === message.uniqueId) {
-                            chatSendQueue.splice(i, 1);
-                        }
-                    }
-                }
+
+                deleteFromChatWaitQueue(message, function(){
+                    console.log('Removed From Wait Q');
+                });
             },
 
             /**
@@ -16970,6 +16977,7 @@ module.exports = ws
              * @return {object} Instant sendMessage result
              */
             getThreads = function (params, callback) {
+                var startTime = new Date().getTime();
                 var count = 50,
                     offset = 0,
                     content = {},
@@ -17127,7 +17135,8 @@ module.exports = ws
                             hasError: result.hasError,
                             cache: false,
                             errorMessage: result.errorMessage,
-                            errorCode: result.errorCode
+                            errorCode: result.errorCode,
+                            uniqueId: result.uniqueId
                         };
 
                         if (!returnData.hasError) {
@@ -17280,7 +17289,7 @@ module.exports = ws
                                 }
                             }
                         }
-
+                        console.log('Durattion = ', new Date().getTime() - startTime);
                         callback && callback(returnData);
                         /**
                          * Delete callback so if server pushes response before
@@ -17444,9 +17453,16 @@ module.exports = ws
                     getChatWaitQueue(parseInt(params.threadId), failedQueue, function (waitQueueMessages) {
                         if (cacheSecret.length > 0) {
                             for (var i = 0; i < waitQueueMessages.length; i++) {
-                                var decryptedEnqueuedMessage = Utility.jsonParser(chatDecrypt(waitQueueMessages[i].message, cacheSecret));
+                                var decryptedEnqueuedMessage = {};
+
+                                if(cacheInMemory) {
+                                    decryptedEnqueuedMessage = waitQueueMessages[i];
+                                } else {
+                                    decryptedEnqueuedMessage = Utility.jsonParser(chatDecrypt(waitQueueMessages[i].message, cacheSecret));
+                                }
+
                                 var time = new Date().getTime();
-                                waitQueueMessages[i] = formatDataToMakeMessage(waitQueueMessages[i].threadId,
+                                failedQueueMessages[i] = formatDataToMakeMessage(waitQueueMessages[i].threadId,
                                     {
                                         uniqueId: decryptedEnqueuedMessage.uniqueId,
                                         ownerId: userInfo.id,
@@ -17458,14 +17474,12 @@ module.exports = ws
                                         participant: userInfo,
                                         time: time,
                                         timeNanos: (time % 1000) * 1000000
-                                    });
+                                    }
+                                );
                             }
-
-                            failedQueueMessages = waitQueueMessages;
                         } else {
                             failedQueueMessages = [];
                         }
-
 
                         if (dynamicHistoryCount) {
                             var tempCount = count - (sendingQueueMessages.length + failedQueueMessages.length + uploadingQueueMessages.length);
@@ -20547,6 +20561,7 @@ module.exports = ws
                     }
                 } else {
                     consoleLogging && console.log(CHAT_ERRORS[6600]);
+                    callback && callback();
                 }
             },
 
@@ -20586,11 +20601,11 @@ module.exports = ws
              *
              * @access private
              *
-             * @return {array}  An array of messages on sendQueue
+             * @return {array}  An array of messages on Wait Queue
              */
             getChatWaitQueue = function (threadId, active, callback) {
                 if (active && threadId > 0) {
-                    if (hasCache && typeof queueDb == 'object') {
+                    if (hasCache && typeof queueDb == 'object' && !forceWaitQueueInMemory) {
                         queueDb.waitQ.where('threadId')
                             .equals(threadId)
                             .and(function (item) {
@@ -20664,10 +20679,14 @@ module.exports = ws
                                 });
                             });
                     } else {
-                        var uniqueIds = [];
+                        var uniqueIds = [],
+                            queueToBeSent = [];
 
                         for (var i = 0; i < chatWaitQueue.length; i++) {
-                            uniqueIds.push(chatWaitQueue[i].uniqueId);
+                            if (chatWaitQueue[i].subjectId == threadId) {
+                                queueToBeSent.push(chatWaitQueue[i]);
+                                uniqueIds.push(chatWaitQueue[i].uniqueId);
+                            }
                         }
 
                         if (uniqueIds.length) {
@@ -20686,11 +20705,11 @@ module.exports = ws
                                             for (var j = 0; j < uniqueIds.length; j++) {
                                                 if (uniqueIds[j] === messageContent[i].uniqueId) {
                                                     uniqueIds.splice(j, 1);
-                                                    chatWaitQueue.splice(j, 1);
+                                                    queueToBeSent.splice(j, 1);
                                                 }
                                             }
                                         }
-                                        callback && callback(chatWaitQueue);
+                                        callback && callback(queueToBeSent);
                                     }
                                 }
                             });
@@ -20756,7 +20775,7 @@ module.exports = ws
              * @return {undefined}
              */
             deleteFromChatWaitQueue = function (item, callback) {
-                if (hasCache && typeof queueDb == 'object') {
+                if (hasCache && typeof queueDb == 'object' && !forceWaitQueueInMemory) {
                     queueDb.waitQ.where('uniqueId')
                         .equals(item.uniqueId)
                         .and(function (item) {
@@ -20802,6 +20821,34 @@ module.exports = ws
                 callback && callback();
             },
 
+            deleteThreadFailedMessagesFromWaitQueue = function (threadId, callback) {
+                if (hasCache && typeof queueDb == 'object' && !forceWaitQueueInMemory) {
+                    queueDb.waitQ.where('threadId')
+                        .equals(threadId)
+                        .and(function (item) {
+                            return item.owner === parseInt(userInfo.id);
+                        })
+                        .delete()
+                        .then(function () {
+                            callback && callback();
+                        })
+                        .catch(function (error) {
+                            fireEvent('error', {
+                                code: error.code,
+                                message: error.message,
+                                error: error
+                            });
+                        });
+                } else {
+                    for (var i = 0; i < chatWaitQueue.length; i++) {
+                        if (chatWaitQueue[i].uniqueId === item.uniqueId) {
+                            chatWaitQueue.splice(i, 1);
+                        }
+                    }
+                    callback && callback();
+                }
+            },
+
             /**
              * Push Message Into Send Queue
              *
@@ -20814,12 +20861,18 @@ module.exports = ws
              *
              * @return {undefined}
              */
-            putInChatSendQueue = function (params, callback) {
+            putInChatSendQueue = function (params, callback, skip) {
                 chatSendQueue.push(params);
 
-                putInChatWaitQueue(params.message, function () {
-                    callback && callback();
-                });
+                if(!skip) {
+                    var time = new Date().getTime();
+                    params.message.time = time;
+                    params.message.timeNanos = (time % 1000) * 1000000;
+                     
+                    putInChatWaitQueue(params.message, function () {
+                        callback && callback();
+                    });
+                }
             },
 
             /**
@@ -20838,7 +20891,7 @@ module.exports = ws
                     var waitQueueUniqueId = (typeof item.uniqueId == 'string') ? item.uniqueId : (Array.isArray(item.uniqueId)) ? item.uniqueId[0] : null;
 
                     if (waitQueueUniqueId != null) {
-                        if (hasCache && typeof queueDb == 'object') {
+                        if (hasCache && typeof queueDb == 'object' && !forceWaitQueueInMemory) {
                             queueDb.waitQ
                                 .put({
                                     threadId: parseInt(item.subjectId),
@@ -20857,9 +20910,68 @@ module.exports = ws
                                     });
                                 });
                         } else {
+                            console.log('Forced to use in memory cache');
                             item.uniqueId = waitQueueUniqueId;
                             chatWaitQueue.push(item);
                             callback && callback();
+                        }
+                    }
+                }
+            },
+
+            getItemFromChatWaitQueue = function (uniqueId, callback) {
+                if (hasCache && typeof queueDb == 'object' && !forceWaitQueueInMemory) {
+                    queueDb.waitQ.where('uniqueId')
+                        .equals(uniqueId)
+                        .and(function (item) {
+                            return item.owner === parseInt(userInfo.id);
+                        })
+                        .toArray()
+                        .then(function (messages) {
+                            var decryptedEnqueuedMessage = Utility.jsonParser(chatDecrypt(messages[0].message, cacheSecret));
+                            if (decryptedEnqueuedMessage.uniqueId === uniqueId) {
+                                var message = formatDataToMakeMessage(messages[0].threadId, {
+                                    uniqueId: decryptedEnqueuedMessage.uniqueId,
+                                    ownerId: userInfo.id,
+                                    message: decryptedEnqueuedMessage.content,
+                                    metadata: decryptedEnqueuedMessage.metadata,
+                                    systemMetadata: decryptedEnqueuedMessage.systemMetadata,
+                                    replyInfo: decryptedEnqueuedMessage.replyInfo,
+                                    forwardInfo: decryptedEnqueuedMessage.forwardInfo,
+                                    participant: userInfo,
+                                    time: decryptedEnqueuedMessage.time,
+                                    timeNanos: decryptedEnqueuedMessage.timeNanos
+                                });
+                                callback && callback(message);
+                            }
+                        })
+                        .catch(function (error) {
+                            fireEvent('error', {
+                                code: error.code,
+                                message: error.message,
+                                error: error
+                            });
+                        });
+                } else {
+                    for (var i = 0; i < chatWaitQueue.length; i++) {
+                        if (chatWaitQueue[i].uniqueId === uniqueId) {
+                            var decryptedEnqueuedMessage = chatWaitQueue[i];
+                            var time = new Date().getTime();
+                            var message = formatDataToMakeMessage(decryptedEnqueuedMessage.threadId, {
+                                uniqueId: decryptedEnqueuedMessage.uniqueId,
+                                ownerId: userInfo.id,
+                                message: decryptedEnqueuedMessage.content,
+                                metadata: decryptedEnqueuedMessage.metadata,
+                                systemMetadata: decryptedEnqueuedMessage.systemMetadata,
+                                replyInfo: decryptedEnqueuedMessage.replyInfo,
+                                forwardInfo: decryptedEnqueuedMessage.forwardInfo,
+                                participant: userInfo,
+                                time: time,
+                                timeNanos: (time % 1000) * 1000000
+                            });
+
+                            callback && callback(message);
+                            break;
                         }
                     }
                 }
@@ -21922,11 +22034,12 @@ module.exports = ws
                     for (var i = 0; i < params.coreUserids.length; i++) {
                         sendMessageParams.content.push({
                             id: params.coreUserids[i],
-                            idType: inviteeVOidTypes.TO_BE_USER_ID
+                            idType: inviteeVOidTypes.TO_BE_CORE_USER_ID
                         });
                     }
                 }
             }
+
             return sendMessage(sendMessageParams, {
                 onResult: function (result) {
                     var returnData = {
@@ -22426,7 +22539,7 @@ module.exports = ws
         };
 
         this.resendMessage = function (uniqueId, callbacks) {
-            if (hasCache && typeof queueDb == 'object') {
+            if (hasCache && typeof queueDb == 'object' && !forceWaitQueueInMemory) {
                 queueDb.waitQ.where('uniqueId')
                     .equals(uniqueId)
                     .and(function (item) {
@@ -22451,15 +22564,16 @@ module.exports = ws
                         });
                     });
             } else {
+                console.log({chatWaitQueue});
                 for (var i = 0; i < chatWaitQueue.length; i++) {
-                    if (chatWaitQueue[i].message.uniqueId === uniqueId) {
+                    if (chatWaitQueue[i].uniqueId === uniqueId) {
                         putInChatSendQueue({
-                            message: chatWaitQueue[i].message,
+                            message: chatWaitQueue[i],
                             callbacks: callbacks
                         }, function () {
                             chatSendQueueHandler();
-                        });
-                        break;
+                        }, true);
+                        // break;
                     }
                 }
             }
@@ -24404,7 +24518,7 @@ module.exports = ws
 })();
 
 },{"./utility/utility.js":44,"dexie":38,"podasync-ws-only":40}],44:[function(require,module,exports){
-(function (global){
+(function (global){(function (){
 (function() {
 
     /**
@@ -24483,14 +24597,15 @@ module.exports = ws
          *
          * @return  {object}
          */
-        this.createReturnData = function(hasError, errorMessage, errorCode, result, contentCount) {
+        this.createReturnData = function(hasError, errorMessage, errorCode, result, contentCount, uniqueId) {
             var returnData = {
                 hasError: hasError,
                 errorMessage: typeof errorMessage == 'string'
                     ? errorMessage
                     : '',
                 errorCode: typeof errorCode == 'number' ? errorCode : 0,
-                result: result
+                result: result,
+                uniqueId: uniqueId
             };
 
             if (typeof contentCount == 'number') {
@@ -24944,5 +25059,5 @@ module.exports = ws
     }
 })();
 
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+}).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"crypto-js":12}]},{},[3]);
