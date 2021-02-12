@@ -138,6 +138,10 @@
                 LAST_MESSAGE_EDITED: 67,
                 BOT_COMMANDS: 68,
                 THREAD_ALL_BOTS: 69,
+                CALL_REQUEST: 70,
+                ACCEPT_CALL: 71,
+                REJECT_CALL: 72,
+                START_CALL: 73,
                 CONTACT_SYNCED: 90,
                 LOGOUT: 100,
                 LOCATION_PING: 101,
@@ -4344,7 +4348,6 @@
              * @return {object} Instant sendMessage result
              */
             getThreads = function (params, callback) {
-                var startTime = new Date().getTime();
                 var count = 50,
                     offset = 0,
                     content = {},
@@ -4656,7 +4659,7 @@
                                 }
                             }
                         }
-                        console.log('Durattion = ', new Date().getTime() - startTime);
+
                         callback && callback(returnData);
                         /**
                          * Delete callback so if server pushes response before
