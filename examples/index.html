@@ -76,7 +76,7 @@
             fullResponseObject: true,
             mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
             // typeCode: "talk",
-            token: "fc92b26060374f188bfb56363df8b101",
+            token: "bf4b92f0165e465faedd4e0439639117",
             // token: "3dd6895c8dc64f93bcd43b58dcc2aab3", // Masoud Amjadi
             // token: "9c627a9125d04ebf8455bf57bb33d2a9", // Pooria Pahlevani
             // token: "f6464d4e0f044314b1a668f90287ba26", // Nadia Anvari
@@ -92,13 +92,14 @@
             reconnectOnClose: true, // auto connect to socket after socket close
             httpRequestTimeout: 30000,
             httpUploadRequestTimeout: 0, // 0 means No timeout
+            forceWaitQueueInMemory: true,
             // asyncRequestTimeout: 500,
             asyncLogging: {
                 onFunction: true, // log main actions on console
                 consoleLogging: true, // log action results in console
-            //     onMessageReceive: true, // log received messages on console
-            //     onMessageSend: true, // log sent messaged on console
-            //     actualTiming: true // log actual functions running time
+                //     onMessageReceive: true, // log received messages on console
+                //     onMessageSend: true, // log sent messaged on console
+                //     actualTiming: true // log actual functions running time
             }
         };
 
@@ -257,7 +258,7 @@
             //     //     "is": "1534835339446"
             //     //   }]
             //     // },
-            //     query: "شورع",
+            //     query: "کِیفین",
             //     // messageType: 'sticker'
             // });
 
@@ -384,7 +385,7 @@
              * @param id
              */
             // chatAgent.removeContacts({
-            //   id: "1821"
+            //   id: 7742
             // }, function(result) {
             //   console.log(result);
             // });
@@ -776,6 +777,12 @@
                     /**
                      * Sending Message Seen to Sender after 5 secs
                      */
+                    // console.log('Sending Message Deliver');
+                    // chatAgent.deliver({
+                    //     messageId: message.id,
+                    //     threadId: message.threadId
+                    // });
+                    // console.log('Sending Message Seen');
                     // chatAgent.seen({
                     //     messageId: message.id,
                     //     threadId: message.threadId
@@ -791,6 +798,9 @@
                     break;
 
                 case "MESSAGE_SEEN":
+                    break;
+
+                case "MESSAGE_FAILED":
                     break;
 
                 default:
@@ -938,9 +948,9 @@
             var startTime = new Date().getTime();
 
             params.queues = {
-                sending: false,
-                uploading: false,
-                failed: false
+                sending: true,
+                uploading: true,
+                failed: true
             };
 
             chatAgent.getHistory(params, function (historyResult) {
@@ -989,7 +999,7 @@
                 onSeen: function (result) {
                     console.log(result.uniqueId + " \t has been Seen!");
                 },
-                onFileUpload: function(result) {
+                onFileUpload: function (result) {
                     console.log('File Upload is done', result);
                 }
             });
@@ -1298,12 +1308,15 @@
         id="deleteCache">Delete Cache</span></p>
 Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
 <button id="tokenInputSet">Set Token</button>
-<br><br>
+<br>
+Thread: <input type="text" id="threadInput" autocomplete="on" width="500">
+<button id="threadInputSet">Set Thread</button>
+<br>
 <form>
     <fieldset>
         <legend>General Functionalities</legend>
         <label for="g-p2p">P2P Thread Id : </label>
-        <input type="text" name="p2p" id="g-p2p" value="312">
+        <input type="text" name="p2p" id="g-p2p" value="35945" class="custom-thread-id">
         <label for="g-p2p-off">offset: </label>
         <input type="text" name="p2poff" id="g-p2p-off" value="0" size="2">
         <label for="g-p2p-count">Count: </label>
@@ -1463,7 +1476,7 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
     <fieldset>
         <legend>Add Participant to Thread</legend>
         <label for="apThread">Thread Id</label>
-        <input type="text" name="apThread" id="apThread">
+        <input type="text" name="apThread" id="apThread" class="custom-thread-id">
         <br>
         <label for="apList">Participants (Array of IDs):</label>
         <input type="text" name="apList" id="apList" placeholder="1, 2, 3, ...">
@@ -1479,7 +1492,7 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
     <fieldset>
         <legend>Send Text Message</legend>
         <label for="sendTextThread">Thread Id</label>
-        <input type="text" name="sendTextThread" id="sendTextThread">
+        <input type="text" name="sendTextThread" id="sendTextThread" class="custom-thread-id">
         <br>
         <label for="sendTextMessage">Message :</label>
         <textarea type="text" name="sendTextMessage" id="sendTextMessage"></textarea>
@@ -1510,7 +1523,7 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
     <fieldset>
         <legend>Send File Message</legend>
         <label for="sendFileThread">Thread Id</label>
-        <input type="text" name="sendFileThread" id="sendFileThread" value="54436">
+        <input type="text" name="sendFileThread" id="sendFileThread" value="54436" class="custom-thread-id">
         <br>
         <label for="sendFileUserGroupHash">Thread userGroupHash</label>
         <input type="text" name="sendFileUserGroupHash" id="sendFileUserGroupHash" value="5GW93QH695O7HC">
@@ -1545,7 +1558,7 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
     <fieldset>
         <legend>Reply File Message</legend>
         <label for="sendFileThreadReply">Thread Id</label>
-        <input type="text" name="sendFileThread" id="sendFileThreadReply" value="">
+        <input type="text" name="sendFileThread" id="sendFileThreadReply" value="" class="custom-thread-id">
         <br>
         <label for="sendFileMesageRepliedTo">Message Id</label>
         <input type="text" name="sendFileThread" id="sendFileMesageRepliedTo" value="">
@@ -1583,7 +1596,7 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
     <fieldset>
         <legend>Update Thread Info</legend>
         <label for="updateThreadThreadId">Thread Id</label>
-        <input type="text" name="updateThreadThreadId" id="updateThreadThreadId" value="">
+        <input type="text" name="updateThreadThreadId" id="updateThreadThreadId" value="" class="custom-thread-id">
         <br>
         <label for="updateThreadUserGroupHash">Thread User Group Hash</label>
         <input type="text" name="updateThreadUserGroupHash" id="updateThreadUserGroupHash" value="">
@@ -2022,7 +2035,7 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
                 onSeen: function (result) {
                     console.log(result.uniqueId + " \t has been Seen!");
                 },
-                onFileUpload: function(result) {
+                onFileUpload: function (result) {
                     console.log('File Upload is done', result);
                 }
             });
@@ -2318,6 +2331,15 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
         console.log('New Token Has been set: ', document.getElementById('tokenInput').value);
         chatAgent.setToken(document.getElementById('tokenInput').value);
     });
+
+    document.getElementById('threadInputSet').addEventListener('click', function (e) {
+        console.log('New Thread Has been set: ', document.getElementById('threadInput').value);
+        var items = document.getElementsByClassName('custom-thread-id');
+        for (var i = 0; i < items.length; i++) {
+            items[i].value = document.getElementById('threadInput').value;
+        }
+    });
+
 </script>
 
 </html>

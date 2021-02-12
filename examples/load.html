@@ -34,22 +34,22 @@
             /**
              * Main Server
              */
-            // socketAddress: 'wss://msg.pod.ir/ws', // {**REQUIRED**} Socket Address
-            // ssoHost: 'https://accounts.pod.ir', // {**REQUIRED**} Socket Address
-            // platformHost: 'https://api.pod.ir/srv/core', // {**REQUIRED**} Platform Core Address
-            // fileServer: 'https://core.pod.ir', // {**REQUIRED**} File Server Address
-            // podSpaceFileServer: 'https://podspace.pod.ir', // {**REQUIRED**} File Server Address
-            // serverName: 'chat-server', // {**REQUIRED**} Server to to register on
+            socketAddress: 'wss://msg.pod.ir/ws', // {**REQUIRED**} Socket Address
+            ssoHost: 'https://accounts.pod.ir', // {**REQUIRED**} Socket Address
+            platformHost: 'https://api.pod.ir/srv/core', // {**REQUIRED**} Platform Core Address
+            fileServer: 'https://core.pod.ir', // {**REQUIRED**} File Server Address
+            podSpaceFileServer: 'https://podspace.pod.ir', // {**REQUIRED**} File Server Address
+            serverName: 'chat-server', // {**REQUIRED**} Server to to register on
 
             /**
              * Sand Box
              */
-            socketAddress: "wss://chat-sandbox.pod.ir/ws",
-            ssoHost: "https://accounts.pod.ir",
-            platformHost: "https://sandbox.pod.ir:8043/srv/basic-platform",
-            fileServer: 'https://core.pod.ir',
-            podSpaceFileServer: 'https://podspace.pod.ir',
-            serverName: "chat-server",
+            // socketAddress: "wss://chat-sandbox.pod.ir/ws",
+            // ssoHost: "https://accounts.pod.ir",
+            // platformHost: "https://sandbox.pod.ir:8043/srv/basic-platform",
+            // fileServer: 'https://core.pod.ir',
+            // podSpaceFileServer: 'https://podspace.pod.ir',
+            // serverName: "chat-server",
 
             /**
              * Integration
@@ -61,7 +61,7 @@
             // podSpaceFileServer: 'http://172.16.110.61:8780/podspace',
             // serverName: "chatlocal",
 
-            token: "7a7f4d77c1ff4793a258761ac2f9cf8f",
+            token: "838f8f162c824532889f4673b2523848",
 
             grantDeviceIdFromSSO: false,
             enableCache: false,
@@ -88,10 +88,12 @@
                 time: 0,
                 uniqueId: ""
             },
-            globalCount = 1000,
-            globalDelay = 100;
+            globalCount = 10000,
+            globalDelay = 200,
+            globalThreadId = 35945;
 
-        var globalSendMessagesFunction,
+        var globalLooperTimeout,
+            globalSendMessagesFunction,
             globalGetThreadsFunction;
 
         var chatReadyInstance = chatAgent.on("chatReady", function () {
@@ -102,12 +104,12 @@
                     var uniqueId = chatAgent.generateUUID();
                     messages[uniqueId] = currdate.getTime();
 
-                    console.log(`[SEND] [${uniqueId}] :: { ${count} } at ${('0' + currdate.getHours()).slice(-2)}:${('0' + currdate.getMinutes()).slice(-2)}:${('0' + currdate.getSeconds()).slice(-2)}:${currdate.getMilliseconds()}`);
+                    console.log(`{ ${count} } [SEND] [${uniqueId}] :: { ${count} } at ${('0' + currdate.getHours()).slice(-2)}:${('0' + currdate.getMinutes()).slice(-2)}:${('0' + currdate.getSeconds()).slice(-2)}:${currdate.getMilliseconds()}`);
 
                     chatAgent.sendTextMessage({
                         uniqueId: uniqueId,
-                        threadId: 36038,
-                        textMessage: `[SEND] [${uniqueId}] <br/> { ${count} } at ${('0' + currdate.getHours()).slice(-2)}:${('0' + currdate.getMinutes()).slice(-2)}:${('0' + currdate.getSeconds()).slice(-2)}:${currdate.getMilliseconds()}`,
+                        threadId: globalThreadId,
+                        textMessage: `{ ${count} } [SEND] [${uniqueId}] <br/> { ${count} } at ${('0' + currdate.getHours()).slice(-2)}:${('0' + currdate.getMinutes()).slice(-2)}:${('0' + currdate.getSeconds()).slice(-2)}:${currdate.getMilliseconds()}`,
                         messageType: 'TEXT',
                         systemMetadata: {
                             time: currdate,
@@ -136,7 +138,7 @@
                     });
                     count++;
 
-                    setTimeout(globalSendMessagesFunction, globalDelay);
+                    globalLooperTimeout = setTimeout(globalSendMessagesFunction, globalDelay);
                 }
             };
 
@@ -148,7 +150,9 @@
 
                     console.log(`[SEND] [${uniqueId}] :: { ${count} } at ${('0' + currdate.getHours()).slice(-2)}:${('0' + currdate.getMinutes()).slice(-2)}:${('0' + currdate.getSeconds()).slice(-2)}:${currdate.getMilliseconds()}`);
 
-                    chatAgent.getThreads({}, function (result) {
+                    chatAgent.getThreads({
+                        // new: true
+                    }, function (result) {
                         var receiveTime = new Date();
                         var duration = new Date().getTime() - messages[result.uniqueId];
 
@@ -164,7 +168,7 @@
                     });
                     count++;
 
-                    setTimeout(globalGetThreadsFunction, globalDelay);
+                    globalLooperTimeout = setTimeout(globalGetThreadsFunction, globalDelay);
                 }
             };
 
@@ -251,7 +255,7 @@
             var type = event.type,
                 message = event.result.message;
 
-            // console.log(event);
+            console.log(event);
 
             switch (type) {
                 case "MESSAGE_NEW":
@@ -326,6 +330,8 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
 <br>
 <h4 id="userName"></h4>
 <br>
+<button id="stopAll">Stop All</button>
+<br>
 <button id="sendMessageTest">Start Send Message Load Test</button>
 <br>
 <button id="getThreadsTest">Start Get Threads Load Test</button>
@@ -356,6 +362,10 @@ Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
         chatAgent.getUserInfo(function(result){
             document.getElementById('userName').innerText = result.result.user.name;
         });
+    });
+
+    document.getElementById('stopAll').addEventListener('click', function () {
+        globalLooperTimeout && clearTimeout(globalLooperTimeout);
     });
 
     document.getElementById('sendMessageTest').addEventListener('click', function () {
