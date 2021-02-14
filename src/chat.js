@@ -59,6 +59,7 @@
                 contactEvents: {},
                 botEvents: {},
                 userEvents: {},
+                callEvents: {},
                 fileUploadEvents: {},
                 systemEvents: {},
                 chatReady: {},
@@ -141,14 +142,32 @@
                 CALL_REQUEST: 70,
                 ACCEPT_CALL: 71,
                 REJECT_CALL: 72,
-                START_CALL: 73,
+                RECIVE_CALL_REQUEST: 73,
+                START_CALL: 74,
+                END_CALL_REQUEST: 75,
+                END_CALL: 76,
+                GET_CALLS: 77,
+                RECONNECT: 78,
+                CONNECT: 79,
                 CONTACT_SYNCED: 90,
+                GROUP_CALL_REQUEST: 91,
+                LEAVE_CALL: 92,
+                ADD_CALL_PARTICIPANT: 93,
+                CALL_PARTICIPANT_JOINED: 94,
+                REMOVE_CALL_PARTICIPANT: 95,
+                TERMINATE_CALL: 96,
+                MUTE_CALL_PARTICIPANT: 97,
+                UNMUTE_CALL_PARTICIPANT: 98,
                 LOGOUT: 100,
                 LOCATION_PING: 101,
                 CLOSE_THREAD: 102,
                 REMOVE_BOT_COMMANDS: 104,
                 SEARCH: 105,
                 CONTINUE_SEARCH: 106,
+                CALL_SESSION_CREATED: 111,
+                IS_BOT_NAME_AVAILABLE: 112,
+                TURN_ON_VIDEO_CALL: 113,
+                TURN_OFF_VIDEO_CALL: 114,
                 ERROR: 999
             },
             inviteeVOidTypes = {
@@ -180,6 +199,8 @@
                 POD_SPACE_VOICE: '10',
                 POD_SPACE_FILE: '11',
                 LINK: '12',
+                END_CALL: '13',
+                START_CALL: '14',
                 STICKER: '15'
             },
             systemMessageTypes = {
@@ -189,6 +210,15 @@
                 UPLOAD_VIDEO: '4',
                 UPLOAD_SOUND: '5',
                 UPLOAD_FILE: '6'
+            },
+            locationPingTypes = {
+                'CHAT': 1,
+                'THREAD': 2,
+                'CONTACTS': 3
+            },
+            callTypes = {
+                'VOICE': 0x0,
+                'VIDEO': 0x1
             },
             systemMessageIntervalPitch = params.systemMessageIntervalPitch || 1000,
             isTypingInterval,
@@ -3061,11 +3091,297 @@
                         break;
 
                     /**
+                     * Type 70    Send Call Request
+                     */
+                    case chatMessageVOTypes.CALL_REQUEST:
+                        callReceived({
+                            callId: messageContent.callId
+                        }, function (r) {
+                            console.log('Receive Call Ack has been sent', r);
+                        });
+
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        fireEvent('callEvents', {
+                            type: 'RECEIVE_CALL',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 71    Accept Call Request
+                     */
+                    case chatMessageVOTypes.ACCEPT_CALL:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        fireEvent('callEvents', {
+                            type: 'ACCEPT_CALL',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 72    Reject Call Request
+                     */
+                    case chatMessageVOTypes.REJECT_CALL:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        fireEvent('callEvents', {
+                            type: 'REJECT_CALL',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 73    Receive Call Rwequest
+                     */
+                    case chatMessageVOTypes.RECIVE_CALL_REQUEST:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        fireEvent('callEvents', {
+                            type: 'RECEIVE_CALL',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 74    Start Call Request
+                     */
+                    case chatMessageVOTypes.START_CALL:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        fireEvent('callEvents', {
+                            type: 'CALL_STARTED',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 75    End Call Request
+                     */
+                    case chatMessageVOTypes.END_CALL_REQUEST:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        fireEvent('callEvents', {
+                            type: 'END_CALL',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 76   Call Ended
+                     */
+                    case chatMessageVOTypes.END_CALL:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        fireEvent('callEvents', {
+                            type: 'CALL_ENDED',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 77    Get Calls History
+                     */
+                    case chatMessageVOTypes.GET_CALLS:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        break;
+
+                    /**
+                     * Type 78    Call Partner Reconnecting
+                     */
+                    case chatMessageVOTypes.RECONNECT:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        fireEvent('callEvents', {
+                            type: 'CALL_PARTICIPANT_RECONNETING',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 79    Call Partner Connects
+                     */
+                    case chatMessageVOTypes.CONNECT:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        fireEvent('callEvents', {
+                            type: 'CALL_PARTICIPANT_CONNECTED',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
                      * Type 90    Contacts Synced
                      */
                     case chatMessageVOTypes.CONTACT_SYNCED:
                         fireEvent('contactEvents', {
                             type: 'CONTACTS_SYNCED',
+                            result: messageContent
+                        });
+                        break;
+
+                    /**
+                     * Type 91    Send Group Call Request
+                     */
+                    case chatMessageVOTypes.GROUP_CALL_REQUEST:
+                        callReceived({
+                            callId: messageContent.callId
+                        }, function (r) {
+                            console.log('Receive Call Ack has been sent', r);
+                        });
+
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        fireEvent('callEvents', {
+                            type: 'RECEIVE_CALL',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 92    Call Partner Leave
+                     */
+                    case chatMessageVOTypes.LEAVE_CALL:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        fireEvent('callEvents', {
+                            type: 'CALL_PARTICIPANT_LEFT',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 93    Add Call Participant
+                     */
+                    case chatMessageVOTypes.ADD_CALL_PARTICIPANT:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        break;
+
+                    /**
+                     * Type 94    Call Participant Joined
+                     */
+                    case chatMessageVOTypes.CALL_PARTICIPANT_JOINED:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        fireEvent('callEvents', {
+                            type: 'CALL_PARTICIPANT_JOINED',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 95    Remove Call Participant
+                     */
+                    case chatMessageVOTypes.REMOVE_CALL_PARTICIPANT:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        fireEvent('callEvents', {
+                            type: 'CALL_PARTICIPANT_REMOVED',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 96    Terminate Call
+                     */
+                    case chatMessageVOTypes.TERMINATE_CALL:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        fireEvent('callEvents', {
+                            type: 'TERMINATE_CALL',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 97    Mute Call Participant
+                     */
+                    case chatMessageVOTypes.MUTE_CALL_PARTICIPANT:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        fireEvent('callEvents', {
+                            type: 'CALL_PARTICIPANT_MUTE',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 98    UnMute Call Participant
+                     */
+                    case chatMessageVOTypes.UNMUTE_CALL_PARTICIPANT:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        fireEvent('callEvents', {
+                            type: 'CALL_PARTICIPANT_UNMUTE',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 101    Location Ping
+                     */
+                    case chatMessageVOTypes.LOCATION_PING:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        fireEvent('systemEvents', {
+                            type: 'LOCATION_PING',
                             result: messageContent
                         });
                         break;
@@ -3110,6 +3426,47 @@
                         if (messagesCallbacks[uniqueId]) {
                             messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
                         }
+                        break;
+
+                    /**
+                     * Type 111    Kafka Call Session Created
+                     */
+                    case chatMessageVOTypes.CALL_SESSION_CREATED:
+                        fireEvent('callEvents', {
+                            type: 'CALL_SESSI(ON_CREATED',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 113    Turn On Video Call
+                     */
+                    case chatMessageVOTypes.TURN_ON_VIDEO_CALL:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        fireEvent('callEvents', {
+                            type: 'TURN_ON_VIDEO_CALL',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 114    Turn Off Video Call
+                     */
+                    case chatMessageVOTypes.TURN_OFF_VIDEO_CALL:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        fireEvent('callEvents', {
+                            type: 'TURN_OFF_VIDEO_CALL',
+                            result: messageContent
+                        });
+
                         break;
 
                     /**
@@ -3390,8 +3747,7 @@
                  * Update waitQ and remove sent messages from it
                  */
 
-                deleteFromChatWaitQueue(message, function(){
-                    console.log('Removed From Wait Q');
+                deleteFromChatWaitQueue(message, function () {
                 });
             },
 
@@ -4225,6 +4581,50 @@
             },
 
             /**
+             * Format Data To Make Call Message
+             *
+             * This functions reformats given JSON to proper Object
+             *
+             * @access private
+             *
+             * @param {object}  messageContent    Json object of thread taken from chat server
+             *
+             * @return {object} Call message Object
+             */
+            formatDataToMakeCallMessage = function (threadId, pushMessageVO) {
+                /**
+                 * + CallVO                   {object}
+                 *    - id                    {int}
+                 *    - creatorId             {int}
+                 *    - type                  {int}
+                 *    - createTime            {string}
+                 *    - startTime             {string}
+                 *    - endTime               {string}
+                 *    - status                {int}
+                 *    - isGroup               {boolean}
+                 *    - callParticipants      {object}
+                 *    - partnerParticipantVO  {object}
+                 *    - conversationVO        {object}
+                 */
+                var callMessage = {
+                    id: pushMessageVO.id,
+                    creatorId: pushMessageVO.creatorId,
+                    type: pushMessageVO.type,
+                    createTime: pushMessageVO.createTime,
+                    startTime: pushMessageVO.startTime,
+                    endTime: pushMessageVO.endTime,
+                    status: pushMessageVO.status,
+                    isGroup: pushMessageVO.isGroup,
+                    callParticipants: pushMessageVO.callParticipants,
+                    partnerParticipantVO: pushMessageVO.partnerParticipantVO,
+                    conversationVO: pushMessageVO.conversationVO
+                };
+
+                // return pinMessage;
+                return JSON.parse(JSON.stringify(callMessage));
+            },
+
+            /**
              * Reformat Thread History
              *
              * This functions reformats given Array of thread Messages
@@ -4825,7 +5225,7 @@
                             for (var i = 0; i < waitQueueMessages.length; i++) {
                                 var decryptedEnqueuedMessage = {};
 
-                                if(cacheInMemory) {
+                                if (cacheInMemory) {
                                     decryptedEnqueuedMessage = waitQueueMessages[i];
                                 } else {
                                     decryptedEnqueuedMessage = Utility.jsonParser(chatDecrypt(waitQueueMessages[i].message, cacheSecret));
@@ -8234,11 +8634,11 @@
             putInChatSendQueue = function (params, callback, skip) {
                 chatSendQueue.push(params);
 
-                if(!skip) {
+                if (!skip) {
                     var time = new Date().getTime();
                     params.message.time = time;
                     params.message.timeNanos = (time % 1000) * 1000000;
-                     
+
                     putInChatWaitQueue(params.message, function () {
                         callback && callback();
                     });
@@ -8699,6 +9099,39 @@
                     deleteFromChatWaitQueue({
                         uniqueId: uniqueId
                     }, callback);
+                });
+            },
+
+            callReceived = function (params, callback) {
+                var receiveCallData = {
+                    chatMessageVOType: chatMessageVOTypes.RECIVE_CALL_REQUEST,
+                    typeCode: params.typeCode,
+                    pushMsgType: 3,
+                    token: token
+                };
+
+                if (params) {
+                    if (typeof +params.callId === 'number' && params.callId > 0) {
+                        receiveCallData.subjectId = +params.callId;
+                    } else {
+                        fireEvent('error', {
+                            code: 999,
+                            message: 'Invalid call id!'
+                        });
+                        return;
+                    }
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'No params have been sent to ReceiveCall()'
+                    });
+                    return;
+                }
+
+                return sendMessage(receiveCallData, {
+                    onResult: function (result) {
+                        callback && callback(result);
+                    }
                 });
             },
 
@@ -11836,6 +12269,623 @@
 
         this.removeAuditor = function (params, callback) {
             removeRoleFromUser(params, callback);
+        };
+
+        this.startCall = function (params, callback) {
+            var startCallData = {
+                chatMessageVOType: chatMessageVOTypes.CALL_REQUEST,
+                typeCode: params.typeCode,
+                pushMsgType: 3,
+                token: token
+            }, content = {};
+
+            if (params) {
+                if (typeof params.type === 'string' && callTypes.hasOwnProperty(params.type.toUpperCase())) {
+                    content.type = callTypes[params.type.toUpperCase()];
+                } else {
+                    content.type = 0x0; // Defaults to AUDIO Call
+                }
+
+                if (typeof +params.threadId === 'number' && params.threadId > 0) {
+                    content.threadId = +params.threadId;
+                } else {
+                    if (Array.isArray(params.invitees)) {
+                        content.invitees = [];
+                        for (var i = 0; i < params.invitees.length; i++) {
+                            var tempInvitee = formatDataToMakeInvitee(params.invitees[i]);
+                            if (tempInvitee) {
+                                content.invitees.push(tempInvitee);
+                            }
+                        }
+                    } else {
+                        fireEvent('error', {
+                            code: 999,
+                            message: 'Invitees list is empty! Send an array of invitees to start a call with, Or send a Thread Id to start a call with current participants'
+                        });
+                        return;
+                    }
+                }
+
+                startCallData.content = JSON.stringify(content);
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to start call!'
+                });
+                return;
+            }
+
+            return sendMessage(startCallData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.startGroupCall = function (params, callback) {
+            var startCallData = {
+                chatMessageVOType: chatMessageVOTypes.GROUP_CALL_REQUEST,
+                typeCode: params.typeCode,
+                pushMsgType: 3,
+                token: token
+            }, content = {};
+
+            if (params) {
+                if (typeof params.type === 'string' && callTypes.hasOwnProperty(params.type.toUpperCase())) {
+                    content.type = callTypes[params.type.toUpperCase()];
+                } else {
+                    content.type = 0x0; // Defaults to AUDIO Call
+                }
+
+                if (typeof +params.threadId === 'number' && params.threadId > 0) {
+                    content.threadId = +params.threadId;
+                } else {
+                    if (Array.isArray(params.invitees)) {
+                        content.invitees = [];
+                        for (var i = 0; i < params.invitees.length; i++) {
+                            var tempInvitee = formatDataToMakeInvitee(params.invitees[i]);
+                            if (tempInvitee) {
+                                content.invitees.push(tempInvitee);
+                            }
+                        }
+                    } else {
+                        fireEvent('error', {
+                            code: 999,
+                            message: 'Invitees list is empty! Send an array of invitees to start a call with, Or send a Thread Id to start a call with current participants'
+                        });
+                        return;
+                    }
+                }
+
+                startCallData.content = JSON.stringify(content);
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to start call!'
+                });
+                return;
+            }
+
+            return sendMessage(startCallData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.callReceived = callReceived;
+
+        this.terminateCall = function (params, callback) {
+            var terminateCallData = {
+                chatMessageVOType: chatMessageVOTypes.TERMINATE_CALL,
+                typeCode: params.typeCode,
+                pushMsgType: 3,
+                token: token
+            }, content = {};
+
+            if (params) {
+                if (typeof +params.callId === 'number' && params.callId > 0) {
+                    terminateCallData.subjectId = +params.callId;
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'Invalid call id!'
+                    });
+                    return;
+                }
+
+                terminateCallData.content = JSON.stringify(content);
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to terminate the call!'
+                });
+                return;
+            }
+
+            return sendMessage(terminateCallData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.acceptCall = function (params, callback) {
+            var acceptCallData = {
+                chatMessageVOType: chatMessageVOTypes.ACCEPT_CALL,
+                typeCode: params.typeCode,
+                pushMsgType: 3,
+                token: token
+            }, content = {};
+
+            if (params) {
+                if (typeof +params.callId === 'number' && params.callId > 0) {
+                    acceptCallData.subjectId = +params.callId;
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'Invalid call id!'
+                    });
+                    return;
+                }
+
+                if (typeof params.mute === 'boolean' && params.mute) {
+                    content.mute = true;
+                }
+
+                if (typeof params.videoCall === 'boolean' && params.videoCall) {
+                    content.videoCall = true;
+                }
+
+                acceptCallData.content = JSON.stringify(content);
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to accept the call!'
+                });
+                return;
+            }
+
+            return sendMessage(acceptCallData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.rejectCall = this.cancelCall = function (params, callback) {
+            var rejectCallData = {
+                chatMessageVOType: chatMessageVOTypes.REJECT_CALL,
+                typeCode: params.typeCode,
+                pushMsgType: 3,
+                token: token
+            };
+
+            if (params) {
+                if (typeof +params.callId === 'number' && params.callId > 0) {
+                    rejectCallData.subjectId = +params.callId;
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'Invalid call id!'
+                    });
+                    return;
+                }
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to reject the call!'
+                });
+                return;
+            }
+
+            return sendMessage(rejectCallData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.endCall = function (params, callback) {
+            var endCallData = {
+                chatMessageVOType: chatMessageVOTypes.END_CALL_REQUEST,
+                typeCode: params.typeCode,
+                pushMsgType: 3,
+                token: token
+            };
+
+            if (params) {
+                if (typeof +params.callId === 'number' && params.callId > 0) {
+                    endCallData.subjectId = +params.callId;
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'Invalid call id!'
+                    });
+                    return;
+                }
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to End the call!'
+                });
+                return;
+            }
+
+            return sendMessage(endCallData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.getCallsList = function (params, callback) {
+            var getCallListData = {
+                chatMessageVOType: chatMessageVOTypes.GET_CALLS,
+                typeCode: params.typeCode,
+                pushMsgType: 3,
+                token: token
+            }, content = {};
+
+            if (params) {
+                if (typeof params.count === 'number' && params.count >= 0) {
+                    content.count = +params.count;
+                } else {
+                    content.count = 50;
+                }
+
+                if (typeof params.offset === 'number' && params.offset >= 0) {
+                    content.offset = +params.offset;
+                } else {
+                    content.offset = 0;
+                }
+
+                if (typeof params.creatorCoreUserId === 'number' && params.creatorCoreUserId > 0) {
+                    content.creatorCoreUserId = +params.creatorCoreUserId;
+                }
+
+                if (typeof params.creatorSsoId === 'number' && params.creatorSsoId > 0) {
+                    content.creatorSsoId = +params.creatorSsoId;
+                }
+
+                if (typeof params.name === 'string') {
+                    content.name = params.name;
+                }
+
+                if (typeof params.type === 'string' && callTypes.hasOwnProperty(params.type.toUpperCase())) {
+                    content.type = callTypes[params.type.toUpperCase()];
+                }
+
+                if (Array.isArray(params.callIds)) {
+                    content.callIds = params.callIds;
+                }
+
+                if (typeof params.contactType === 'string') {
+                    content.contactType = params.contactType;
+                }
+
+                if (typeof params.uniqueId === 'string') {
+                    content.uniqueId = params.uniqueId;
+                }
+
+                getCallListData.content = JSON.stringify(content);
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to End the call!'
+                });
+                return;
+            }
+            console.log({getCallListData});
+            return sendMessage(getCallListData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.addCallParticipants = function (params, callback) {
+            /**
+             * + AddCallParticipantsRequest     {object}
+             *    - subjectId                   {int}
+             *    + content                     {list} List of CONTACT IDs or inviteeVO Objects
+             *    - uniqueId                    {string}
+             */
+
+            var sendMessageParams = {
+                chatMessageVOType: chatMessageVOTypes.ADD_CALL_PARTICIPANT,
+                typeCode: params.typeCode,
+                content: []
+            };
+
+            if (params) {
+                if (typeof params.callId === 'number' && params.callId > 0) {
+                    sendMessageParams.subjectId = params.callId;
+                }
+
+                if (Array.isArray(params.contactIds)) {
+                    sendMessageParams.content = params.contactIds;
+                }
+
+                if (Array.isArray(params.usernames)) {
+                    sendMessageParams.content = [];
+                    for (var i = 0; i < params.usernames.length; i++) {
+                        sendMessageParams.content.push({
+                            id: params.usernames[i],
+                            idType: inviteeVOidTypes.TO_BE_USER_USERNAME
+                        });
+                    }
+                }
+
+                if (Array.isArray(params.coreUserids)) {
+                    sendMessageParams.content = [];
+                    for (var i = 0; i < params.coreUserids.length; i++) {
+                        sendMessageParams.content.push({
+                            id: params.coreUserids[i],
+                            idType: inviteeVOidTypes.TO_BE_CORE_USER_ID
+                        });
+                    }
+                }
+            }
+
+            return sendMessage(sendMessageParams, {
+                onResult: function (result) {
+                    var returnData = {
+                        hasError: result.hasError,
+                        cache: false,
+                        errorMessage: result.errorMessage,
+                        errorCode: result.errorCode
+                    };
+                    if (!returnData.hasError) {
+                        // TODO : What is the result?!
+                        var messageContent = result.result;
+                        returnData.result = messageContent;
+                    }
+                    callback && callback(returnData);
+                }
+            });
+        };
+
+        this.removeCallParticipants = function (params, callback) {
+            /**
+             * + removeCallParticipantsRequest     {object}
+             *    - subjectId                   {int}
+             *    + content                     {list} List of Participants UserIds
+             */
+
+            var sendMessageParams = {
+                chatMessageVOType: chatMessageVOTypes.REMOVE_CALL_PARTICIPANT,
+                typeCode: params.typeCode,
+                content: []
+            };
+
+            if (params) {
+                if (typeof params.callId === 'number' && params.callId > 0) {
+                    sendMessageParams.subjectId = params.callId;
+                }
+
+                if (Array.isArray(params.userIds)) {
+                    sendMessageParams.content = params.userIds;
+                }
+            }
+
+            return sendMessage(sendMessageParams, {
+                onResult: function (result) {
+                    var returnData = {
+                        hasError: result.hasError,
+                        cache: false,
+                        errorMessage: result.errorMessage,
+                        errorCode: result.errorCode
+                    };
+                    if (!returnData.hasError) {
+                        // TODO : What is the result?!
+                        var messageContent = result.result;
+                        returnData.result = messageContent;
+                    }
+                    callback && callback(returnData);
+                }
+            });
+        };
+
+        this.muteCallParticipants = function (params, callback) {
+            /**
+             * + muteCallParticipantsRequest     {object}
+             *    - subjectId                   {int}
+             *    + content                     {list} List of Participants UserIds
+             */
+
+            var sendMessageParams = {
+                chatMessageVOType: chatMessageVOTypes.MUTE_CALL_PARTICIPANT,
+                typeCode: params.typeCode,
+                content: []
+            };
+
+            if (params) {
+                if (typeof params.callId === 'number' && params.callId > 0) {
+                    sendMessageParams.subjectId = params.callId;
+                }
+
+                if (Array.isArray(params.userIds)) {
+                    sendMessageParams.content = params.userIds;
+                }
+            }
+
+            return sendMessage(sendMessageParams, {
+                onResult: function (result) {
+                    var returnData = {
+                        hasError: result.hasError,
+                        cache: false,
+                        errorMessage: result.errorMessage,
+                        errorCode: result.errorCode
+                    };
+                    if (!returnData.hasError) {
+                        // TODO : What is the result?!
+                        var messageContent = result.result;
+                        returnData.result = messageContent;
+                    }
+                    callback && callback(returnData);
+                }
+            });
+        };
+
+        this.unMuteCallParticipants = function (params, callback) {
+            /**
+             * + unMuteCallParticipantsRequest     {object}
+             *    - subjectId                   {int}
+             *    + content                     {list} List of Participants UserIds
+             */
+
+            var sendMessageParams = {
+                chatMessageVOType: chatMessageVOTypes.UNMUTE_CALL_PARTICIPANT,
+                typeCode: params.typeCode,
+                content: []
+            };
+
+            if (params) {
+                if (typeof params.callId === 'number' && params.callId > 0) {
+                    sendMessageParams.subjectId = params.callId;
+                }
+
+                if (Array.isArray(params.userIds)) {
+                    sendMessageParams.content = params.userIds;
+                }
+            }
+
+            return sendMessage(sendMessageParams, {
+                onResult: function (result) {
+                    var returnData = {
+                        hasError: result.hasError,
+                        cache: false,
+                        errorMessage: result.errorMessage,
+                        errorCode: result.errorCode
+                    };
+                    if (!returnData.hasError) {
+                        // TODO : What is the result?!
+                        var messageContent = result.result;
+                        returnData.result = messageContent;
+                    }
+                    callback && callback(returnData);
+                }
+            });
+        };
+
+        this.turnOnVideoCall = function (params, callback) {
+            var turnOnVideoData = {
+                chatMessageVOType: chatMessageVOTypes.TURN_ON_VIDEO_CALL,
+                typeCode: params.typeCode,
+                pushMsgType: 3,
+                token: token
+            };
+
+            if (params) {
+                if (typeof +params.callId === 'number' && params.callId > 0) {
+                    turnOnVideoData.subjectId = +params.callId;
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'Invalid call id!'
+                    });
+                    return;
+                }
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to turn on the video call!'
+                });
+                return;
+            }
+
+            return sendMessage(turnOnVideoData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.turnOffVideoCall = function (params, callback) {
+            var turnOffVideoData = {
+                chatMessageVOType: chatMessageVOTypes.TURN_OFF_VIDEO_CALL,
+                typeCode: params.typeCode,
+                pushMsgType: 3,
+                token: token
+            };
+
+            if (params) {
+                if (typeof +params.callId === 'number' && params.callId > 0) {
+                    turnOffVideoData.subjectId = +params.callId;
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'Invalid call id!'
+                    });
+                    return;
+                }
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to turn off the video call!'
+                });
+                return;
+            }
+
+            return sendMessage(turnOffVideoData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.sendLocationPing = function (params, callback) {
+            /**
+             * + locationPingRequest     {object}
+             *    + content              {list} A map of { location: string, locationId: int }
+             */
+
+            var locationPingData = {
+                chatMessageVOType: chatMessageVOTypes.LOCATION_PING,
+                typeCode: params.typeCode,
+                pushMsgType: 3,
+                token: token
+            }, content = {};
+
+            if (params) {
+                if (typeof params.location === 'string' && locationPingTypes.hasOwnProperty(params.location.toUpperCase())) {
+                    content.location = locationPingTypes[params.location.toUpperCase()];
+
+                    if (params.location.toUpperCase() === 'THREAD') {
+                        if(typeof params.threadId === 'number' && params.threadId > 0) {
+                            content.locationId = +params.threadId;
+                        } else {
+                            fireEvent('error', {
+                                code: 999,
+                                message: 'You set the location to be a thread, you have to send a valid ThreadId'
+                            });
+                            return;
+                        }
+                    }
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'Send a valid location type (CHAT / THREAD / CONTACTS)'
+                    });
+                    return;
+                }
+
+                locationPingData.content = JSON.stringify(content);
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to LocationPing!'
+                });
+                return;
+            }
+
+            return sendMessage(locationPingData, {
+                onResult: function (result) {
+                    console.log({result});
+                    callback && callback(result);
+                }
+            });
         };
 
         this.clearChatServerCaches = clearChatServerCaches;
