@@ -3149,10 +3149,12 @@
                             messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
                         }
 
-                        fireEvent('callEvents', {
-                            type: 'RECEIVE_CALL',
-                            result: messageContent
-                        });
+                        if(messageContent.callId > 0) {
+                            fireEvent('callEvents', {
+                                type: 'RECEIVE_CALL',
+                                result: messageContent
+                            });
+                        }
 
                         break;
 
@@ -3433,7 +3435,7 @@
                      */
                     case chatMessageVOTypes.CALL_SESSION_CREATED:
                         fireEvent('callEvents', {
-                            type: 'CALL_SESSI(ON_CREATED',
+                            type: 'CALL_SESSION_CREATED',
                             result: messageContent
                         });
 

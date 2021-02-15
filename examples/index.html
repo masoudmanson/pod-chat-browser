@@ -12,6 +12,8 @@
     <script type="text/javascript" src="../node_modules/podasync-ws-only/src/network/async.js"></script>
     <script type="text/javascript" src="../node_modules/crypto-js/crypto-js.js"></script>
     <script type="text/javascript" src="../node_modules/dexie/dist/dexie.min.js"></script>
+    <script type="text/javascript" src="../bower_components/kurento-utils/js/kurento-utils.min.js"></script>
+    <script type="text/javascript" src="../bower_components/webrtc-adapter/release/adapter.js"></script>
     <script type="text/javascript" src="../src/chat.js"></script>
 
     <!-- Production Mode -->
@@ -76,7 +78,7 @@
             fullResponseObject: true,
             mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
             // typeCode: "talk",
-            token: "313d594374f04c06aa346dd1c012540c",
+            token: "5d31a8d13c444692827cdb2b49bf9205",
             // token: "3dd6895c8dc64f93bcd43b58dcc2aab3", // Masoud Amjadi
             // token: "9c627a9125d04ebf8455bf57bb33d2a9", // Pooria Pahlevani
             // token: "f6464d4e0f044314b1a668f90287ba26", // Nadia Anvari
@@ -105,7 +107,9 @@
 
         var chatAgent = new PodChat(params),
             PID,
-            P2P_THREAD_ID = 293;
+            P2P_THREAD_ID = 293,
+            callWebSocket,
+            webpeers = {};
 
         var chatReadyInstance = chatAgent.on("chatReady", function () {
             // chatAgent.sendLocationPing({
@@ -120,8 +124,8 @@
             //     console.log({res})
             // })
 
-            // chatAgent.startGroupCall({
-            //     threadId: 36292,//4441,
+            // chatAgent.startCall({
+            //     threadId: 4441,
             //     type: 'voice',
             //     // invitees: [
             //     //     {
@@ -918,6 +922,26 @@
 
                     break;
 
+                case 'CALL_SESSION_CREATED':
+                    document.getElementById('call-receive-id').innerText = event.result.callId;
+                    break;
+
+                case 'CALL_STARTED':
+                    document.getElementById('call-receive-broker').innerText = event.result.clientDTO.brokerAddress.split(',')[0];
+                    document.getElementById('call-receive-send').innerText = event.result.clientDTO.topicSend;
+                    document.getElementById('call-receive-receive').innerText = event.result.clientDTO.topicReceive;
+                    document.getElementById('call-receive-key').innerText = event.result.clientDTO.sendKey;
+
+                    uiCallStart({
+                        uiLocalVideo: 'uiLocalVideo',
+                        uiRemoteVideo: 'uiRemoteVideo',
+                        sendingTopic: event.result.clientDTO.topicSend,
+                        receiveTopic: event.result.clientDTO.topicReceive,
+                        brokerAddress: event.result.clientDTO.brokerAddress.split(',')[0]
+                    });
+
+                    break;
+
                 default:
                     break;
             }
@@ -927,6 +951,297 @@
         /**
          * Local Functions
          */
+
+        function uiCallStart(params) {
+            callWebSocket = new WebSocket('wss://46.32.6.187/gsthandler');
+            turnIp = "46.32.6.188";
+
+            uiLocalVideo = document.getElementById(params.uiLocalVideo);
+            uiRemoteVideo = document.getElementById(params.uiRemoteVideo);
+            sendingTopic = params.sendingTopic;
+            receiveTopic = params.receiveTopic;
+
+            console.log({uiLocalVideo});
+            console.log({uiRemoteVideo});
+            console.log({sendingTopic});
+            console.log({receiveTopic});
+
+            callWebSocket.onopen = function () {
+                sendCallSocketMessage({
+                    id: 'CREATE_SESSION',
+                    brokerAddress: '10.56.16.51:9093',//params.brokerAddress,
+                    clientId: 'token'
+                });
+
+
+                console.log("[start] Create WebRtcPeerSendrecv");
+
+                const sendoptions = {
+                    localVideo: uiLocalVideo,
+                    mediaConstraints: {
+                        audio: false,
+                        video: {
+                            width: 176,
+                            height: 144,
+                        }
+                    },
+                    onicecandidate: (candidate) => {
+                        sendCallSocketMessage({
+                            id: 'ADD_ICE_CANDIDATE',
+                            topic: sendingTopic,
+                            candidate: candidate,
+                            // transferType: 2
+                        })
+                    },
+                    configuration: {
+                        iceServers: [
+                            {"urls": "stun:" + turnIp + ":3478"},
+                            {
+                                "urls": "turn:" + turnIp + ":3478",
+                                "username": "mkhorrami",
+                                "credential": "mkh_123456"
+                            }
+                        ]
+                    }
+                };
+
+                const reciveoptions = {
+                    remoteVideo: uiRemoteVideo,
+                    mediaConstraints: {audio: false, video: true},
+                    onicecandidate: (candidate) => {
+                        sendCallSocketMessage({
+                            id: 'ADD_ICE_CANDIDATE',
+                            topic: receiveTopic,
+                            candidate: candidate,
+                            transferType: 2531
+                        })
+                    },
+                    configuration: {
+                        iceServers: [
+                            {"urls": "stun:" + turnIp + ":3478"},
+                            {
+                                "urls": "turn:" + turnIp + ":3478",
+                                "username": "mkhorrami",
+                                "credential": "mkh_123456"
+                            }
+                        ]
+                    }
+                };
+
+                webRtcPeer2 = new kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(reciveoptions,
+                    function (err) {
+                        if (err) {
+                            console.error("[start/WebRtcPeerRecvonly] Error in constructor: "
+                                + explainUserMediaError(err));
+                            return;
+                        }
+
+                        console.log("[start/WebRtcPeerRecvonly] Created; generate SDP Offer");
+
+                        webRtcPeer2.generateOffer((err, sdpOffer) => {
+                            if (err) {
+                                console.error("[start/WebRtcPeerRecvonly/generateOffer] " + err);
+                                return;
+                            }
+                            sendCallSocketMessage({
+                                id: 'RECIVE_SDP_OFFER',
+                                sdpOffer: sdpOffer,
+                                useComedia: true,
+                                useSrtp: false,
+                                topic: receiveTopic,
+                                mediaType: 2
+                            });
+
+                            console.log("[start/WebRtcPeerRecvonly/generateOffer] Done!");
+                        });
+                    });
+                webpeers[receiveTopic] = webRtcPeer2;
+
+                webRtcPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerSendonly(sendoptions,
+                    function (err) {
+                        if (err) {
+                            sendCallSocketError("[start/WebRtcPeerSendrecv] Error: " + explainUserMediaError(err));
+                            stop();
+                            return;
+                        }
+
+                        console.log("[start/WebRtcPeerSendrecv] Created; start local video");
+                        startVideo(uiLocalVideo);
+
+                        console.log("[start/WebRtcPeerSendrecv] Generate SDP Offer");
+                        webRtcPeer.generateOffer((err, sdpOffer) => {
+                            if (err) {
+                                sendCallSocketError("[start/WebRtcPeerSendrecv/generateOffer] Error: " + err);
+                                stop();
+                                return;
+                            }
+                            sendCallSocketMessage({
+                                id: 'SEND_SDP_OFFER',
+                                topic: sendingTopic,
+                                sdpOffer: sdpOffer,
+                                mediaType: 2
+                            });
+
+                            console.log("[start/WebRtcPeerSendrecv/generateOffer] Done!");
+                        });
+                    });
+                webpeers[sendingTopic] = webRtcPeer;
+                console.log("[start] Create WebRtcPeerRecvonly");
+            };
+
+            callWebSocket.onmessage = function (message) {
+                const jsonMessage = JSON.parse(message.data);
+                console.log("[onmessage] Received message: " + message.data);
+
+                switch (jsonMessage.id) {
+                    case 'PROCESS_SDP_ANSWER':
+                        console.log('******************************');
+                        handleProcessSdpAnswer(jsonMessage);
+                        break;
+                    case 'ADD_ICE_CANDIDATE':
+                        handleAddIceCandidate(jsonMessage);
+                        break;
+                    case 'GET_KEY_FRAME':
+                        setTimeout(restartVideo, 8000);
+                        break;
+                    case 'ERROR':
+                        handleError(jsonMessage, sendingTopic, receiveTopic);
+                        break;
+                    default:
+                        console.warn("[onmessage] Invalid message, id: " + jsonMessage.id);
+                        break;
+                }
+            }
+        }
+
+        function sendCallSocketMessage(message) {
+            if (callWebSocket.readyState !== callWebSocket.OPEN) {
+                console.warn("[sendMessage] Skip, WebSocket session isn't open");
+                return;
+            }
+
+            const jsonMessage = JSON.stringify(message);
+            console.log("[sendMessage] message: " + jsonMessage);
+            callWebSocket.send(jsonMessage);
+        }
+
+        function sendCallSocketError(message) {
+            console.error(message);
+
+            sendCallSocketMessage({
+                id: 'ERROR',
+                message: message,
+            });
+        }
+
+        function explainUserMediaError(err) {
+            console.log({err})
+            const n = err.name;
+            if (n === 'NotFoundError' || n === 'DevicesNotFoundError') {
+                return "Missing webcam for required tracks";
+            } else if (n === 'NotReadableError' || n === 'TrackStartError') {
+                return "Webcam is already in use";
+            } else if (n === 'OverconstrainedError' || n === 'ConstraintNotSatisfiedError') {
+                return "Webcam doesn't provide required tracks";
+            } else if (n === 'NotAllowedError' || n === 'PermissionDeniedError') {
+                return "Webcam permission has been denied by the user";
+            } else if (n === 'TypeError') {
+                return "No media tracks have been requested";
+            } else {
+                return "Unknown error: " + err;
+            }
+        }
+
+        function startVideo(video) {
+            video.play().catch((err) => {
+                if (err.name === 'NotAllowedError') {
+                    console.error("[start] Browser doesn't allow playing video: " + err);
+                } else {
+                    console.error("[start] Error in video.play(): " + err);
+                }
+            });
+        }
+
+        function restartVideo() {
+            uiLocalVideo.pause();
+            webRtcPeer.getLocalStream().getTracks()[0].enabled = false;
+            webRtcPeer.getLocalStream().getTracks()[0].applyConstraints({width: 160});
+
+            setTimeout(function () {
+                webRtcPeer.getLocalStream().getTracks()[0].applyConstraints({width: 176});
+                webRtcPeer.getLocalStream().getTracks()[0].enabled = true;
+                uiLocalVideo.play()
+            }, 1000);
+        }
+
+        function handleProcessSdpAnswer(jsonMessage) {
+            console.log("[handleProcessSdpAnswer] SDP Answer from Kurento, process in WebRTC Peer");
+
+            let sampleWebRtc = webpeers[jsonMessage.topic];
+            if (sampleWebRtc == null) {
+                console.warn("[handleProcessSdpAnswer] Skip, no WebRTC Peer");
+                return;
+            }
+
+            sampleWebRtc.processAnswer(jsonMessage.sdpAnswer, (err) => {
+                if (err) {
+                    sendCallSocketError("[handleProcessSdpAnswer] Error: " + err);
+                    stop();
+                    return;
+                }
+
+                console.log("[handleProcessSdpAnswer] SDP Answer ready; start remote video");
+                startVideo(uiRemoteVideo);
+            });
+        }
+
+        function handleAddIceCandidate(jsonMessage) {
+            let sampleWebRtc = webpeers[jsonMessage.topic];
+            if (sampleWebRtc == null) {
+                console.warn("[handleAddIceCandidate] Skip, no WebRTC Peer");
+                return;
+            }
+
+            sampleWebRtc.addIceCandidate(jsonMessage.candidate, (err) => {
+                if (err) {
+                    console.error("[handleAddIceCandidate] " + err);
+                    return;
+                }
+            });
+        }
+
+        function handleError(jsonMessage, sendingTopic, receiveTopic) {
+            const errMessage = jsonMessage.message;
+            console.error("Kurento error: " + errMessage);
+
+            console.log("Assume that the other side stops after an error...");
+            callStop(sendingTopic, receiveTopic);
+        }
+
+        function callStop(sendingTopic, receiveTopic) {
+
+            console.log("[stop]");
+
+            if (webRtcPeer) {
+                webRtcPeer.dispose();
+                webRtcPeer = null;
+            }
+
+            if (webRtcPeer2) {
+                webRtcPeer2.dispose();
+                webRtcPeer2 = null;
+            }
+
+            sendCallSocketMessage({
+                id: 'STOP',
+                topic: sendingTopic
+            });
+
+            sendCallSocketMessage({
+                id: 'STOP',
+                topic: receiveTopic
+            });
+        }
 
         function getUserInfo() {
             chatAgent.getUserInfo(function (userInfo) {
@@ -955,7 +1270,6 @@
                 }
             });
         }
-
 
         function addParticipants(threadId, type, participants) {
             switch (type) {
@@ -1364,13 +1678,24 @@
     </script>
 
     <style>
+        html {
+            font-family: monospace;
+        }
+
         .btn {
-            padding: 10px 25px;
+            padding: 5px 15px;
             color: #fff;
             background-color: #222;
             border: none !important;
             text-decoration: none;
-            margin: 10px 15px;
+            margin: 5px 10px;
+            display: inline-block;
+        }
+
+        input {
+            padding: 5px 15px;
+            border: solid 1px #ddd !important;
+            margin: 5px 10px;
             display: inline-block;
         }
 
@@ -1383,6 +1708,27 @@
             margin-left: 10px;
             cursor: pointer;
         }
+
+        table td {
+            border: solid 1px #ddd;
+            padding: 6px 10px;
+        }
+
+        table tr:nth-child(2n) {
+            background-color: #eee;
+            font-family: monospace;
+        }
+
+        .video-wrapper {
+            width: 44%;
+            float: left;
+            text-align: center;
+        }
+
+        .video-wrapper video {
+            max-width: 100%;
+            background-color: bisque;
+        }
     </style>
 </head>
 
@@ -1390,11 +1736,72 @@
 <p>POD CHAT <span id="reconnect">Reconnect...</span> | <span id="clearCache">Clear User Cache</span> | <span
         id="deleteCache">Delete Cache</span></p>
 Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
-<button id="tokenInputSet">Set Token</button>
+<button id="tokenInputSet" class="btn">Set Token</button>
 <br>
 Thread: <input type="text" id="threadInput" autocomplete="on" width="500">
-<button id="threadInputSet">Set Thread</button>
+<button id="threadInputSet" class="btn">Set Thread</button>
 <br>
+<form>
+    <fieldset>
+        <legend>Call</legend>
+        <label for="call-p2p-thread">Call P2P Thread Id : </label>
+        <input type="text" name="call-p2p-thread" id="call-p2p-thread" value="4441" class="custom-thread-id">
+
+        <a class="btn" href="#" onclick="chatAgent.startCall({
+            threadId: document.getElementById('call-p2p-thread').value,
+            type: 'video'
+        })">Make Call</a>
+        <br>
+        <br>
+
+        <fieldset>
+            <legend>Started Call Info</legend>
+            <table>
+                <tr>
+                    <td>Call Id</td>
+                    <td>Broker</td>
+                    <td>Send Topic</td>
+                    <td>Receive Topic</td>
+                    <td>Send Key</td>
+                </tr>
+                <tr>
+                    <td id="call-receive-id"></td>
+                    <td id="call-receive-broker"></td>
+                    <td id="call-receive-send"></td>
+                    <td id="call-receive-receive"></td>
+                    <td id="call-receive-key"></td>
+                </tr>
+            </table>
+        </fieldset>
+
+        <br>
+
+        <fieldset class="video-wrapper">
+            <legend>Local stream</legend>
+
+            <video id="uiLocalVideo"
+                   width="320px"
+                   height="240px"
+                   playsinline
+                   muted></video>
+        </fieldset>
+
+        <fieldset class="video-wrapper">
+            <legend>Remote Stream</legend>
+
+            <video id="uiRemoteVideo"
+                   width="320px"
+                   height="240px"
+                   playsinline></video>
+        </fieldset>
+    </fieldset>
+</form>
+
+
+<br>
+<hr>
+<br>
+
 <form>
     <fieldset>
         <legend>General Functionalities</legend>
