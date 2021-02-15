@@ -78,7 +78,7 @@
             fullResponseObject: true,
             mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
             // typeCode: "talk",
-            token: "f7829360f396453992d5927329833cd9",
+            token: "68809b332ff84ad7b534283841825d48",
             // token: "3dd6895c8dc64f93bcd43b58dcc2aab3", // Masoud Amjadi
             // token: "9c627a9125d04ebf8455bf57bb33d2a9", // Pooria Pahlevani
             // token: "f6464d4e0f044314b1a668f90287ba26", // Nadia Anvari
@@ -954,6 +954,8 @@
 
         // Start Call Functions
 
+        var callTopics = {};
+
         function uiCallStart(params) {
             callWebSocket = new WebSocket('wss://46.32.6.187/gsthandler');
             turnIp = "46.32.6.188";
@@ -962,6 +964,13 @@
             uiRemoteVideo = document.getElementById(params.uiRemoteVideo);
             sendingTopic = params.sendingTopic;
             receiveTopic = params.receiveTopic;
+
+            callTopics['sendVideoTopic'] = 'vi-' + params.sendingTopic;
+            callTopics['sendAudioTopic'] = 'vo-' + params.sendingTopic;
+            callTopics['receiveVideoTopic'] = 'vi-' + params.receiveTopic;
+            callTopics['receiveAudioTopic'] = 'vo-' + params.receiveTopic;
+
+            console.log({callTopics});
 
             callWebSocket.onopen = function () {
                 sendCallSocketMessage({
@@ -986,7 +995,7 @@
                     onicecandidate: (candidate) => {
                         sendCallSocketMessage({
                             id: 'ADD_ICE_CANDIDATE',
-                            topic: 'Vi-' + sendingTopic,
+                            topic: callTopics['sendVideoTopic'],
                             candidate: candidate
                         })
                     },
@@ -1008,7 +1017,7 @@
                     onicecandidate: (candidate) => {
                         sendCallSocketMessage({
                             id: 'ADD_ICE_CANDIDATE',
-                            topic: 'Vi-' + receiveTopic,
+                            topic: callTopics['receiveVideoTopic'],
                             candidate: candidate
                         })
                     },
@@ -1044,7 +1053,7 @@
                                 sdpOffer: sdpOffer,
                                 useComedia: true,
                                 useSrtp: false,
-                                topic: receiveTopic,
+                                topic: callTopics['receiveVideoTopic'],
                                 mediaType: 2
                             });
 
@@ -1053,7 +1062,7 @@
                     }
                 );
 
-                webpeers[receiveTopic] = webRtcReceiveVideoPeer;
+                webpeers[callTopics['receiveVideoTopic']] = webRtcReceiveVideoPeer;
 
                 webRtcSendVideoPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerSendonly(
                     sendVideoOptions,
@@ -1076,7 +1085,7 @@
                             }
                             sendCallSocketMessage({
                                 id: 'SEND_SDP_OFFER',
-                                topic: sendingTopic,
+                                topic: callTopics['sendVideoTopic'],
                                 sdpOffer: sdpOffer,
                                 mediaType: 2
                             });
@@ -1086,7 +1095,7 @@
                     }
                 );
 
-                webpeers[sendingTopic] = webRtcSendVideoPeer;
+                webpeers[callTopics['sendVideoTopic']] = webRtcSendVideoPeer;
 
                 // Audio Topics
 
@@ -1096,7 +1105,7 @@
                     onicecandidate: (candidate) => {
                         sendCallSocketMessage({
                             id: 'ADD_ICE_CANDIDATE',
-                            topic: 'Vo-' + sendingTopic,
+                            topic: callTopics['sendAudioTopic'],
                             candidate: candidate,
                         })
                     },
@@ -1108,7 +1117,7 @@
                     onicecandidate: (candidate) => {
                         sendCallSocketMessage({
                             id: 'ADD_ICE_CANDIDATE',
-                            topic: 'Vo-' + receiveTopic,
+                            topic: callTopics['receiveAudioTopic'],
                             candidate: candidate,
                         })
                     },
@@ -1138,7 +1147,7 @@
                             }
                             sendCallSocketMessage({
                                 id: 'SEND_SDP_OFFER',
-                                topic: sendingTopic,
+                                topic: callTopics['sendAudioTopic'],
                                 sdpOffer: sdpOffer,
                             });
 
@@ -1147,7 +1156,7 @@
                     }
                 );
 
-                webpeers[sendingAudioTopic] = webRtcSendAudioPeer;
+                webpeers[callTopics['sendAudioTopic']] = webRtcSendAudioPeer;
 
                 console.log("[start] Create WebRtcAudioPeerReceiveOnly");
 
@@ -1171,7 +1180,7 @@
                                 sdpOffer: sdpOffer,
                                 useComedia: true,
                                 useSrtp: false,
-                                topic: receiveTopic
+                                topic: callTopics['receiveAudioTopic']
                             });
 
                             console.log("[start/WebRtcPeerRecvonly/generateOffer] Done!");
@@ -1179,7 +1188,7 @@
                     }
                 );
 
-                webpeers[receiveTopicAudio] = webRtcReceiveAudioPeer;
+                webpeers[callTopics['receiveAudioTopic']] = webRtcReceiveAudioPeer;
 
                 console.log("[start] Create WebRtcPeerRecvonly");
             };
@@ -1249,9 +1258,9 @@
         function startVideo(video) {
             video.play().catch((err) => {
                 if (err.name === 'NotAllowedError') {
-                    console.error("[start] Browser doesn't allow playing video: " + err);
+                    console.error("[start] Browser doesn't allow playing media: " + err);
                 } else {
-                    console.error("[start] Error in video.play(): " + err);
+                    console.error("[start] Error in media.play(): " + err);
                 }
             });
         }
@@ -1269,9 +1278,6 @@
         }
 
         function handleProcessSdpAnswer(jsonMessage) {
-            console.log('***************************')
-            console.log({jsonMessage});
-            return;
             console.log("[handleProcessSdpAnswer] SDP Answer from Kurento, process in WebRTC Peer");
 
             let sampleWebRtc = webpeers[jsonMessage.topic];
@@ -1842,6 +1848,7 @@
         .video-wrapper audio {
             max-width: 100%;
             margin-top: 10px;
+            outline: none !important;
         }
     </style>
 </head>
