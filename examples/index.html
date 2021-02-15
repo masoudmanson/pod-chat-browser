@@ -78,7 +78,7 @@
             fullResponseObject: true,
             mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
             // typeCode: "talk",
-            token: "5d31a8d13c444692827cdb2b49bf9205",
+            token: "f7829360f396453992d5927329833cd9",
             // token: "3dd6895c8dc64f93bcd43b58dcc2aab3", // Masoud Amjadi
             // token: "9c627a9125d04ebf8455bf57bb33d2a9", // Pooria Pahlevani
             // token: "f6464d4e0f044314b1a668f90287ba26", // Nadia Anvari
@@ -952,6 +952,8 @@
          * Local Functions
          */
 
+        // Start Call Functions
+
         function uiCallStart(params) {
             callWebSocket = new WebSocket('wss://46.32.6.187/gsthandler');
             turnIp = "46.32.6.188";
@@ -961,22 +963,18 @@
             sendingTopic = params.sendingTopic;
             receiveTopic = params.receiveTopic;
 
-            console.log({uiLocalVideo});
-            console.log({uiRemoteVideo});
-            console.log({sendingTopic});
-            console.log({receiveTopic});
-
             callWebSocket.onopen = function () {
                 sendCallSocketMessage({
                     id: 'CREATE_SESSION',
-                    brokerAddress: '10.56.16.51:9093',//params.brokerAddress,
+                    brokerAddress: '10.56.16.51:9093',
                     clientId: 'token'
                 });
 
-
                 console.log("[start] Create WebRtcPeerSendrecv");
 
-                const sendoptions = {
+                // Video Topics
+
+                const sendVideoOptions = {
                     localVideo: uiLocalVideo,
                     mediaConstraints: {
                         audio: false,
@@ -988,9 +986,8 @@
                     onicecandidate: (candidate) => {
                         sendCallSocketMessage({
                             id: 'ADD_ICE_CANDIDATE',
-                            topic: sendingTopic,
-                            candidate: candidate,
-                            // transferType: 2
+                            topic: 'Vi-' + sendingTopic,
+                            candidate: candidate
                         })
                     },
                     configuration: {
@@ -1005,15 +1002,14 @@
                     }
                 };
 
-                const reciveoptions = {
+                const receiveVideoOptions = {
                     remoteVideo: uiRemoteVideo,
                     mediaConstraints: {audio: false, video: true},
                     onicecandidate: (candidate) => {
                         sendCallSocketMessage({
                             id: 'ADD_ICE_CANDIDATE',
-                            topic: receiveTopic,
-                            candidate: candidate,
-                            transferType: 2531
+                            topic: 'Vi-' + receiveTopic,
+                            candidate: candidate
                         })
                     },
                     configuration: {
@@ -1028,17 +1024,17 @@
                     }
                 };
 
-                webRtcPeer2 = new kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(reciveoptions,
+                webRtcReceiveVideoPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(
+                    receiveVideoOptions,
                     function (err) {
                         if (err) {
-                            console.error("[start/WebRtcPeerRecvonly] Error in constructor: "
-                                + explainUserMediaError(err));
+                            console.error("[start/WebRtcPeerRecvonly] Error: " + explainUserMediaError(err));
                             return;
                         }
 
                         console.log("[start/WebRtcPeerRecvonly] Created; generate SDP Offer");
 
-                        webRtcPeer2.generateOffer((err, sdpOffer) => {
+                        webRtcReceiveVideoPeer.generateOffer((err, sdpOffer) => {
                             if (err) {
                                 console.error("[start/WebRtcPeerRecvonly/generateOffer] " + err);
                                 return;
@@ -1054,10 +1050,13 @@
 
                             console.log("[start/WebRtcPeerRecvonly/generateOffer] Done!");
                         });
-                    });
-                webpeers[receiveTopic] = webRtcPeer2;
+                    }
+                );
 
-                webRtcPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerSendonly(sendoptions,
+                webpeers[receiveTopic] = webRtcReceiveVideoPeer;
+
+                webRtcSendVideoPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerSendonly(
+                    sendVideoOptions,
                     function (err) {
                         if (err) {
                             sendCallSocketError("[start/WebRtcPeerSendrecv] Error: " + explainUserMediaError(err));
@@ -1069,7 +1068,7 @@
                         startVideo(uiLocalVideo);
 
                         console.log("[start/WebRtcPeerSendrecv] Generate SDP Offer");
-                        webRtcPeer.generateOffer((err, sdpOffer) => {
+                        webRtcSendVideoPeer.generateOffer((err, sdpOffer) => {
                             if (err) {
                                 sendCallSocketError("[start/WebRtcPeerSendrecv/generateOffer] Error: " + err);
                                 stop();
@@ -1084,8 +1083,104 @@
 
                             console.log("[start/WebRtcPeerSendrecv/generateOffer] Done!");
                         });
-                    });
-                webpeers[sendingTopic] = webRtcPeer;
+                    }
+                );
+
+                webpeers[sendingTopic] = webRtcSendVideoPeer;
+
+                // Audio Topics
+
+                const sendAudioOptions = {
+                    localVideo: uiLocalAudio,
+                    mediaConstraints: {audio: true, video: false},
+                    onicecandidate: (candidate) => {
+                        sendCallSocketMessage({
+                            id: 'ADD_ICE_CANDIDATE',
+                            topic: 'Vo-' + sendingTopic,
+                            candidate: candidate,
+                        })
+                    },
+                };
+
+                const receiveAudioOptions = {
+                    remoteVideo: uiRemoteAudio,
+                    mediaConstraints: {audio: true, video: false},
+                    onicecandidate: (candidate) => {
+                        sendCallSocketMessage({
+                            id: 'ADD_ICE_CANDIDATE',
+                            topic: 'Vo-' + receiveTopic,
+                            candidate: candidate,
+                        })
+                    },
+                };
+
+                console.log("[start] Create WebRtcAudioPeerSendOnly");
+
+                webRtcSendAudioPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerSendonly(
+                    sendAudioOptions,
+                    function (err) {
+                        if (err) {
+                            sendCallSocketError("[start/WebRtcPeerSendrecv] Error: " + explainUserMediaError(err));
+                            stop();
+                            return;
+                        }
+
+                        console.log("[start/WebRtcPeerSendrecv] Created; start local video");
+                        startVideo(uiLocalAudio);
+
+                        console.log("[start/WebRtcPeerSendrecv] Generate SDP Offer");
+
+                        webRtcSendAudioPeer.generateOffer((err, sdpOffer) => {
+                            if (err) {
+                                sendCallSocketError("[start/WebRtcPeerSendrecv/generateOffer] Error: " + err);
+                                stop();
+                                return;
+                            }
+                            sendCallSocketMessage({
+                                id: 'SEND_SDP_OFFER',
+                                topic: sendingTopic,
+                                sdpOffer: sdpOffer,
+                            });
+
+                            console.log("[start/WebRtcPeerSendrecv/generateOffer] Done!");
+                        });
+                    }
+                );
+
+                webpeers[sendingAudioTopic] = webRtcSendAudioPeer;
+
+                console.log("[start] Create WebRtcAudioPeerReceiveOnly");
+
+                webRtcReceiveAudioPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(
+                    receiveAudioOptions,
+                    function (err) {
+                        if (err) {
+                            console.error("[start/WebRtcPeerRecvonly] Error: " + explainUserMediaError(err));
+                            return;
+                        }
+
+                        console.log("[start/WebRtcPeerRecvonly] Created; generate SDP Offer");
+
+                        webRtcReceiveAudioPeer.generateOffer((err, sdpOffer) => {
+                            if (err) {
+                                console.error("[start/WebRtcPeerRecvonly/generateOffer] " + err);
+                                return;
+                            }
+                            sendCallSocketMessage({
+                                id: 'RECIVE_SDP_OFFER',
+                                sdpOffer: sdpOffer,
+                                useComedia: true,
+                                useSrtp: false,
+                                topic: receiveTopic
+                            });
+
+                            console.log("[start/WebRtcPeerRecvonly/generateOffer] Done!");
+                        });
+                    }
+                );
+
+                webpeers[receiveTopicAudio] = webRtcReceiveAudioPeer;
+
                 console.log("[start] Create WebRtcPeerRecvonly");
             };
 
@@ -1095,7 +1190,6 @@
 
                 switch (jsonMessage.id) {
                     case 'PROCESS_SDP_ANSWER':
-                        console.log('******************************');
                         handleProcessSdpAnswer(jsonMessage);
                         break;
                     case 'ADD_ICE_CANDIDATE':
@@ -1175,6 +1269,9 @@
         }
 
         function handleProcessSdpAnswer(jsonMessage) {
+            console.log('***************************')
+            console.log({jsonMessage});
+            return;
             console.log("[handleProcessSdpAnswer] SDP Answer from Kurento, process in WebRTC Peer");
 
             let sampleWebRtc = webpeers[jsonMessage.topic];
@@ -1222,14 +1319,24 @@
 
             console.log("[stop]");
 
-            if (webRtcPeer) {
-                webRtcPeer.dispose();
-                webRtcPeer = null;
+            if (webRtcSendVideoPeer) {
+                webRtcSendVideoPeer.dispose();
+                webRtcSendVideoPeer = null;
             }
 
-            if (webRtcPeer2) {
-                webRtcPeer2.dispose();
-                webRtcPeer2 = null;
+            if (webRtcReceiveVideoPeer) {
+                webRtcReceiveVideoPeer.dispose();
+                webRtcReceiveVideoPeer = null;
+            }
+
+            if (webRtcSendAudioPeer) {
+                webRtcSendAudioPeer.dispose();
+                webRtcSendAudioPeer = null;
+            }
+
+            if (webRtcReceiveAudioPeer) {
+                webRtcReceiveAudioPeer.dispose();
+                webRtcReceiveAudioPeer = null;
             }
 
             sendCallSocketMessage({
@@ -1242,6 +1349,8 @@
                 topic: receiveTopic
             });
         }
+
+        // End Of Call Functions
 
         function getUserInfo() {
             chatAgent.getUserInfo(function (userInfo) {
@@ -1729,6 +1838,11 @@
             max-width: 100%;
             background-color: bisque;
         }
+
+        .video-wrapper audio {
+            max-width: 100%;
+            margin-top: 10px;
+        }
     </style>
 </head>
 
@@ -1784,6 +1898,8 @@ Thread: <input type="text" id="threadInput" autocomplete="on" width="500">
                    height="240px"
                    playsinline
                    muted></video>
+
+            <audio id="uiLocalAudio" autoplay controls></audio>
         </fieldset>
 
         <fieldset class="video-wrapper">
@@ -1793,6 +1909,8 @@ Thread: <input type="text" id="threadInput" autocomplete="on" width="500">
                    width="320px"
                    height="240px"
                    playsinline></video>
+
+            <audio id="uiRemoteAudio" autoplay controls></audio>
         </fieldset>
     </fieldset>
 </form>
