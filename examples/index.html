@@ -78,7 +78,7 @@
             fullResponseObject: true,
             mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
             // typeCode: "talk",
-            token: "68809b332ff84ad7b534283841825d48",
+            token: "aabafa2cc44447ea95b2f7cdf903f7e0",
             // token: "3dd6895c8dc64f93bcd43b58dcc2aab3", // Masoud Amjadi
             // token: "9c627a9125d04ebf8455bf57bb33d2a9", // Pooria Pahlevani
             // token: "f6464d4e0f044314b1a668f90287ba26", // Nadia Anvari
@@ -900,6 +900,7 @@
                 case 'RECEIVE_CALL':
 
                     console.log('Accepting the call #' + event.result.callId);
+
                     chatAgent.acceptCall({
                         callId: event.result.callId
                     }, function (res) {
@@ -952,7 +953,7 @@
          * Local Functions
          */
 
-        // Start Call Functions
+            // Start Call Functions
 
         var callTopics = {};
 
@@ -978,8 +979,6 @@
                     brokerAddress: '10.56.16.51:9093',
                     clientId: 'token'
                 });
-
-                console.log("[start] Create WebRtcPeerSendrecv");
 
                 // Video Topics
 
@@ -1033,6 +1032,8 @@
                     }
                 };
 
+                console.log("[start] Create WebRtcVideoPeerReceiveOnly");
+
                 webRtcReceiveVideoPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(
                     receiveVideoOptions,
                     function (err) {
@@ -1041,11 +1042,11 @@
                             return;
                         }
 
-                        console.log("[start/WebRtcPeerRecvonly] Created; generate SDP Offer");
+                        console.log("[start/WebRtcVideoPeerReceiveOnly] Created; generate SDP Offer");
 
                         webRtcReceiveVideoPeer.generateOffer((err, sdpOffer) => {
                             if (err) {
-                                console.error("[start/WebRtcPeerRecvonly/generateOffer] " + err);
+                                console.error("[start/WebRtcVideoPeerReceiveOnly/generateOffer] " + err);
                                 return;
                             }
                             sendCallSocketMessage({
@@ -1057,30 +1058,33 @@
                                 mediaType: 2
                             });
 
-                            console.log("[start/WebRtcPeerRecvonly/generateOffer] Done!");
+                            console.log("[start/WebRtcVideoPeerReceiveOnly/generateOffer] Done!");
                         });
                     }
                 );
 
                 webpeers[callTopics['receiveVideoTopic']] = webRtcReceiveVideoPeer;
 
+                console.log("[start] Create WebRtcVideoPeerSendOnly");
+
                 webRtcSendVideoPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerSendonly(
                     sendVideoOptions,
                     function (err) {
                         if (err) {
-                            sendCallSocketError("[start/WebRtcPeerSendrecv] Error: " + explainUserMediaError(err));
-                            stop();
+                            sendCallSocketError("[start/WebRtcVideoPeerSendOnly] Error: " + explainUserMediaError(err));
+                            callStop();
                             return;
                         }
 
-                        console.log("[start/WebRtcPeerSendrecv] Created; start local video");
-                        startVideo(uiLocalVideo);
+                        console.log("[start/WebRtcVideoPeerSendOnly] Created; start local video");
 
-                        console.log("[start/WebRtcPeerSendrecv] Generate SDP Offer");
+                        startMedia(uiLocalVideo);
+
+                        console.log("[start/WebRtcVideoPeerSendOnly] Generate SDP Offer");
                         webRtcSendVideoPeer.generateOffer((err, sdpOffer) => {
                             if (err) {
-                                sendCallSocketError("[start/WebRtcPeerSendrecv/generateOffer] Error: " + err);
-                                stop();
+                                sendCallSocketError("[start/WebRtcVideoPeerSendOnly/generateOffer] Error: " + err);
+                                callStop();
                                 return;
                             }
                             sendCallSocketMessage({
@@ -1090,7 +1094,7 @@
                                 mediaType: 2
                             });
 
-                            console.log("[start/WebRtcPeerSendrecv/generateOffer] Done!");
+                            console.log("[start/WebRtcVideoPeerSendOnly/generateOffer] Done!");
                         });
                     }
                 );
@@ -1129,20 +1133,21 @@
                     sendAudioOptions,
                     function (err) {
                         if (err) {
-                            sendCallSocketError("[start/WebRtcPeerSendrecv] Error: " + explainUserMediaError(err));
-                            stop();
+                            sendCallSocketError("[start/WebRtcAudioPeerSendOnly] Error: " + explainUserMediaError(err));
+                            callStop();
                             return;
                         }
 
-                        console.log("[start/WebRtcPeerSendrecv] Created; start local video");
-                        startVideo(uiLocalAudio);
+                        console.log("[start/WebRtcAudioPeerSendOnly] Created; start local Audio");
 
-                        console.log("[start/WebRtcPeerSendrecv] Generate SDP Offer");
+                        startMedia(uiLocalAudio);
+
+                        console.log("[start/WebRtcAudioPeerSendOnly] Generate SDP Offer");
 
                         webRtcSendAudioPeer.generateOffer((err, sdpOffer) => {
                             if (err) {
-                                sendCallSocketError("[start/WebRtcPeerSendrecv/generateOffer] Error: " + err);
-                                stop();
+                                sendCallSocketError("[start/WebRtcAudioPeerSendOnly/generateOffer] Error: " + err);
+                                callStop();
                                 return;
                             }
                             sendCallSocketMessage({
@@ -1151,7 +1156,7 @@
                                 sdpOffer: sdpOffer,
                             });
 
-                            console.log("[start/WebRtcPeerSendrecv/generateOffer] Done!");
+                            console.log("[start/WebRtcAudioPeerSendOnly/generateOffer] Done!");
                         });
                     }
                 );
@@ -1164,15 +1169,15 @@
                     receiveAudioOptions,
                     function (err) {
                         if (err) {
-                            console.error("[start/WebRtcPeerRecvonly] Error: " + explainUserMediaError(err));
+                            console.error("[start/WebRtcAudioPeerReceiveOnly] Error: " + explainUserMediaError(err));
                             return;
                         }
 
-                        console.log("[start/WebRtcPeerRecvonly] Created; generate SDP Offer");
+                        console.log("[start/WebRtcAudioPeerReceiveOnly] Created; generate SDP Offer");
 
                         webRtcReceiveAudioPeer.generateOffer((err, sdpOffer) => {
                             if (err) {
-                                console.error("[start/WebRtcPeerRecvonly/generateOffer] " + err);
+                                console.error("[start/WebRtcAudioPeerReceiveOnly/generateOffer] " + err);
                                 return;
                             }
                             sendCallSocketMessage({
@@ -1183,19 +1188,17 @@
                                 topic: callTopics['receiveAudioTopic']
                             });
 
-                            console.log("[start/WebRtcPeerRecvonly/generateOffer] Done!");
+                            console.log("[start/WebRtcAudioPeerReceiveOnly/generateOffer] Done!");
                         });
                     }
                 );
 
                 webpeers[callTopics['receiveAudioTopic']] = webRtcReceiveAudioPeer;
-
-                console.log("[start] Create WebRtcPeerRecvonly");
             };
 
             callWebSocket.onmessage = function (message) {
                 const jsonMessage = JSON.parse(message.data);
-                console.log("[onmessage] Received message: " + message.data);
+                // console.log("[onmessage] Received message: " + message.data);
 
                 switch (jsonMessage.id) {
                     case 'PROCESS_SDP_ANSWER':
@@ -1205,7 +1208,7 @@
                         handleAddIceCandidate(jsonMessage);
                         break;
                     case 'GET_KEY_FRAME':
-                        setTimeout(restartVideo, 8000);
+                        setTimeout(restartMedia, 8000);
                         break;
                     case 'ERROR':
                         handleError(jsonMessage, sendingTopic, receiveTopic);
@@ -1224,7 +1227,7 @@
             }
 
             const jsonMessage = JSON.stringify(message);
-            console.log("[sendMessage] message: " + jsonMessage);
+            // console.log("[sendMessage] message: " + jsonMessage);
             callWebSocket.send(jsonMessage);
         }
 
@@ -1255,8 +1258,8 @@
             }
         }
 
-        function startVideo(video) {
-            video.play().catch((err) => {
+        function startMedia(media) {
+            media.play().catch((err) => {
                 if (err.name === 'NotAllowedError') {
                     console.error("[start] Browser doesn't allow playing media: " + err);
                 } else {
@@ -1265,7 +1268,7 @@
             });
         }
 
-        function restartVideo() {
+        function restartMedia() {
             uiLocalVideo.pause();
             webRtcPeer.getLocalStream().getTracks()[0].enabled = false;
             webRtcPeer.getLocalStream().getTracks()[0].applyConstraints({width: 160});
@@ -1281,6 +1284,7 @@
             console.log("[handleProcessSdpAnswer] SDP Answer from Kurento, process in WebRTC Peer");
 
             let sampleWebRtc = webpeers[jsonMessage.topic];
+            console.log({sampleWebRtc});
             if (sampleWebRtc == null) {
                 console.warn("[handleProcessSdpAnswer] Skip, no WebRTC Peer");
                 return;
@@ -1289,12 +1293,12 @@
             sampleWebRtc.processAnswer(jsonMessage.sdpAnswer, (err) => {
                 if (err) {
                     sendCallSocketError("[handleProcessSdpAnswer] Error: " + err);
-                    stop();
+                    callStop();
                     return;
                 }
 
                 console.log("[handleProcessSdpAnswer] SDP Answer ready; start remote video");
-                startVideo(uiRemoteVideo);
+                startMedia(uiRemoteVideo);
             });
         }
 
@@ -1324,25 +1328,32 @@
         function callStop(sendingTopic, receiveTopic) {
 
             console.log("[stop]");
+            //
+            // if (webRtcSendVideoPeer) {
+            //     webRtcSendVideoPeer.dispose();
+            //     webRtcSendVideoPeer = null;
+            // }
+            //
+            // if (webRtcReceiveVideoPeer) {
+            //     webRtcReceiveVideoPeer.dispose();
+            //     webRtcReceiveVideoPeer = null;
+            // }
+            //
+            // if (webRtcSendAudioPeer) {
+            //     webRtcSendAudioPeer.dispose();
+            //     webRtcSendAudioPeer = null;
+            // }
+            //
+            // if (webRtcReceiveAudioPeer) {
+            //     webRtcReceiveAudioPeer.dispose();
+            //     webRtcReceiveAudioPeer = null;
+            // }
 
-            if (webRtcSendVideoPeer) {
-                webRtcSendVideoPeer.dispose();
-                webRtcSendVideoPeer = null;
-            }
-
-            if (webRtcReceiveVideoPeer) {
-                webRtcReceiveVideoPeer.dispose();
-                webRtcReceiveVideoPeer = null;
-            }
-
-            if (webRtcSendAudioPeer) {
-                webRtcSendAudioPeer.dispose();
-                webRtcSendAudioPeer = null;
-            }
-
-            if (webRtcReceiveAudioPeer) {
-                webRtcReceiveAudioPeer.dispose();
-                webRtcReceiveAudioPeer = null;
+            for (var i = 0; i < webpeers.length; i++) {
+                if (webpeers[i]) {
+                    webpeers[i].dispose();
+                    webpeers[i] = null;
+                }
             }
 
             sendCallSocketMessage({
