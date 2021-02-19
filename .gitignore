@@ -67,5 +67,5 @@ index-local2.js
 # SQLite files
 *.sqlite
 
-#examples
+# examples configs
 examples/config.js
