@@ -7,17 +7,20 @@
      */
     var Async,
         ChatUtility,
-        Dexie;
+        Dexie,
+        KurentoUtils;
 
     function Chat(params) {
         if (typeof (require) !== 'undefined' && typeof (exports) !== 'undefined') {
             Async = require('podasync-ws-only');
             ChatUtility = require('./utility/utility.js');
             Dexie = require('dexie').default || require('dexie');
+            KurentoUtils = require('kurento-utils');
         } else {
             Async = window.POD.Async;
             ChatUtility = window.POD.ChatUtility;
             Dexie = window.Dexie;
+            KurentoUtils = window.kurentoUtils;
         }
 
         /*******************************************************
@@ -220,6 +223,36 @@
                 'VOICE': 0x0,
                 'VIDEO': 0x1
             },
+            callSocketAddress = (params.callOptions
+                && params.callOptions.hasOwnProperty(callSocketAddress)
+                && typeof params.callOptions.callSocketAddress === 'string')
+                ? params.callOptions.callSocketAddress
+                : 'wss://46.32.6.187/gsthandler',
+            callTurnIp = (params.callOptions
+                && params.callOptions.hasOwnProperty(callTurnIp)
+                && typeof params.callOptions.callTurnIp === 'string')
+                ? params.callOptions.callTurnIp
+                : '46.32.6.188',
+            callDivId = (params.callOptions
+                && params.callOptions.hasOwnProperty(callDivId)
+                && typeof params.callOptions.callDivId === 'string')
+                ? params.callOptions.callDivId
+                : 'call-div',
+            callAudioTagClassName = (params.callOptions
+                && params.callOptions.hasOwnProperty(callAudioTagClassName)
+                && typeof params.callOptions.callAudioTagClassName === 'string')
+                ? params.callOptions.callAudioTagClassName
+                : '',
+            callVideoTagClassName = (params.callOptions
+                && params.callOptions.hasOwnProperty(callVideoTagClassName)
+                && typeof params.callOptions.callVideoTagClassName === 'string')
+                ? params.callOptions.callVideoTagClassName
+                : '',
+            callTopics = {},
+            callWebSocket = null,
+            webpeers = {},
+            uiRemoteMedias = [],
+            uiLocalVideo = null,
             systemMessageIntervalPitch = params.systemMessageIntervalPitch || 1000,
             isTypingInterval,
             protocol = params.protocol || 'websocket',
@@ -3149,7 +3182,7 @@
                             messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
                         }
 
-                        if(messageContent.callId > 0) {
+                        if (messageContent.callId > 0) {
                             fireEvent('callEvents', {
                                 type: 'RECEIVE_CALL',
                                 result: messageContent
@@ -3169,6 +3202,19 @@
                         fireEvent('callEvents', {
                             type: 'CALL_STARTED',
                             result: messageContent
+                        });
+
+                        startCallWebRTCFunctions({
+                            video: true,
+                            audio: true,
+                            sendingTopic: messageContent.clientDTO.topicSend,
+                            receiveTopic: messageContent.clientDTO.topicReceive,
+                            brokerAddress: '10.56.16.51:9093',//messageContent.clientDTO.brokerAddress.split(',')[0]
+                        }, function (callDivs) {
+                            fireEvent('callEvents', {
+                                type: 'CALL_DIVS',
+                                result: callDivs
+                            });
                         });
 
                         break;
@@ -9410,6 +9456,422 @@
                 }
 
                 getImageFromLinkObjects[uniqueId].src = url;
+            },
+
+            startCallWebRTCFunctions = function (params, callback) {
+                if (callDivId) {
+                    var callParentDiv,
+                        callVideo = (typeof params.video === 'boolean') ? params.video : true,
+                        callAudio = (typeof params.audio === 'boolean') ? params.audio : true,
+                        sendingTopic = params.sendingTopic,
+                        receiveTopic = params.receiveTopic;
+
+                    callTopics['sendVideoTopic'] = 'vi-' + params.sendingTopic;
+                    callTopics['sendAudioTopic'] = 'vo-' + params.sendingTopic;
+                    callTopics['receiveVideoTopic'] = 'vi-' + params.receiveTopic;
+                    callTopics['receiveAudioTopic'] = 'vo-' + params.receiveTopic;
+
+                    callParentDiv = document.getElementById(callDivId);
+
+                    // Local Video Tag
+                    if (!uiRemoteMedias[callTopics['sendVideoTopic']]) {
+                        uiRemoteMedias[callTopics['sendVideoTopic']] = document.createElement('video');
+                        uiRemoteMedias[callTopics['sendVideoTopic']].setAttribute('id', 'uiRemoteVideo-' + callTopics['sendVideoTopic']);
+                        uiRemoteMedias[callTopics['sendVideoTopic']].className = callVideoTagClassName;
+                        uiRemoteMedias[callTopics['sendVideoTopic']].setAttribute('playsinline', '');
+                        uiRemoteMedias[callTopics['sendVideoTopic']].setAttribute('muted', '');
+                        uiRemoteMedias[callTopics['sendVideoTopic']].setAttribute('width', '320px');
+                        uiRemoteMedias[callTopics['sendVideoTopic']].setAttribute('height', '240px');
+                    }
+
+                    // Local Audio Tag
+                    if (!uiRemoteMedias[callTopics['sendAudioTopic']]) {
+                        uiRemoteMedias[callTopics['sendAudioTopic']] = document.createElement('audio');
+                        uiRemoteMedias[callTopics['sendAudioTopic']].setAttribute('id', 'uiRemoteAudio-' + callTopics['sendAudioTopic']);
+                        uiRemoteMedias[callTopics['sendAudioTopic']].className = callAudioTagClassName;
+                        uiRemoteMedias[callTopics['sendAudioTopic']].setAttribute('autoplay', '');
+                        uiRemoteMedias[callTopics['sendAudioTopic']].setAttribute('muted', '');
+                        uiRemoteMedias[callTopics['sendAudioTopic']].setAttribute('controls', '');
+                    }
+
+                    // Remote Video Tag
+                    if (!uiRemoteMedias[callTopics['receiveVideoTopic']]) {
+                        uiRemoteMedias[callTopics['receiveVideoTopic']] = document.createElement('video');
+                        uiRemoteMedias[callTopics['receiveVideoTopic']].setAttribute('id', 'uiRemoteVideo-' + callTopics['receiveVideoTopic']);
+                        uiRemoteMedias[callTopics['receiveVideoTopic']].className = callVideoTagClassName;
+                        uiRemoteMedias[callTopics['receiveVideoTopic']].setAttribute('playsinline', '');
+                        uiRemoteMedias[callTopics['receiveVideoTopic']].setAttribute('width', '320px');
+                        uiRemoteMedias[callTopics['receiveVideoTopic']].setAttribute('height', '240px');
+                    }
+
+                    // Remote Audio Tag
+                    if (!uiRemoteMedias[callTopics['receiveAudioTopic']]) {
+                        uiRemoteMedias[callTopics['receiveAudioTopic']] = document.createElement('audio');
+                        uiRemoteMedias[callTopics['receiveAudioTopic']].setAttribute('id', 'uiRemoteAudio-' + callTopics['receiveAudioTopic']);
+                        uiRemoteMedias[callTopics['receiveAudioTopic']].className = callAudioTagClassName;
+                        uiRemoteMedias[callTopics['receiveAudioTopic']].setAttribute('autoplay', '');
+                        uiRemoteMedias[callTopics['receiveAudioTopic']].setAttribute('controls', '');
+                    }
+
+                    if (callParentDiv) {
+                        callParentDiv.appendChild(uiRemoteMedias[callTopics['sendVideoTopic']]);
+                        callParentDiv.appendChild(uiRemoteMedias[callTopics['sendAudioTopic']]);
+                        callParentDiv.appendChild(uiRemoteMedias[callTopics['receiveVideoTopic']]);
+                        callParentDiv.appendChild(uiRemoteMedias[callTopics['receiveAudioTopic']]);
+                    } else {
+                        callback && callback({
+                            'uiLocalVideo': uiRemoteMedias[callTopics['sendVideoTopic']],
+                            'uiLocalAudio': uiRemoteMedias[callTopics['sendAudioTopic']],
+                            'uiRemoteVideo': uiRemoteMedias[callTopics['receiveVideoTopic']],
+                            'uiRemoteAudio': uiRemoteMedias[callTopics['receiveAudioTopic']]
+                        });
+                    }
+
+                    callWebSocket = new WebSocket(callSocketAddress);
+
+                    callWebSocket.onopen = function () {
+                        sendCallSocketMessage({
+                            id: 'CREATE_SESSION',
+                            brokerAddress: params.brokerAddress,
+                            clientId: 'token'
+                        });
+
+                        // Video Topics
+                        if (callVideo) {
+                            const sendVideoOptions = {
+                                localVideo: uiRemoteMedias[callTopics['sendVideoTopic']],
+                                mediaConstraints: {
+                                    audio: false,
+                                    video: {
+                                        width: 320,
+                                        // height: 240,
+                                    }
+                                },
+                                onicecandidate: (candidate) => {
+                                    sendCallSocketMessage({
+                                        id: 'ADD_ICE_CANDIDATE',
+                                        topic: callTopics['sendVideoTopic'],
+                                        candidate: candidate
+                                    })
+                                },
+                                configuration: {
+                                    iceServers: [
+                                        {"urls": "stun:" + callTurnIp + ":3478"},
+                                        {
+                                            "urls": "turn:" + callTurnIp + ":3478",
+                                            "username": "mkhorrami",
+                                            "credential": "mkh_123456"
+                                        }
+                                    ]
+                                }
+                            };
+
+                            const receiveVideoOptions = {
+                                remoteVideo: uiRemoteMedias[callTopics['receiveVideoTopic']],
+                                mediaConstraints: {audio: false, video: true},
+                                onicecandidate: (candidate) => {
+                                    sendCallSocketMessage({
+                                        id: 'ADD_ICE_CANDIDATE',
+                                        topic: callTopics['receiveVideoTopic'],
+                                        candidate: candidate
+                                    })
+                                },
+                                configuration: {
+                                    iceServers: [
+                                        {"urls": "stun:" + callTurnIp + ":3478"},
+                                        {
+                                            "urls": "turn:" + callTurnIp + ":3478",
+                                            "username": "mkhorrami",
+                                            "credential": "mkh_123456"
+                                        }
+                                    ]
+                                }
+                            };
+
+                            webpeers[callTopics['receiveVideoTopic']] = new KurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(receiveVideoOptions, function (err) {
+                                if (err) {
+                                    console.error("[start/webRtcReceiveVideoPeer] Error: " + explainUserMediaError(err));
+                                    return;
+                                }
+
+                                webpeers[callTopics['receiveVideoTopic']].generateOffer((err, sdpOffer) => {
+                                    if (err) {
+                                        console.error("[start/WebRtcVideoPeerReceiveOnly/generateOffer] " + err);
+                                        return;
+                                    }
+                                    sendCallSocketMessage({
+                                        id: 'RECIVE_SDP_OFFER',
+                                        sdpOffer: sdpOffer,
+                                        useComedia: true,
+                                        useSrtp: false,
+                                        topic: callTopics['receiveVideoTopic'],
+                                        mediaType: 2
+                                    });
+                                });
+                            });
+
+                            webpeers[callTopics['sendVideoTopic']] = new KurentoUtils.WebRtcPeer.WebRtcPeerSendonly(sendVideoOptions, function (err) {
+                                if (err) {
+                                    sendCallSocketError("[start/WebRtcVideoPeerSendOnly] Error: " + explainUserMediaError(err));
+                                    callStop();
+                                    return;
+                                }
+
+                                startMedia(uiRemoteMedias[callTopics['sendVideoTopic']]);
+
+                                webpeers[callTopics['sendVideoTopic']].generateOffer((err, sdpOffer) => {
+                                    if (err) {
+                                        sendCallSocketError("[start/WebRtcVideoPeerSendOnly/generateOffer] Error: " + err);
+                                        callStop();
+                                        return;
+                                    }
+                                    sendCallSocketMessage({
+                                        id: 'SEND_SDP_OFFER',
+                                        topic: callTopics['sendVideoTopic'],
+                                        sdpOffer: sdpOffer,
+                                        mediaType: 2
+                                    });
+                                });
+                            });
+                        }
+
+                        // Audio Topics
+
+                        if (callAudio) {
+                            const sendAudioOptions = {
+                                localVideo: uiRemoteMedias[callTopics['sendAudioTopic']],
+                                mediaConstraints: {audio: true, video: false},
+                                onicecandidate: (candidate) => {
+                                    sendCallSocketMessage({
+                                        id: 'ADD_ICE_CANDIDATE',
+                                        topic: callTopics['sendAudioTopic'],
+                                        candidate: candidate,
+                                    })
+                                },
+                                configuration: {
+                                    iceServers: [
+                                        {"urls": "stun:" + callTurnIp + ":3478"},
+                                        {
+                                            "urls": "turn:" + callTurnIp + ":3478",
+                                            "username": "mkhorrami",
+                                            "credential": "mkh_123456"
+                                        }
+                                    ]
+                                }
+                            };
+
+                            const receiveAudioOptions = {
+                                remoteVideo: uiRemoteMedias[callTopics['receiveAudioTopic']],
+                                mediaConstraints: {audio: true, video: false},
+                                onicecandidate: (candidate) => {
+                                    sendCallSocketMessage({
+                                        id: 'ADD_ICE_CANDIDATE',
+                                        topic: callTopics['receiveAudioTopic'],
+                                        candidate: candidate,
+                                    })
+                                },
+                                configuration: {
+                                    iceServers: [
+                                        {"urls": "stun:" + callTurnIp + ":3478"},
+                                        {
+                                            "urls": "turn:" + callTurnIp + ":3478",
+                                            "username": "mkhorrami",
+                                            "credential": "mkh_123456"
+                                        }
+                                    ]
+                                }
+                            };
+
+                            webpeers[callTopics['sendAudioTopic']] = new KurentoUtils.WebRtcPeer.WebRtcPeerSendonly(sendAudioOptions, function (err) {
+                                if (err) {
+                                    sendCallSocketError("[start/WebRtcAudioPeerSendOnly] Error: " + explainUserMediaError(err));
+                                    callStop();
+                                    return;
+                                }
+
+                                startMedia(uiRemoteMedias[callTopics['sendAudioTopic']]);
+
+                                webpeers[callTopics['sendAudioTopic']].generateOffer((err, sdpOffer) => {
+                                    if (err) {
+                                        sendCallSocketError("[start/WebRtcAudioPeerSendOnly/generateOffer] Error: " + err);
+                                        callStop();
+                                        return;
+                                    }
+                                    sendCallSocketMessage({
+                                        id: 'SEND_SDP_OFFER',
+                                        topic: callTopics['sendAudioTopic'],
+                                        sdpOffer: sdpOffer,
+                                        mediaType: 1
+                                    });
+                                });
+                            });
+
+                            webpeers[callTopics['receiveAudioTopic']] = new KurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(receiveAudioOptions, function (err) {
+                                if (err) {
+                                    console.error("[start/WebRtcAudioPeerReceiveOnly] Error: " + explainUserMediaError(err));
+                                    return;
+                                }
+
+                                webpeers[callTopics['receiveAudioTopic']].generateOffer((err, sdpOffer) => {
+                                    if (err) {
+                                        console.error("[start/WebRtcAudioPeerReceiveOnly/generateOffer] " + err);
+                                        return;
+                                    }
+                                    sendCallSocketMessage({
+                                        id: 'RECIVE_SDP_OFFER',
+                                        sdpOffer: sdpOffer,
+                                        useComedia: false,
+                                        useSrtp: false,
+                                        mediaType: 1,
+                                        topic: callTopics['receiveAudioTopic']
+                                    });
+                                });
+                            });
+
+                        }
+                    };
+
+                    callWebSocket.onmessage = function (message) {
+                        const jsonMessage = JSON.parse(message.data);
+
+                        switch (jsonMessage.id) {
+                            case 'PROCESS_SDP_ANSWER':
+                                handleProcessSdpAnswer(jsonMessage);
+                                break;
+                            case 'ADD_ICE_CANDIDATE':
+                                handleAddIceCandidate(jsonMessage);
+                                break;
+                            case 'GET_KEY_FRAME':
+                                setTimeout(restartMedia, 8000);
+                                break;
+                            case 'ERROR':
+                                handleError(jsonMessage, sendingTopic, receiveTopic);
+                                break;
+                            default:
+                                console.warn("[onmessage] Invalid message, id: " + jsonMessage.id);
+                                break;
+                        }
+                    }
+                } else {
+                    console.log('No Call DIV has been declared!');
+                    return;
+                }
+            },
+
+            sendCallSocketMessage = function (message) {
+                if (callWebSocket.readyState !== callWebSocket.OPEN) {
+                    console.warn("[sendMessage] Skip, WebSocket session isn't open");
+                    return;
+                }
+
+                const jsonMessage = JSON.stringify(message);
+                callWebSocket.send(jsonMessage);
+            },
+
+            sendCallSocketError = function (message) {
+                console.error(message);
+
+                sendCallSocketMessage({
+                    id: 'ERROR',
+                    message: message,
+                });
+            },
+
+            explainUserMediaError = function (err) {
+                console.log({err});
+                const n = err.name;
+                if (n === 'NotFoundError' || n === 'DevicesNotFoundError') {
+                    return "Missing webcam for required tracks";
+                } else if (n === 'NotReadableError' || n === 'TrackStartError') {
+                    return "Webcam is already in use";
+                } else if (n === 'OverconstrainedError' || n === 'ConstraintNotSatisfiedError') {
+                    return "Webcam doesn't provide required tracks";
+                } else if (n === 'NotAllowedError' || n === 'PermissionDeniedError') {
+                    return "Webcam permission has been denied by the user";
+                } else if (n === 'TypeError') {
+                    return "No media tracks have been requested";
+                } else {
+                    return "Unknown error: " + err;
+                }
+            },
+
+            startMedia = function (media) {
+                media.play().catch((err) => {
+                    if (err.name === 'NotAllowedError') {
+                        console.error("[start] Browser doesn't allow playing media: " + err);
+                    } else {
+                        console.error("[start] Error in media.play(): " + err);
+                    }
+                });
+            },
+
+            restartMedia = function () {
+                uiRemoteMedias[callTopics['sendVideoTopic']].pause();
+                webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].enabled = false;
+                webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].applyConstraints({width: 319});
+
+                setTimeout(function () {
+                    webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].applyConstraints({width: 320});
+                    webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].enabled = true;
+                    uiRemoteMedias[callTopics['sendVideoTopic']].play()
+                }, 1000);
+            },
+
+            handleProcessSdpAnswer = function (jsonMessage) {
+                let sampleWebRtc = webpeers[jsonMessage.topic];
+
+                if (sampleWebRtc == null) {
+                    console.warn("[handleProcessSdpAnswer] Skip, no WebRTC Peer");
+                    return;
+                }
+
+                sampleWebRtc.processAnswer(jsonMessage.sdpAnswer, (err) => {
+                    if (err) {
+                        sendCallSocketError("[handleProcessSdpAnswer] Error: " + err);
+                        callStop();
+                        return;
+                    }
+                    startMedia(uiRemoteMedias[jsonMessage.topic]);
+                });
+            },
+
+            handleAddIceCandidate = function (jsonMessage) {
+                let sampleWebRtc = webpeers[jsonMessage.topic];
+                if (sampleWebRtc == null) {
+                    console.warn("[handleAddIceCandidate] Skip, no WebRTC Peer");
+                    return;
+                }
+
+                sampleWebRtc.addIceCandidate(jsonMessage.candidate, (err) => {
+                    if (err) {
+                        console.error("[handleAddIceCandidate] " + err);
+                        return;
+                    }
+                });
+            },
+
+            handleError = function (jsonMessage, sendingTopic, receiveTopic) {
+                const errMessage = jsonMessage.message;
+                console.error("Kurento error: " + errMessage);
+                callStop(sendingTopic, receiveTopic);
+            },
+
+            callStop = function () {
+                console.log("[stop]");
+
+                for (var i in webpeers) {
+                    if (webpeers[i]) {
+                        webpeers[i].dispose();
+                        webpeers[i] = null;
+                    }
+                }
+
+                for (var i in callTopics) {
+                    sendCallSocketMessage({
+                        id: 'STOP',
+                        topic: callTopics[i].substr(3)
+                    });
+                }
             };
 
         /******************************************************
@@ -12837,6 +13299,10 @@
             });
         };
 
+        this.restartMedia = restartMedia;
+
+        this.callStop = callStop;
+
         this.sendLocationPing = function (params, callback) {
             /**
              * + locationPingRequest     {object}
@@ -12855,7 +13321,7 @@
                     content.location = locationPingTypes[params.location.toUpperCase()];
 
                     if (params.location.toUpperCase() === 'THREAD') {
-                        if(typeof params.threadId === 'number' && params.threadId > 0) {
+                        if (typeof params.threadId === 'number' && params.threadId > 0) {
                             content.locationId = +params.threadId;
                         } else {
                             fireEvent('error', {

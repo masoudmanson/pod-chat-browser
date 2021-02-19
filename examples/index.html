@@ -12,9 +12,9 @@
     <script type="text/javascript" src="../node_modules/podasync-ws-only/src/network/async.js"></script>
     <script type="text/javascript" src="../node_modules/crypto-js/crypto-js.js"></script>
     <script type="text/javascript" src="../node_modules/dexie/dist/dexie.min.js"></script>
-    <script type="text/javascript" src="../bower_components/kurento-utils/js/kurento-utils.min.js"></script>
-    <script type="text/javascript" src="../bower_components/webrtc-adapter/release/adapter.js"></script>
+    <script type="text/javascript" src="./kurento-utils.min.js"></script>
     <script type="text/javascript" src="../src/chat.js"></script>
+    <script type="text/javascript" src="./config.js"></script>
 
     <!-- Production Mode -->
     <!--<script type="text/javascript" src="podchat.js"></script>-->
@@ -34,12 +34,12 @@
              * ActiveMQ Config
              */
             // protocol: "queue",
-            // queueHost: "10.56.16.25",
-            // queuePort: "61613",
-            // queueUsername: "root",
-            // queuePassword: "zalzalak",
-            // queueReceive: "queue-in-amjadi-stomp",
-            // queueSend: "queue-out-amjadi-stomp",
+            // queueHost: CONFIG.queueHost,
+            // queuePort: CONFIG.queuePort,
+            // queueUsername: CONFIG.queueUsername,
+            // queuePassword: CONFIG.queuePassword,
+            // queueReceive: CONFIG.queueReceive,
+            // queueSend: CONFIG.queueSend,
             // queueConnectionTimeout: 20000,
             // serverName: "chat-server",
 
@@ -73,44 +73,42 @@
             // podSpaceFileServer: 'http://172.16.110.61:8780/podspace',
             // serverName: "chatlocal",
 
+            token: CONFIG.token,
             grantDeviceIdFromSSO: false,
-            enableCache: false, // Enable Client side caching
+            enableCache: false,
             fullResponseObject: true,
-            mapApiKey: '8b77db18704aa646ee5aaea13e7370f4f88b9e8c',
-            // typeCode: "talk",
-            token: "aabafa2cc44447ea95b2f7cdf903f7e0",
-            // token: "3dd6895c8dc64f93bcd43b58dcc2aab3", // Masoud Amjadi
-            // token: "9c627a9125d04ebf8455bf57bb33d2a9", // Pooria Pahlevani
-            // token: "f6464d4e0f044314b1a668f90287ba26", // Nadia Anvari
-            // token: "99506f7c32c849a9a6e2a954303b81ee", // Farhad Kheirkhah
-            // token: "979aa5de03934c73a5c6c855bd80cb04", // Mahyar Zhiani
-            // token: "a47c9016c8354236abc01395093bed5c", // Ahmad Sajadi
-            // token: "d3114ed2fd2a49b4a0a386e727c9e5fa", // Saba Safavi
-            // token: "872110b9c6944eda9bc98ef2a68dcf50", // Leila Nemati
-            wsConnectionWaitTime: 500, // Time out to wait for socket to get ready after open
-            connectionRetryInterval: 5000, // Time interval to retry registering device or registering server
-            connectionCheckTimeout: 10000, // Socket connection live time on server
-            messageTtl: 24 * 60 * 60, // Message time to live (1 day in seonds)
-            reconnectOnClose: true, // auto connect to socket after socket close
+            mapApiKey: CONFIG.mapApiKey,
+            typeCode: "default",
+            wsConnectionWaitTime: 500,
+            connectionRetryInterval: 5000,
+            connectionCheckTimeout: 10000,
+            messageTtl: 24 * 60 * 60,
+            reconnectOnClose: true,
             httpRequestTimeout: 30000,
-            httpUploadRequestTimeout: 0, // 0 means No timeout
+            httpUploadRequestTimeout: 0,
             forceWaitQueueInMemory: true,
-            // asyncRequestTimeout: 500,
+            asyncRequestTimeout: 500,
+            callOptions: {
+                callSocketAddress: "wss://46.32.6.187/gsthandler",
+                callTurnIp: "46.32.6.188",
+                callDivId: "call-div",
+                callAudioTagClassName: "podcall-audio",
+                callVideoTagClassName: "podcall-video"
+            },
             asyncLogging: {
-                onFunction: true, // log main actions on console
-                consoleLogging: true, // log action results in console
-                //     onMessageReceive: true, // log received messages on console
-                //     onMessageSend: true, // log sent messaged on console
-                //     actualTiming: true // log actual functions running time
+                onFunction: true,
+                consoleLogging: true,
+                onMessageReceive: false,
+                onMessageSend: false,
+                actualTiming: false
             }
         };
 
-        var chatAgent = new PodChat(params),
-            PID,
-            P2P_THREAD_ID = 293,
-            callWebSocket,
-            webpeers = {};
+        var chatAgent = new PodChat(params);
 
+        /*
+         * Main Chat Ready Listener
+         */
         var chatReadyInstance = chatAgent.on("chatReady", function () {
             // chatAgent.sendLocationPing({
             //     location: 'contacts'
@@ -758,6 +756,9 @@
             console.log(event);
         });
 
+        /**
+         * Listen to Contact Events
+         */
         chatAgent.on("contactEvents", function (event) {
             if (event.type == 'CONTACTS_SYNCED') {
                 console.log('Core contacts have been successfully synced with chat server.');
@@ -932,15 +933,6 @@
                     document.getElementById('call-receive-send').innerText = event.result.clientDTO.topicSend;
                     document.getElementById('call-receive-receive').innerText = event.result.clientDTO.topicReceive;
                     document.getElementById('call-receive-key').innerText = event.result.clientDTO.sendKey;
-
-                    uiCallStart({
-                        uiLocalVideo: 'uiLocalVideo',
-                        uiRemoteVideo: 'uiRemoteVideo',
-                        sendingTopic: event.result.clientDTO.topicSend,
-                        receiveTopic: event.result.clientDTO.topicReceive,
-                        brokerAddress: event.result.clientDTO.brokerAddress.split(',')[0]
-                    });
-
                     break;
 
                 default:
@@ -952,422 +944,6 @@
         /**
          * Local Functions
          */
-
-            // Start Call Functions
-
-        var callTopics = {};
-
-        function uiCallStart(params) {
-            callWebSocket = new WebSocket('wss://46.32.6.187/gsthandler');
-            turnIp = "46.32.6.188";
-
-            uiLocalVideo = document.getElementById(params.uiLocalVideo);
-            uiRemoteVideo = document.getElementById(params.uiRemoteVideo);
-            sendingTopic = params.sendingTopic;
-            receiveTopic = params.receiveTopic;
-
-            callTopics['sendVideoTopic'] = 'vi-' + params.sendingTopic;
-            callTopics['sendAudioTopic'] = 'vo-' + params.sendingTopic;
-            callTopics['receiveVideoTopic'] = 'vi-' + params.receiveTopic;
-            callTopics['receiveAudioTopic'] = 'vo-' + params.receiveTopic;
-
-            console.log({callTopics});
-
-            callWebSocket.onopen = function () {
-                sendCallSocketMessage({
-                    id: 'CREATE_SESSION',
-                    brokerAddress: '10.56.16.51:9093',
-                    clientId: 'token'
-                });
-
-                // Video Topics
-
-                const sendVideoOptions = {
-                    localVideo: uiLocalVideo,
-                    mediaConstraints: {
-                        audio: false,
-                        video: {
-                            width: 176,
-                            height: 144,
-                        }
-                    },
-                    onicecandidate: (candidate) => {
-                        sendCallSocketMessage({
-                            id: 'ADD_ICE_CANDIDATE',
-                            topic: callTopics['sendVideoTopic'],
-                            candidate: candidate
-                        })
-                    },
-                    configuration: {
-                        iceServers: [
-                            {"urls": "stun:" + turnIp + ":3478"},
-                            {
-                                "urls": "turn:" + turnIp + ":3478",
-                                "username": "mkhorrami",
-                                "credential": "mkh_123456"
-                            }
-                        ]
-                    }
-                };
-
-                const receiveVideoOptions = {
-                    remoteVideo: uiRemoteVideo,
-                    mediaConstraints: {audio: false, video: true},
-                    onicecandidate: (candidate) => {
-                        sendCallSocketMessage({
-                            id: 'ADD_ICE_CANDIDATE',
-                            topic: callTopics['receiveVideoTopic'],
-                            candidate: candidate
-                        })
-                    },
-                    configuration: {
-                        iceServers: [
-                            {"urls": "stun:" + turnIp + ":3478"},
-                            {
-                                "urls": "turn:" + turnIp + ":3478",
-                                "username": "mkhorrami",
-                                "credential": "mkh_123456"
-                            }
-                        ]
-                    }
-                };
-
-                console.log("[start] Create WebRtcVideoPeerReceiveOnly");
-
-                webRtcReceiveVideoPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(
-                    receiveVideoOptions,
-                    function (err) {
-                        if (err) {
-                            console.error("[start/WebRtcPeerRecvonly] Error: " + explainUserMediaError(err));
-                            return;
-                        }
-
-                        console.log("[start/WebRtcVideoPeerReceiveOnly] Created; generate SDP Offer");
-
-                        webRtcReceiveVideoPeer.generateOffer((err, sdpOffer) => {
-                            if (err) {
-                                console.error("[start/WebRtcVideoPeerReceiveOnly/generateOffer] " + err);
-                                return;
-                            }
-                            sendCallSocketMessage({
-                                id: 'RECIVE_SDP_OFFER',
-                                sdpOffer: sdpOffer,
-                                useComedia: true,
-                                useSrtp: false,
-                                topic: callTopics['receiveVideoTopic'],
-                                mediaType: 2
-                            });
-
-                            console.log("[start/WebRtcVideoPeerReceiveOnly/generateOffer] Done!");
-                        });
-                    }
-                );
-
-                webpeers[callTopics['receiveVideoTopic']] = webRtcReceiveVideoPeer;
-
-                console.log("[start] Create WebRtcVideoPeerSendOnly");
-
-                webRtcSendVideoPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerSendonly(
-                    sendVideoOptions,
-                    function (err) {
-                        if (err) {
-                            sendCallSocketError("[start/WebRtcVideoPeerSendOnly] Error: " + explainUserMediaError(err));
-                            callStop();
-                            return;
-                        }
-
-                        console.log("[start/WebRtcVideoPeerSendOnly] Created; start local video");
-
-                        startMedia(uiLocalVideo);
-
-                        console.log("[start/WebRtcVideoPeerSendOnly] Generate SDP Offer");
-                        webRtcSendVideoPeer.generateOffer((err, sdpOffer) => {
-                            if (err) {
-                                sendCallSocketError("[start/WebRtcVideoPeerSendOnly/generateOffer] Error: " + err);
-                                callStop();
-                                return;
-                            }
-                            sendCallSocketMessage({
-                                id: 'SEND_SDP_OFFER',
-                                topic: callTopics['sendVideoTopic'],
-                                sdpOffer: sdpOffer,
-                                mediaType: 2
-                            });
-
-                            console.log("[start/WebRtcVideoPeerSendOnly/generateOffer] Done!");
-                        });
-                    }
-                );
-
-                webpeers[callTopics['sendVideoTopic']] = webRtcSendVideoPeer;
-
-                // Audio Topics
-
-                const sendAudioOptions = {
-                    localVideo: uiLocalAudio,
-                    mediaConstraints: {audio: true, video: false},
-                    onicecandidate: (candidate) => {
-                        sendCallSocketMessage({
-                            id: 'ADD_ICE_CANDIDATE',
-                            topic: callTopics['sendAudioTopic'],
-                            candidate: candidate,
-                        })
-                    },
-                };
-
-                const receiveAudioOptions = {
-                    remoteVideo: uiRemoteAudio,
-                    mediaConstraints: {audio: true, video: false},
-                    onicecandidate: (candidate) => {
-                        sendCallSocketMessage({
-                            id: 'ADD_ICE_CANDIDATE',
-                            topic: callTopics['receiveAudioTopic'],
-                            candidate: candidate,
-                        })
-                    },
-                };
-
-                console.log("[start] Create WebRtcAudioPeerSendOnly");
-
-                webRtcSendAudioPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerSendonly(
-                    sendAudioOptions,
-                    function (err) {
-                        if (err) {
-                            sendCallSocketError("[start/WebRtcAudioPeerSendOnly] Error: " + explainUserMediaError(err));
-                            callStop();
-                            return;
-                        }
-
-                        console.log("[start/WebRtcAudioPeerSendOnly] Created; start local Audio");
-
-                        startMedia(uiLocalAudio);
-
-                        console.log("[start/WebRtcAudioPeerSendOnly] Generate SDP Offer");
-
-                        webRtcSendAudioPeer.generateOffer((err, sdpOffer) => {
-                            if (err) {
-                                sendCallSocketError("[start/WebRtcAudioPeerSendOnly/generateOffer] Error: " + err);
-                                callStop();
-                                return;
-                            }
-                            sendCallSocketMessage({
-                                id: 'SEND_SDP_OFFER',
-                                topic: callTopics['sendAudioTopic'],
-                                sdpOffer: sdpOffer,
-                            });
-
-                            console.log("[start/WebRtcAudioPeerSendOnly/generateOffer] Done!");
-                        });
-                    }
-                );
-
-                webpeers[callTopics['sendAudioTopic']] = webRtcSendAudioPeer;
-
-                console.log("[start] Create WebRtcAudioPeerReceiveOnly");
-
-                webRtcReceiveAudioPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(
-                    receiveAudioOptions,
-                    function (err) {
-                        if (err) {
-                            console.error("[start/WebRtcAudioPeerReceiveOnly] Error: " + explainUserMediaError(err));
-                            return;
-                        }
-
-                        console.log("[start/WebRtcAudioPeerReceiveOnly] Created; generate SDP Offer");
-
-                        webRtcReceiveAudioPeer.generateOffer((err, sdpOffer) => {
-                            if (err) {
-                                console.error("[start/WebRtcAudioPeerReceiveOnly/generateOffer] " + err);
-                                return;
-                            }
-                            sendCallSocketMessage({
-                                id: 'RECIVE_SDP_OFFER',
-                                sdpOffer: sdpOffer,
-                                useComedia: true,
-                                useSrtp: false,
-                                topic: callTopics['receiveAudioTopic']
-                            });
-
-                            console.log("[start/WebRtcAudioPeerReceiveOnly/generateOffer] Done!");
-                        });
-                    }
-                );
-
-                webpeers[callTopics['receiveAudioTopic']] = webRtcReceiveAudioPeer;
-            };
-
-            callWebSocket.onmessage = function (message) {
-                const jsonMessage = JSON.parse(message.data);
-                // console.log("[onmessage] Received message: " + message.data);
-
-                switch (jsonMessage.id) {
-                    case 'PROCESS_SDP_ANSWER':
-                        handleProcessSdpAnswer(jsonMessage);
-                        break;
-                    case 'ADD_ICE_CANDIDATE':
-                        handleAddIceCandidate(jsonMessage);
-                        break;
-                    case 'GET_KEY_FRAME':
-                        setTimeout(restartMedia, 8000);
-                        break;
-                    case 'ERROR':
-                        handleError(jsonMessage, sendingTopic, receiveTopic);
-                        break;
-                    default:
-                        console.warn("[onmessage] Invalid message, id: " + jsonMessage.id);
-                        break;
-                }
-            }
-        }
-
-        function sendCallSocketMessage(message) {
-            if (callWebSocket.readyState !== callWebSocket.OPEN) {
-                console.warn("[sendMessage] Skip, WebSocket session isn't open");
-                return;
-            }
-
-            const jsonMessage = JSON.stringify(message);
-            // console.log("[sendMessage] message: " + jsonMessage);
-            callWebSocket.send(jsonMessage);
-        }
-
-        function sendCallSocketError(message) {
-            console.error(message);
-
-            sendCallSocketMessage({
-                id: 'ERROR',
-                message: message,
-            });
-        }
-
-        function explainUserMediaError(err) {
-            console.log({err})
-            const n = err.name;
-            if (n === 'NotFoundError' || n === 'DevicesNotFoundError') {
-                return "Missing webcam for required tracks";
-            } else if (n === 'NotReadableError' || n === 'TrackStartError') {
-                return "Webcam is already in use";
-            } else if (n === 'OverconstrainedError' || n === 'ConstraintNotSatisfiedError') {
-                return "Webcam doesn't provide required tracks";
-            } else if (n === 'NotAllowedError' || n === 'PermissionDeniedError') {
-                return "Webcam permission has been denied by the user";
-            } else if (n === 'TypeError') {
-                return "No media tracks have been requested";
-            } else {
-                return "Unknown error: " + err;
-            }
-        }
-
-        function startMedia(media) {
-            media.play().catch((err) => {
-                if (err.name === 'NotAllowedError') {
-                    console.error("[start] Browser doesn't allow playing media: " + err);
-                } else {
-                    console.error("[start] Error in media.play(): " + err);
-                }
-            });
-        }
-
-        function restartMedia() {
-            uiLocalVideo.pause();
-            webRtcPeer.getLocalStream().getTracks()[0].enabled = false;
-            webRtcPeer.getLocalStream().getTracks()[0].applyConstraints({width: 160});
-
-            setTimeout(function () {
-                webRtcPeer.getLocalStream().getTracks()[0].applyConstraints({width: 176});
-                webRtcPeer.getLocalStream().getTracks()[0].enabled = true;
-                uiLocalVideo.play()
-            }, 1000);
-        }
-
-        function handleProcessSdpAnswer(jsonMessage) {
-            console.log("[handleProcessSdpAnswer] SDP Answer from Kurento, process in WebRTC Peer");
-
-            let sampleWebRtc = webpeers[jsonMessage.topic];
-            console.log({sampleWebRtc});
-            if (sampleWebRtc == null) {
-                console.warn("[handleProcessSdpAnswer] Skip, no WebRTC Peer");
-                return;
-            }
-
-            sampleWebRtc.processAnswer(jsonMessage.sdpAnswer, (err) => {
-                if (err) {
-                    sendCallSocketError("[handleProcessSdpAnswer] Error: " + err);
-                    callStop();
-                    return;
-                }
-
-                console.log("[handleProcessSdpAnswer] SDP Answer ready; start remote video");
-                startMedia(uiRemoteVideo);
-            });
-        }
-
-        function handleAddIceCandidate(jsonMessage) {
-            let sampleWebRtc = webpeers[jsonMessage.topic];
-            if (sampleWebRtc == null) {
-                console.warn("[handleAddIceCandidate] Skip, no WebRTC Peer");
-                return;
-            }
-
-            sampleWebRtc.addIceCandidate(jsonMessage.candidate, (err) => {
-                if (err) {
-                    console.error("[handleAddIceCandidate] " + err);
-                    return;
-                }
-            });
-        }
-
-        function handleError(jsonMessage, sendingTopic, receiveTopic) {
-            const errMessage = jsonMessage.message;
-            console.error("Kurento error: " + errMessage);
-
-            console.log("Assume that the other side stops after an error...");
-            callStop(sendingTopic, receiveTopic);
-        }
-
-        function callStop(sendingTopic, receiveTopic) {
-
-            console.log("[stop]");
-            //
-            // if (webRtcSendVideoPeer) {
-            //     webRtcSendVideoPeer.dispose();
-            //     webRtcSendVideoPeer = null;
-            // }
-            //
-            // if (webRtcReceiveVideoPeer) {
-            //     webRtcReceiveVideoPeer.dispose();
-            //     webRtcReceiveVideoPeer = null;
-            // }
-            //
-            // if (webRtcSendAudioPeer) {
-            //     webRtcSendAudioPeer.dispose();
-            //     webRtcSendAudioPeer = null;
-            // }
-            //
-            // if (webRtcReceiveAudioPeer) {
-            //     webRtcReceiveAudioPeer.dispose();
-            //     webRtcReceiveAudioPeer = null;
-            // }
-
-            for (var i = 0; i < webpeers.length; i++) {
-                if (webpeers[i]) {
-                    webpeers[i].dispose();
-                    webpeers[i] = null;
-                }
-            }
-
-            sendCallSocketMessage({
-                id: 'STOP',
-                topic: sendingTopic
-            });
-
-            sendCallSocketMessage({
-                id: 'STOP',
-                topic: receiveTopic
-            });
-        }
-
-        // End Of Call Functions
 
         function getUserInfo() {
             chatAgent.getUserInfo(function (userInfo) {
@@ -1808,6 +1384,10 @@
             font-family: monospace;
         }
 
+        body {
+            max-width: 500px;
+        }
+
         .btn {
             padding: 5px 15px;
             color: #fff;
@@ -1846,14 +1426,14 @@
         }
 
         .video-wrapper {
-            width: 44%;
-            float: left;
+            width: auto;
             text-align: center;
         }
 
         .video-wrapper video {
             max-width: 100%;
             background-color: bisque;
+            border: solid 5px bisque;
         }
 
         .video-wrapper audio {
@@ -1864,7 +1444,7 @@
     </style>
 </head>
 
-<body style="max-width: 600px;">
+<body>
 <p>POD CHAT <span id="reconnect">Reconnect...</span> | <span id="clearCache">Clear User Cache</span> | <span
         id="deleteCache">Delete Cache</span></p>
 Token: <input type="text" id="tokenInput" autocomplete="on" width="500">
@@ -1876,13 +1456,22 @@ Thread: <input type="text" id="threadInput" autocomplete="on" width="500">
 <form>
     <fieldset>
         <legend>Call</legend>
-        <label for="call-p2p-thread">Call P2P Thread Id : </label>
+        <label for="call-p2p-thread">P2P Thread Id : </label>
         <input type="text" name="call-p2p-thread" id="call-p2p-thread" value="4441" class="custom-thread-id">
 
         <a class="btn" href="#" onclick="chatAgent.startCall({
             threadId: document.getElementById('call-p2p-thread').value,
             type: 'video'
-        })">Make Call</a>
+        })">P2P Call</a>
+        <br>
+
+        <label for="call-group-thread">Group Thread Id : </label>
+        <input type="text" name="call-group-thread" id="call-group-thread" value="37014" class="custom-thread-id">
+
+        <a class="btn" href="#" onclick="chatAgent.startGroupCall({
+            threadId: document.getElementById('call-group-thread').value,
+            type: 'video'
+        })">Group Call</a>
         <br>
         <br>
 
@@ -1908,29 +1497,14 @@ Thread: <input type="text" id="threadInput" autocomplete="on" width="500">
 
         <br>
 
-        <fieldset class="video-wrapper">
-            <legend>Local stream</legend>
+        <div class="video-wrapper" id="call-div"></div>
 
-            <video id="uiLocalVideo"
-                   width="320px"
-                   height="240px"
-                   playsinline
-                   muted></video>
+        <br style="clear: fix">
 
-            <audio id="uiLocalAudio" autoplay controls></audio>
-        </fieldset>
+        <a class="btn" href="#" onclick="chatAgent.restartMedia()">Restart Call</a>
+        <a class="btn" href="#" onclick="chatAgent.callStop()">Stop Call</a>
 
-        <fieldset class="video-wrapper">
-            <legend>Remote Stream</legend>
-
-            <video id="uiRemoteVideo"
-                   width="320px"
-                   height="240px"
-                   playsinline></video>
-
-            <audio id="uiRemoteAudio" autoplay controls></audio>
-        </fieldset>
-    </fieldset>
+    </div>
 </form>
 
 
