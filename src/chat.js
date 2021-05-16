@@ -250,6 +250,11 @@
                 : '',
             callTopics = {},
             callWebSocket = null,
+            callClientType = {
+                WEB: 1,
+                ANDROID: 2,
+                DESKTOP: 3
+            },
             webpeers = {},
             uiRemoteMedias = [],
             uiLocalVideo = null,
@@ -8143,6 +8148,7 @@
                         }, function () {
                             if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
                                 uploadImageToPodspaceUserGroup(fileUploadParams, function (result) {
+                                    console.log(result);
                                     if (!result.hasError) {
                                         // Send onFileUpload callback result
                                         if (typeof callbacks === 'object' && callbacks.hasOwnProperty('onFileUpload')) {
@@ -12741,7 +12747,9 @@
                 typeCode: params.typeCode,
                 pushMsgType: 3,
                 token: token
-            }, content = {};
+            }, content = {
+                creatorClientDto: {}
+            };
 
             if (params) {
                 if (typeof params.type === 'string' && callTypes.hasOwnProperty(params.type.toUpperCase())) {
@@ -12750,7 +12758,15 @@
                     content.type = 0x0; // Defaults to AUDIO Call
                 }
 
-                if (typeof +params.threadId === 'number' && params.threadId > 0) {
+                content.creatorClientDto.mute = (params.mute && typeof params.mute === 'boolean') ? params.mute : false;
+
+                if (params.clientType && typeof params.clientType === 'string' && callClientTypes[params.clientType.toUpperCase()] > 0) {
+                    content.creatorClientDto.clientType = callClientTypes[params.clientType.toUpperCase()];
+                } else {
+                    content.creatorClientDto.clientType = callClientType.WEB;
+                }
+
+                if (typeof +params.threadId === 'number' && +params.threadId > 0) {
                     content.threadId = +params.threadId;
                 } else {
                     if (Array.isArray(params.invitees)) {
@@ -12792,13 +12808,23 @@
                 typeCode: params.typeCode,
                 pushMsgType: 3,
                 token: token
-            }, content = {};
+            }, content = {
+                creatorClientDto: {}
+            };
 
             if (params) {
                 if (typeof params.type === 'string' && callTypes.hasOwnProperty(params.type.toUpperCase())) {
                     content.type = callTypes[params.type.toUpperCase()];
                 } else {
                     content.type = 0x0; // Defaults to AUDIO Call
+                }
+
+                content.creatorClientDto.mute = (typeof params.mute === 'boolean') ? params.mute : false;
+
+                if (params.clientType && typeof params.clientType === 'string' && callClientTypes[params.clientType.toUpperCase()] > 0) {
+                    content.creatorClientDto.clientType = callClientTypes[params.clientType.toUpperCase()];
+                } else {
+                    content.creatorClientDto.clientType = callClientType.WEB;
                 }
 
                 if (typeof +params.threadId === 'number' && params.threadId > 0) {
@@ -12899,6 +12925,12 @@
 
                 if (typeof params.videoCall === 'boolean' && params.videoCall) {
                     content.videoCall = true;
+                }
+
+                if (params.clientType && typeof params.clientType === 'string' && callClientTypes[params.clientType.toUpperCase()] > 0) {
+                    content.clientType = callClientTypes[params.clientType.toUpperCase()];
+                } else {
+                    content.clientType = callClientType.WEB;
                 }
 
                 acceptCallData.content = JSON.stringify(content);

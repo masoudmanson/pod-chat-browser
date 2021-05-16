@@ -23,9 +23,7 @@
     <script type="text/javascript">
         // Developement
         var PodChat = window.POD.Chat;
-
-        // Production
-        //        var PodChat = window.PodChat;
+        var env = 'sandbox'; // main | sandbox | integration
 
         var params = {
             appId: new Date().getTime(),
@@ -43,35 +41,12 @@
             // queueConnectionTimeout: 20000,
             // serverName: "chat-server",
 
-            /**
-             * Main Server
-             */
-            // socketAddress: 'wss://msg.pod.ir/ws', // {**REQUIRED**} Socket Address
-            // ssoHost: 'https://accounts.pod.ir', // {**REQUIRED**} Socket Address
-            // platformHost: 'https://api.pod.ir/srv/core', // {**REQUIRED**} Platform Core Address
-            // fileServer: 'https://core.pod.ir', // {**REQUIRED**} File Server Address
-            // podSpaceFileServer: 'https://podspace.pod.ir', // {**REQUIRED**} File Server Address
-            // serverName: 'chat-server', // {**REQUIRED**} Server to to register on
-
-            /**
-             * Sand Box
-             */
-            socketAddress: "wss://chat-sandbox.pod.ir/ws",
-            ssoHost: "https://accounts.pod.ir",
-            platformHost: "https://sandbox.pod.ir:8043/srv/basic-platform",
-            fileServer: 'https://core.pod.ir',
-            podSpaceFileServer: 'https://podspace.pod.ir',
-            serverName: "chat-server",
-
-            /**
-             * Integration
-             */
-            // socketAddress: "ws://172.16.110.235:8003/ws",
-            // ssoHost: "http://172.16.110.76",
-            // platformHost: "http://172.16.110.235:8003/srv/bptest-core",
-            // fileServer: 'https://core.pod.ir',
-            // podSpaceFileServer: 'http://172.16.110.61:8780/podspace',
-            // serverName: "chatlocal",
+            socketAddress: CONFIG[env].socketAddress,
+            ssoHost: CONFIG[env].ssoHost,
+            platformHost: CONFIG[env].platformHost,
+            fileServer: CONFIG[env].fileServer,
+            podSpaceFileServer: CONFIG[env].podSpaceFileServer,
+            serverName: CONFIG[env].serverName,
 
             token: CONFIG.token,
             grantDeviceIdFromSSO: false,
@@ -87,9 +62,9 @@
             httpRequestTimeout: 30000,
             httpUploadRequestTimeout: 0,
             forceWaitQueueInMemory: true,
-            asyncRequestTimeout: 500,
+            asyncRequestTimeout: 50000,
             callOptions: {
-                callSocketAddress: "wss://46.32.6.187/gsthandler",
+                callSocketAddress: "wss://46.32.6.187",
                 callTurnIp: "46.32.6.188",
                 callDivId: "call-div",
                 callAudioTagClassName: "podcall-audio",
@@ -110,6 +85,56 @@
          * Main Chat Ready Listener
          */
         var chatReadyInstance = chatAgent.on("chatReady", function () {
+
+            // chatAgent.createBot({
+            //     botName: 'takiBOT',
+            // }, function (res) {
+            //     console.log(res);
+            // });
+
+            // chatAgent.getBotCommandsList({
+            //     botName: 'takiBOT'
+            // }, function (res) {
+            //     console.log(res);
+            // });
+            //
+            // chatAgent.defineBotCommand({
+            //     botName: 'takiBOT',
+            //     commandList: ['start', 'finish', 'scoreboard']
+            // }, function (res) {
+            //     console.log(res);
+            // });
+
+            // chatAgent.addParticipants({
+            //     threadId: 149486,
+            //     usernames: ['takiBOT']
+            // }, function (res) {
+            //     console.log(res);
+            // });
+
+            // removeParticipants(149486, [3945575]);
+            //
+            // chatAgent.startBot({
+            //     threadId: 149486,
+            //     botName: 'takiBOT'
+            // }, function (res) {
+            //     console.log(res);
+            // });
+
+            // chatAgent.getThreadAllBots({threadId: 149486}, function (res) {
+            //     console.log(res)
+            // });
+
+            // chatAgent.closeThread({
+            //     threadId: 451618
+            // }, function (res) {
+            //
+            //     console.log(res);
+            //     chatAgent.getThreads({}, function(threads) {
+            //         console.log(threads.result);
+            //     });
+            // });
+
             // chatAgent.sendLocationPing({
             //     location: 'contacts'
             // }, function(res) {
@@ -140,9 +165,15 @@
             // });
 
             // chatAgent.getCallsList({
-            //     // type: 'video'
-            //     // callIds: [273, 274]
-            //     name: 'فرهاد'
+            //     type: 'video',
+            //     callIds: [273, 274],
+            //     name: 'فرهاد',
+            //     count: 50,
+            //     offset: 0,
+            //     creatorCoreUserId: 2648,
+            //     creatorSsoId: 131,
+            //     uniqueId: '3r42f-f242hf-u45bsd3-ber42',
+            //     contactType: 'default',
             // }, function(calls){
             //     console.log({calls});
             // });
@@ -226,7 +257,7 @@
             //     count: 50,
             //     offset: 0,
             //     // threadIds: [312, 1210],
-            //     threadName: "فرهاد"
+            //     threadName: "مخدوم"
             // });
 
 
@@ -287,11 +318,11 @@
              * @param metaQuery
              * @param query
              */
-            // getHistory({
+            // chatAgent.getHistory({
             //     count: 50,
-            //     offset: 0,
-            //     threadId: 149486,
-            //     fromTimeFull: 1611728867161577000,
+            //     offset: 200,
+            //     threadId: 489068,
+            //     // fromTimeFull: 1611728867161577000,
             //     order: 'asc',
             //     // firstMessageId: 17035,
             //     // order: "ASC",
@@ -304,8 +335,10 @@
             //     //     "is": "1534835339446"
             //     //   }]
             //     // },
-            //     query: "کِیفین",
+            //     // query: "/start@takiBOT",
             //     // messageType: 'sticker'
+            // }, function (history) {
+            //     console.log(history)
             // });
 
             /**
@@ -370,7 +403,7 @@
             //     // contactId: "7741",
             //     // cellphoneNumber: "912",
             //     // email: "gmail.com",
-            //     // query: "بهنام",
+            //     query: "شهبازی",
             //     // uniqueId: "672803e8-455f-4201-b0d6-64216b19679a"
             // });
 
@@ -401,10 +434,10 @@
              * @param email
              */
             // var addContactInstantResult = chatAgent.addContacts({
-            //   firstName: "حامد",
-            //   lastName: "مهرآرا",
-            //   cellphoneNumber: "09188644304",
-            //   email: "hamed.m844a@gmail.com"
+            //   firstName: "Poo",
+            //   lastName: "Pah",
+            //   cellphoneNumber: "09387",
+            //   email: "poo@gmail.com"
             // }, function(result) {
             //   console.log(result);
             // });
@@ -514,7 +547,7 @@
              * @param threadId
              * @param messageId
              */
-            // replyMessage(8543, 881920, "Reply to message.");
+            // replyMessage(149486, 1582759, "...");
 
             /**
              * FORWARD MESSAGE
@@ -681,7 +714,7 @@
              * Create Bot
              */
             // chatAgent.createBot({
-            //     botName: 'docsBOT'
+            //     botName: 'game1BOT'
             // }, (result) => {
             //     console.log(result);
             // });
@@ -703,6 +736,8 @@
             // });
 
             // addParticipants(8543, 'username', ['docsBOT']);
+            // addParticipants(149486, 'username', ['salman.shahbazi']);
+            // addParticipants(149486, 'contact', [25023511]);
 
             /*
              * Start Bot
@@ -978,7 +1013,7 @@
                 case 'contact':
                     chatAgent.addParticipants({
                         threadId: threadId,
-                        contacts: participants
+                        contactIds: participants
                     }, function (result) {
                         console.log(result);
                     });
@@ -1007,11 +1042,10 @@
         function removeParticipants(threadId, participants) {
             chatAgent.removeParticipants({
                 threadId: threadId,
-                participants: participants
+                participantIds: participants
             }, function (result) {
                 // console.log(result);
             });
-
         }
 
         function leaveThread(threadId) {
@@ -1504,7 +1538,7 @@ Thread: <input type="text" id="threadInput" autocomplete="on" width="500">
         <a class="btn" href="#" onclick="chatAgent.restartMedia()">Restart Call</a>
         <a class="btn" href="#" onclick="chatAgent.callStop()">Stop Call</a>
 
-    </div>
+        </div>
 </form>
 
 
@@ -2053,7 +2087,18 @@ Thread: <input type="text" id="threadInput" autocomplete="on" width="500">
                 image: document.getElementById("createThreadImage").value,
                 description: document.getElementById("createThreadDesc").value,
                 metadata: document.getElementById("createThreadMetadata").value,
-                uniqueName: document.getElementById("createThreadPublicName").value
+                uniqueName: document.getElementById("createThreadPublicName").value,
+                message: {
+                    uniqueId: "9766b140-24a9-49fb-a02e-6aff7242e5a6",
+                    text: "This is a new Mesage",
+                    metadata: {
+                        messageTime: new Date()
+                    },
+                    systemMetadata: {
+                        id: new Date().getTime()
+                    },
+                    type: 1
+                }
             };
 
             if (Array.isArray(invitees)) {
@@ -2431,7 +2476,7 @@ Thread: <input type="text" id="threadInput" autocomplete="on" width="500">
             var hashCode = document.getElementById("fileHash").value;
 
             chatAgent.getFileFromPodspace({
-                hashCode: 'qef78wse80vs587wserfwv',
+                hashCode: hashCode,
                 responseType: 'link'
             }, function (result) {
                 console.log(result);
