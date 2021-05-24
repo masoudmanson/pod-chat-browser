@@ -227,6 +227,7 @@
                 'VOICE': 0x0,
                 'VIDEO': 0x1
             },
+            callOptions: params.callOptions,
             callSocketAddress = (params.callOptions
                 && params.callOptions.hasOwnProperty(callSocketAddress)
                 && typeof params.callOptions.callSocketAddress === 'string')
@@ -9612,7 +9613,8 @@
              */
             startCallWebRTCFunctions = function (params, callback) {
                 console.log('startCallWebRTCFunctions called!');
-                console.log(params.callOptions);
+                console.log(callVideoTagClassName);
+                console.log(callAudioTagClassName);
                 console.log(callTopics);
                 if (callDivId) {
                     var callParentDiv,
