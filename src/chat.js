@@ -227,7 +227,7 @@
                 'VOICE': 0x0,
                 'VIDEO': 0x1
             },
-            callOptions: params.callOptions,
+            callOptions = params.callOptions,
             callSocketAddress = (params.callOptions
                 && params.callOptions.hasOwnProperty(callSocketAddress)
                 && typeof params.callOptions.callSocketAddress === 'string')
