@@ -68,7 +68,8 @@
                 callTurnIp: "46.32.6.188",
                 callDivId: "call-div",
                 callAudioTagClassName: "podcall-audio",
-                callVideoTagClassName: "podcall-video"
+                callVideoTagClassName: "podcall-video",
+                callPingInterval: 8000
             },
             asyncLogging: {
                 onFunction: true,
@@ -86,6 +87,14 @@
          */
         var chatReadyInstance = chatAgent.on("chatReady", function () {
 
+            // chatAgent.changeThreadPrivacy({
+            //     threadId: 475387,
+            //     threadType: 'PUBLIC_GROUP',
+            //     uniqueName: 'takeGhadKeshide4'
+            // }, function(result) {
+            //     console.log(result);
+            // });
+
             // chatAgent.createBot({
             //     botName: 'takiBOT',
             // }, function (res) {
@@ -93,14 +102,14 @@
             // });
 
             // chatAgent.getBotCommandsList({
-            //     botName: 'takiBOT'
+            //     botName: 'talkyBOT'
             // }, function (res) {
             //     console.log(res);
             // });
             //
             // chatAgent.defineBotCommand({
             //     botName: 'takiBOT',
-            //     commandList: ['start', 'finish', 'scoreboard']
+            //     commandList: ['start', 'finish', 'scoreboard', 'dev']
             // }, function (res) {
             //     console.log(res);
             // });
@@ -112,8 +121,10 @@
             //     console.log(res);
             // });
 
+
             // removeParticipants(149486, [3945575]);
             //
+
             // chatAgent.startBot({
             //     threadId: 149486,
             //     botName: 'takiBOT'
