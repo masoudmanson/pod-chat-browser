@@ -9611,6 +9611,9 @@
              * Call Functionalities
              */
             startCallWebRTCFunctions = function (params, callback) {
+                console.log('startCallWebRTCFunctions called!');
+                console.log(params.callOptions);
+                console.log(callTopics);
                 if (callDivId) {
                     var callParentDiv,
                         callVideo = (typeof params.video === 'boolean') ? params.video : true,
