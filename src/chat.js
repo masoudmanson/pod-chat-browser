@@ -9695,7 +9695,8 @@
             },
 
             initCallSocket = function (params) {
-                console.log('Init call sockets')
+                callWebSocket && callWebSocket.close();
+
                 callWebSocket = new WebSocket(callSocketAddress);
 
                 callWebSocket.onopen = function () {
@@ -10156,9 +10157,7 @@
                 callStop(sendingTopic, receiveTopic);
             },
 
-            callStop = function () {
-                console.log("[stop]");
-
+            callStop = function (params) {
                 for (var i in webpeers) {
                     if (webpeers[i]) {
                         webpeers[i].dispose();
@@ -10172,6 +10171,8 @@
                         topic: callTopics[i].substr(3)
                     });
                 }
+
+                callWebSocket && callWebSocket.close();
             };
 
         /******************************************************
@@ -13360,6 +13361,7 @@
 
             return sendMessage(endCallData, {
                 onResult: function (result) {
+                    callStop();
                     callback && callback(result);
                 }
             });
