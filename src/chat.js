@@ -253,7 +253,8 @@
                 && typeof params.callOptions.callVideoTagClassName === 'string')
                 ? params.callOptions.callVideoTagClassName
                 : '',
-            callPingInterval = params.callOptions.callPingInterval || 8000,
+            callPingIntervalTime = params.callOptions.callPingInterval || 8000,
+            callPingInterval = null,
             callTopics = {},
             callWebSocket = null,
             callClientType = {
@@ -9739,6 +9740,8 @@
                 }
 
                 callWebSocket.onclose = function (event) {
+                    callPingInterval && clearInterval(callPingInterval);
+
                     fireEvent('callEvents', {
                         type: 'CALL_ERROR',
                         errorCode: 7000,
@@ -9749,7 +9752,9 @@
             },
 
             handleCallSocketOpen = function (params) {
-                setInterval(function () {
+                callPingInterval && clearInterval(callPingInterval);
+
+                callPingInterval = setInterval(function () {
                     if (callWebSocket.readyState !== callWebSocket.OPEN) {
                         fireEvent('callEvents', {
                             type: 'CALL_ERROR',
@@ -9757,10 +9762,17 @@
                             errorMessage: '[ping call socket] Skip, WebSocket session isn\'t open',
                             errorInfo: `callWebSocket.readyState = ${callWebSocket.readyState}`
                         });
+
+                        initCallSocket({
+                            video: params.callVideo,
+                            audio: params.callAudio,
+                            brokerAddress: params.brokerAddress
+                        });
+
                         return;
                     }
                     callWebSocket.send('');
-                }, callPingInterval);
+                }, callPingIntervalTime);
 
                 sendCallSocketMessage({
                     id: 'CREATE_SESSION',
