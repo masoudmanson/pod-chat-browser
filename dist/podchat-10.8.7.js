@@ -17586,6 +17586,7 @@ WildEmitter.mixin(WildEmitter);
                 'VOICE': 0x0,
                 'VIDEO': 0x1
             },
+            callOptions = params.callOptions,
             callSocketAddress = (params.callOptions
                 && params.callOptions.hasOwnProperty(callSocketAddress)
                 && typeof params.callOptions.callSocketAddress === 'string')
@@ -17611,7 +17612,8 @@ WildEmitter.mixin(WildEmitter);
                 && typeof params.callOptions.callVideoTagClassName === 'string')
                 ? params.callOptions.callVideoTagClassName
                 : '',
-            callPingInterval = params.callOptions.callPingInterval || 8000,
+            callPingIntervalTime = params.callOptions.callPingInterval || 8000,
+            callPingInterval = null,
             callTopics = {},
             callWebSocket = null,
             callClientType = {
@@ -26977,10 +26979,10 @@ WildEmitter.mixin(WildEmitter);
                         sendingTopic = params.sendingTopic,
                         receiveTopic = params.receiveTopic;
 
-                    callTopics['sendVideoTopic'] = 'vi-' + params.sendingTopic;
-                    callTopics['sendAudioTopic'] = 'vo-' + params.sendingTopic;
-                    callTopics['receiveVideoTopic'] = 'vi-' + params.receiveTopic;
-                    callTopics['receiveAudioTopic'] = 'vo-' + params.receiveTopic;
+                    callTopics['sendVideoTopic'] = 'Vi-' + params.sendingTopic;
+                    callTopics['sendAudioTopic'] = 'Vo-' + params.sendingTopic;
+                    callTopics['receiveVideoTopic'] = 'Vi-' + params.receiveTopic;
+                    callTopics['receiveAudioTopic'] = 'Vo-' + params.receiveTopic;
 
                     callParentDiv = document.getElementById(callDivId);
 
@@ -27053,7 +27055,8 @@ WildEmitter.mixin(WildEmitter);
             },
 
             initCallSocket = function (params) {
-                console.log('Init call sockets')
+                callWebSocket && callWebSocket.close();
+
                 callWebSocket = new WebSocket(callSocketAddress);
 
                 callWebSocket.onopen = function () {
@@ -27096,6 +27099,8 @@ WildEmitter.mixin(WildEmitter);
                 }
 
                 callWebSocket.onclose = function (event) {
+                    callPingInterval && clearInterval(callPingInterval);
+
                     fireEvent('callEvents', {
                         type: 'CALL_ERROR',
                         errorCode: 7000,
@@ -27106,7 +27111,9 @@ WildEmitter.mixin(WildEmitter);
             },
 
             handleCallSocketOpen = function (params) {
-                setInterval(function () {
+                callPingInterval && clearInterval(callPingInterval);
+
+                callPingInterval = setInterval(function () {
                     if (callWebSocket.readyState !== callWebSocket.OPEN) {
                         fireEvent('callEvents', {
                             type: 'CALL_ERROR',
@@ -27114,10 +27121,17 @@ WildEmitter.mixin(WildEmitter);
                             errorMessage: '[ping call socket] Skip, WebSocket session isn\'t open',
                             errorInfo: `callWebSocket.readyState = ${callWebSocket.readyState}`
                         });
+
+                        initCallSocket({
+                            video: params.callVideo,
+                            audio: params.callAudio,
+                            brokerAddress: params.brokerAddress
+                        });
+
                         return;
                     }
                     callWebSocket.send('');
-                }, callPingInterval);
+                }, callPingIntervalTime);
 
                 sendCallSocketMessage({
                     id: 'CREATE_SESSION',
@@ -27514,9 +27528,7 @@ WildEmitter.mixin(WildEmitter);
                 callStop(sendingTopic, receiveTopic);
             },
 
-            callStop = function () {
-                console.log("[stop]");
-
+            callStop = function (params) {
                 for (var i in webpeers) {
                     if (webpeers[i]) {
                         webpeers[i].dispose();
@@ -27530,6 +27542,8 @@ WildEmitter.mixin(WildEmitter);
                         topic: callTopics[i].substr(3)
                     });
                 }
+
+                callWebSocket && callWebSocket.close();
             };
 
         /******************************************************
@@ -30718,6 +30732,7 @@ WildEmitter.mixin(WildEmitter);
 
             return sendMessage(endCallData, {
                 onResult: function (result) {
+                    callStop();
                     callback && callback(result);
                 }
             });

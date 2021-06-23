@@ -9620,10 +9620,10 @@
                         sendingTopic = params.sendingTopic,
                         receiveTopic = params.receiveTopic;
 
-                    callTopics['sendVideoTopic'] = 'vi-' + params.sendingTopic;
-                    callTopics['sendAudioTopic'] = 'vo-' + params.sendingTopic;
-                    callTopics['receiveVideoTopic'] = 'vi-' + params.receiveTopic;
-                    callTopics['receiveAudioTopic'] = 'vo-' + params.receiveTopic;
+                    callTopics['sendVideoTopic'] = 'Vi-' + params.sendingTopic;
+                    callTopics['sendAudioTopic'] = 'Vo-' + params.sendingTopic;
+                    callTopics['receiveVideoTopic'] = 'Vi-' + params.receiveTopic;
+                    callTopics['receiveAudioTopic'] = 'Vo-' + params.receiveTopic;
 
                     callParentDiv = document.getElementById(callDivId);
 
