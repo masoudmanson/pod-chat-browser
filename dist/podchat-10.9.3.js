@@ -17588,27 +17588,27 @@ WildEmitter.mixin(WildEmitter);
             },
             callOptions = params.callOptions,
             callSocketAddress = (params.callOptions
-                && params.callOptions.hasOwnProperty(callSocketAddress)
+                && params.callOptions.hasOwnProperty('callSocketAddress')
                 && typeof params.callOptions.callSocketAddress === 'string')
                 ? params.callOptions.callSocketAddress
                 : 'wss://46.32.6.187/gsthandler',
             callTurnIp = (params.callOptions
-                && params.callOptions.hasOwnProperty(callTurnIp)
+                && params.callOptions.hasOwnProperty('callTurnIp')
                 && typeof params.callOptions.callTurnIp === 'string')
                 ? params.callOptions.callTurnIp
                 : '46.32.6.188',
             callDivId = (params.callOptions
-                && params.callOptions.hasOwnProperty(callDivId)
+                && params.callOptions.hasOwnProperty('callDivId')
                 && typeof params.callOptions.callDivId === 'string')
                 ? params.callOptions.callDivId
                 : 'call-div',
             callAudioTagClassName = (params.callOptions
-                && params.callOptions.hasOwnProperty(callAudioTagClassName)
+                && params.callOptions.hasOwnProperty('callAudioTagClassName')
                 && typeof params.callOptions.callAudioTagClassName === 'string')
                 ? params.callOptions.callAudioTagClassName
                 : '',
             callVideoTagClassName = (params.callOptions
-                && params.callOptions.hasOwnProperty(callVideoTagClassName)
+                && params.callOptions.hasOwnProperty('callVideoTagClassName')
                 && typeof params.callOptions.callVideoTagClassName === 'string')
                 ? params.callOptions.callVideoTagClassName
                 : '',
