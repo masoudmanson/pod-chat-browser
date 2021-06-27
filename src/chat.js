@@ -9681,6 +9681,7 @@
                         uiRemoteMedias[callTopics['receiveVideoTopic']].setAttribute('id', 'uiRemoteVideo-' + callTopics['receiveVideoTopic']);
                         uiRemoteMedias[callTopics['receiveVideoTopic']].setAttribute('class', callVideoTagClassName);
                         uiRemoteMedias[callTopics['receiveVideoTopic']].setAttribute('playsinline', '');
+                        uiRemoteMedias[callTopics['receiveVideoTopic']].setAttribute('muted', '');
                         uiRemoteMedias[callTopics['receiveVideoTopic']].setAttribute('width', callVideoMinWidth + 'px');
                         uiRemoteMedias[callTopics['receiveVideoTopic']].setAttribute('height', callVideoMinHeight + 'px');
                     }
@@ -9731,7 +9732,8 @@
             },
 
             initCallSocket = function (params) {
-                callWebSocket && callWebSocket.close();
+                if(callWebSocket)
+                    callWebSocket.close();
 
                 callWebSocket = new WebSocket(callSocketAddress);
 
@@ -10263,7 +10265,7 @@
                         uiRemoteMedias[RTCStream].srcObject = null;
                     }
 
-                    callParentDiv.removeChild(uiRemoteMedias[RTCStream]);
+                    uiRemoteMedias[RTCStream].remove();
                     delete (uiRemoteMedias[RTCStream]);
                 }
             },
