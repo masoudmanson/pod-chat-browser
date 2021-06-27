@@ -10134,7 +10134,7 @@
             },
 
             restartMedia = function () {
-                if (webpeers[callTopics['sendVideoTopic']] && !!webpeers[callTopics['sendVideoTopic']].getLocalStream()) {\
+                if (webpeers[callTopics['sendVideoTopic']] && !!webpeers[callTopics['sendVideoTopic']].getLocalStream()) {
                     if (navigator && !!navigator.userAgent.match(/firefox/gi)) {
                         webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].enabled = false;
                     }
