@@ -253,6 +253,18 @@
                 && typeof params.callOptions.callVideoTagClassName === 'string')
                 ? params.callOptions.callVideoTagClassName
                 : '',
+            callVideoMinWidth = (params.callOptions
+                && params.callOptions.hasOwnProperty('callVideo')
+                && typeof params.callOptions.callVideo === 'object'
+                && params.callOptions.callVideo.hasOwnProperty('minWidth'))
+                ? params.callOptions.callVideo.minWidth
+                : 320,
+            callVideoMinHeight = (params.callOptions
+                && params.callOptions.hasOwnProperty('callVideo')
+                && typeof params.callOptions.callVideo === 'object'
+                && params.callOptions.callVideo.hasOwnProperty('minHeight'))
+                ? params.callOptions.callVideo.minHeight
+                : 180,
             callPingIntervalTime = params.callOptions.callPingInterval || 8000,
             callPingInterval = null,
             callTopics = {},
@@ -263,8 +275,7 @@
                 DESKTOP: 3
             },
             webpeers = {},
-            uiRemoteMedias = [],
-            uiLocalVideo = null,
+            uiRemoteMedias = {},
             systemMessageIntervalPitch = params.systemMessageIntervalPitch || 1000,
             isTypingInterval,
             protocol = params.protocol || 'websocket',
@@ -1066,7 +1077,7 @@
                                         fileHashCode = fileUploadResult.result.hashCode;
                                     }
                                 } catch (e) {
-                                    console.log(e)
+                                    consoleLogging && console.log(e)
                                 }
 
                                 fireEvent('fileUploadEvents', {
@@ -3159,7 +3170,7 @@
                         callReceived({
                             callId: messageContent.callId
                         }, function (r) {
-                            console.log('Receive Call Ack has been sent', r);
+
                         });
 
                         if (messagesCallbacks[uniqueId]) {
@@ -3204,7 +3215,7 @@
                         break;
 
                     /**
-                     * Type 73    Receive Call Rwequest
+                     * Type 73    Receive Call Request
                      */
                     case chatMessageVOTypes.RECIVE_CALL_REQUEST:
                         if (messagesCallbacks[uniqueId]) {
@@ -3233,12 +3244,13 @@
                             result: messageContent
                         });
 
+                        //TODO : Check video status
                         startCallWebRTCFunctions({
-                            video: true,
-                            audio: true,
+                            video: true,//messageContent.clientDTO.video,
+                            mute: false,//messageContent.clientDTO.mute,
                             sendingTopic: messageContent.clientDTO.topicSend,
                             receiveTopic: messageContent.clientDTO.topicReceive,
-                            brokerAddress: '10.56.16.53:9093',//messageContent.clientDTO.brokerAddress.split(',')[0]
+                            brokerAddress: messageContent.clientDTO.brokerAddress
                         }, function (callDivs) {
                             fireEvent('callEvents', {
                                 type: 'CALL_DIVS',
@@ -3261,6 +3273,8 @@
                             result: messageContent
                         });
 
+                        callStop();
+
                         break;
 
                     /**
@@ -3275,6 +3289,8 @@
                             type: 'CALL_ENDED',
                             result: messageContent
                         });
+
+                        callStop();
 
                         break;
 
@@ -3316,6 +3332,8 @@
                             result: messageContent
                         });
 
+                        restartMedia();
+
                         break;
 
                     /**
@@ -3335,7 +3353,6 @@
                         callReceived({
                             callId: messageContent.callId
                         }, function (r) {
-                            console.log('Receive Call Ack has been sent', r);
                         });
 
                         if (messagesCallbacks[uniqueId]) {
@@ -3362,6 +3379,10 @@
                             result: messageContent
                         });
 
+                        if (!!messageContent[0].sendTopic) {
+                            removeFromCallUI(messageContent[0].sendTopic);
+                        }
+
                         break;
 
                     /**
@@ -3387,6 +3408,8 @@
                             result: messageContent
                         });
 
+                        restartMedia();
+
                         break;
 
                     /**
@@ -3402,6 +3425,7 @@
                             result: messageContent
                         });
 
+
                         break;
 
                     /**
@@ -3416,6 +3440,8 @@
                             type: 'TERMINATE_CALL',
                             result: messageContent
                         });
+
+                        callStop();
 
                         break;
 
@@ -3567,6 +3593,8 @@
                             type: 'START_RECORDING_CALL',
                             result: messageContent
                         });
+
+                        restartMedia();
 
                         break;
 
@@ -8293,7 +8321,6 @@
                         }, function () {
                             if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
                                 uploadImageToPodspaceUserGroup(fileUploadParams, function (result) {
-                                    console.log(result);
                                     if (!result.hasError) {
                                         // Send onFileUpload callback result
                                         if (typeof callbacks === 'object' && callbacks.hasOwnProperty('onFileUpload')) {
@@ -8879,7 +8906,7 @@
                                     });
                                 });
                         } else {
-                            console.log('Forced to use in memory cache');
+                            consoleLogging && console.log('Forced to use in memory cache');
                             item.uniqueId = waitQueueUniqueId;
                             chatWaitQueue.push(item);
                             callback && callback();
@@ -9616,26 +9643,26 @@
                 if (callDivId) {
                     var callParentDiv,
                         callVideo = (typeof params.video === 'boolean') ? params.video : true,
-                        callAudio = (typeof params.audio === 'boolean') ? params.audio : true,
+                        callMute = (typeof params.mute === 'boolean') ? params.mute : false,
                         sendingTopic = params.sendingTopic,
                         receiveTopic = params.receiveTopic;
 
-                    callTopics['sendVideoTopic'] = 'Vi-' + params.sendingTopic;
-                    callTopics['sendAudioTopic'] = 'Vo-' + params.sendingTopic;
-                    callTopics['receiveVideoTopic'] = 'Vi-' + params.receiveTopic;
-                    callTopics['receiveAudioTopic'] = 'Vo-' + params.receiveTopic;
+                    callTopics['sendVideoTopic'] = 'Vi-' + sendingTopic;
+                    callTopics['sendAudioTopic'] = 'Vo-' + sendingTopic;
+                    callTopics['receiveVideoTopic'] = 'Vi-' + receiveTopic;
+                    callTopics['receiveAudioTopic'] = 'Vo-' + receiveTopic;
 
                     callParentDiv = document.getElementById(callDivId);
 
                     // Local Video Tag
-                    if (!uiRemoteMedias[callTopics['sendVideoTopic']]) {
+                    if (callVideo && !uiRemoteMedias[callTopics['sendVideoTopic']]) {
                         uiRemoteMedias[callTopics['sendVideoTopic']] = document.createElement('video');
                         uiRemoteMedias[callTopics['sendVideoTopic']].setAttribute('id', 'uiRemoteVideo-' + callTopics['sendVideoTopic']);
                         uiRemoteMedias[callTopics['sendVideoTopic']].setAttribute('class', callVideoTagClassName);
                         uiRemoteMedias[callTopics['sendVideoTopic']].setAttribute('playsinline', '');
                         uiRemoteMedias[callTopics['sendVideoTopic']].setAttribute('muted', '');
-                        uiRemoteMedias[callTopics['sendVideoTopic']].setAttribute('width', '320px');
-                        uiRemoteMedias[callTopics['sendVideoTopic']].setAttribute('height', '240px');
+                        uiRemoteMedias[callTopics['sendVideoTopic']].setAttribute('width', callVideoMinWidth + 'px');
+                        uiRemoteMedias[callTopics['sendVideoTopic']].setAttribute('height', callVideoMinHeight + 'px');
                     }
 
                     // Local Audio Tag
@@ -9649,13 +9676,13 @@
                     }
 
                     // Remote Video Tag
-                    if (!uiRemoteMedias[callTopics['receiveVideoTopic']]) {
+                    if (callVideo && !uiRemoteMedias[callTopics['receiveVideoTopic']]) {
                         uiRemoteMedias[callTopics['receiveVideoTopic']] = document.createElement('video');
                         uiRemoteMedias[callTopics['receiveVideoTopic']].setAttribute('id', 'uiRemoteVideo-' + callTopics['receiveVideoTopic']);
                         uiRemoteMedias[callTopics['receiveVideoTopic']].setAttribute('class', callVideoTagClassName);
                         uiRemoteMedias[callTopics['receiveVideoTopic']].setAttribute('playsinline', '');
-                        uiRemoteMedias[callTopics['receiveVideoTopic']].setAttribute('width', '320px');
-                        uiRemoteMedias[callTopics['receiveVideoTopic']].setAttribute('height', '240px');
+                        uiRemoteMedias[callTopics['receiveVideoTopic']].setAttribute('width', callVideoMinWidth + 'px');
+                        uiRemoteMedias[callTopics['receiveVideoTopic']].setAttribute('height', callVideoMinHeight + 'px');
                     }
 
                     // Remote Audio Tag
@@ -9664,14 +9691,22 @@
                         uiRemoteMedias[callTopics['receiveAudioTopic']].setAttribute('id', 'uiRemoteAudio-' + callTopics['receiveAudioTopic']);
                         uiRemoteMedias[callTopics['receiveAudioTopic']].setAttribute('class', callAudioTagClassName);
                         uiRemoteMedias[callTopics['receiveAudioTopic']].setAttribute('autoplay', '');
+                        callMute && uiRemoteMedias[callTopics['receiveAudioTopic']].setAttribute('muted', '');
                         uiRemoteMedias[callTopics['receiveAudioTopic']].setAttribute('controls', '');
                     }
 
                     if (callParentDiv) {
-                        callParentDiv.appendChild(uiRemoteMedias[callTopics['sendVideoTopic']]);
+                        callVideo && callParentDiv.appendChild(uiRemoteMedias[callTopics['sendVideoTopic']]);
                         callParentDiv.appendChild(uiRemoteMedias[callTopics['sendAudioTopic']]);
-                        callParentDiv.appendChild(uiRemoteMedias[callTopics['receiveVideoTopic']]);
+                        callVideo && callParentDiv.appendChild(uiRemoteMedias[callTopics['receiveVideoTopic']]);
                         callParentDiv.appendChild(uiRemoteMedias[callTopics['receiveAudioTopic']]);
+
+                        callback && callback({
+                            'uiLocalVideo': uiRemoteMedias[callTopics['sendVideoTopic']],
+                            'uiLocalAudio': uiRemoteMedias[callTopics['sendAudioTopic']],
+                            'uiRemoteVideo': uiRemoteMedias[callTopics['receiveVideoTopic']],
+                            'uiRemoteAudio': uiRemoteMedias[callTopics['receiveAudioTopic']]
+                        });
                     } else {
                         callback && callback({
                             'uiLocalVideo': uiRemoteMedias[callTopics['sendVideoTopic']],
@@ -9684,13 +9719,13 @@
                     //init call
                     initCallSocket({
                         video: callVideo,
-                        audio: callAudio,
+                        audio: true,
                         brokerAddress: params.brokerAddress,
                         sendingTopic: params.sendingTopic,
                         receiveTopic: params.receiveTopic
                     });
                 } else {
-                    console.log('No Call DIV has been declared!');
+                    consoleLogging && console.log('No Call DIV has been declared!');
                     return;
                 }
             },
@@ -9720,6 +9755,9 @@
                             break;
                         case 'GET_KEY_FRAME':
                             setTimeout(restartMedia, 4000);
+                            setTimeout(restartMedia, 8000);
+                            setTimeout(restartMedia, 12000);
+                            setTimeout(restartMedia, 20000);
                             break;
                         case 'ERROR':
                             handleError(jsonMessage, params.sendingTopic, params.receiveTopic);
@@ -9787,8 +9825,8 @@
                         mediaConstraints: {
                             audio: false,
                             video: {
-                                width: 320,
-                                // height: 240,
+                                width: callVideoMinWidth,
+                                height: callVideoMinHeight,
                             }
                         },
                         onicecandidate: (candidate) => {
@@ -9973,19 +10011,27 @@
 
                 }
 
-                for (var i = 0; i < webpeers.length; i++) {
-                    console.log(webpeers[i]);
-                    webpeers[i].peerConnection.oniceconnectionstatechange = function () {
-                        if (webpeers[i].peerConnection.iceConnectionState == 'disconnected') {
-                            fireEvent('callEvents', {
-                                type: 'CALL_ERROR',
-                                errorCode: 7000,
-                                errorMessage: 'Call Peer is Disconnected!',
-                                errorInfo: webpeers[i]
-                            });
+                for (var peer in webpeers) {
+                    if (webpeers[peer]) {
+                        webpeers[peer].peerConnection.oniceconnectionstatechange = function () {
+                            if (webpeers[peer].peerConnection.iceConnectionState == 'disconnected') {
+                                fireEvent('callEvents', {
+                                    type: 'CALL_ERROR',
+                                    errorCode: 7000,
+                                    errorMessage: 'Call Peer is Disconnected!',
+                                    errorInfo: webpeers[peer]
+                                });
+
+                                removeFromCallUI(peer.substring(3));
+                            }
                         }
                     }
                 }
+
+                setTimeout(restartMedia, 4000);
+                setTimeout(restartMedia, 8000);
+                setTimeout(restartMedia, 12000);
+                setTimeout(restartMedia, 20000);
             },
 
             sendCallSocketMessage = function (message) {
@@ -10088,15 +10134,23 @@
             },
 
             restartMedia = function () {
-                uiRemoteMedias[callTopics['sendVideoTopic']].pause();
-                webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].enabled = false;
-                webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].applyConstraints({width: 319});
-
-                setTimeout(function () {
-                    webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].applyConstraints({width: 320});
-                    webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].enabled = true;
-                    uiRemoteMedias[callTopics['sendVideoTopic']].play()
-                }, 1000);
+                if (webpeers[callTopics['sendVideoTopic']] && !!webpeers[callTopics['sendVideoTopic']].getLocalStream()) {\
+                    if (navigator && !!navigator.userAgent.match(/firefox/gi)) {
+                        webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].enabled = false;
+                    }
+                    webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].applyConstraints({
+                        "width": callVideoMinWidth - 10,
+                        "height": callVideoMinHeight - 10
+                    }).then((res) => {
+                        if (navigator && !!navigator.userAgent.match(/firefox/gi)) {
+                            webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].enabled = true;
+                        }
+                        webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].applyConstraints({
+                            "width": callVideoMinWidth,
+                            "height": callVideoMinHeight
+                        });
+                    }).catch(e => consoleLogging && console.log(e));
+                }
             },
 
             handleProcessSdpAnswer = function (jsonMessage) {
@@ -10170,6 +10224,11 @@
             },
 
             callStop = function (params) {
+                var callParentDiv = document.getElementById(callDivId);
+                for (var media in uiRemoteMedias) {
+                    removeStreamFromWebRTC(media);
+                }
+
                 for (var i in webpeers) {
                     if (webpeers[i]) {
                         webpeers[i].dispose();
@@ -10185,6 +10244,38 @@
                 }
 
                 callWebSocket && callWebSocket.close();
+            },
+
+            removeStreamFromWebRTC = function (RTCStream) {
+                var callParentDiv = document.getElementById(callDivId);
+
+                const stream = uiRemoteMedias[RTCStream].srcObject;
+                if (!!stream) {
+                    const tracks = stream.getTracks();
+
+                    if (!!tracks) {
+                        tracks.forEach(function (track) {
+                            track.stop();
+                        });
+                    }
+
+                    uiRemoteMedias[RTCStream].srcObject = null;
+                }
+                callParentDiv.removeChild(uiRemoteMedias[RTCStream]);
+                delete (uiRemoteMedias[RTCStream]);
+            },
+
+            removeFromCallUI = function (topic) {
+                var videoElement = 'Vi-' + topic;
+                var audioElement = 'Vo-' + topic;
+
+                if (topic.length > 0 && uiRemoteMedias.hasOwnProperty(videoElement)) {
+                    removeStreamFromWebRTC(videoElement);
+                }
+
+                if (topic.length > 0 && uiRemoteMedias.hasOwnProperty(audioElement)) {
+                    removeStreamFromWebRTC(audioElement);
+                }
             };
 
         /******************************************************
@@ -11144,7 +11235,6 @@
                         });
                     });
             } else {
-                console.log({chatWaitQueue});
                 for (var i = 0; i < chatWaitQueue.length; i++) {
                     if (chatWaitQueue[i].uniqueId === uniqueId) {
                         putInChatSendQueue({
@@ -13123,7 +13213,9 @@
                     content.type = 0x0; // Defaults to AUDIO Call
                 }
 
+                //TODO: Check for mute
                 content.creatorClientDto.mute = (params.mute && typeof params.mute === 'boolean') ? params.mute : false;
+                content.mute = (params.mute && typeof params.mute === 'boolean') ? params.mute : false;
 
                 if (params.clientType && typeof params.clientType === 'string' && callClientTypes[params.clientType.toUpperCase()] > 0) {
                     content.creatorClientDto.clientType = callClientTypes[params.clientType.toUpperCase()];
@@ -13407,6 +13499,7 @@
 
             return sendMessage(recordCallData, {
                 onResult: function (result) {
+                    restartMedia();
                     callback && callback(result);
                 }
             });
@@ -13837,6 +13930,40 @@
             });
         };
 
+        this.resizeCallVideo = function (params, callback) {
+            if (params) {
+                if (!!params.width && +params.width > 0) {
+                    callVideoMinWidth = +params.width;
+                }
+
+                if (!!params.height && +params.height > 0) {
+                    callVideoMinHeight = +params.height;
+                }
+
+                webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].applyConstraints({
+                    "width": callVideoMinWidth,
+                    "height": callVideoMinHeight
+                })
+                    .then((res) => {
+                        uiRemoteMedias[callTopics['sendVideoTopic']].style.width = callVideoMinWidth + 'px';
+                        uiRemoteMedias[callTopics['sendVideoTopic']].style.height = callVideoMinHeight + 'px';
+                        callback && callback();
+                    })
+                    .catch((e) => {
+                        fireEvent('error', {
+                            code: 999,
+                            message: e
+                        });
+                    });
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to resize the video call! Send an object like {width: 640, height: 480}'
+                });
+                return;
+            }
+        }
+
         this.restartMedia = restartMedia;
 
         this.callStop = callStop;
@@ -13888,7 +14015,6 @@
 
             return sendMessage(locationPingData, {
                 onResult: function (result) {
-                    console.log({result});
                     callback && callback(result);
                 }
             });

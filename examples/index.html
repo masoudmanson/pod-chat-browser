@@ -64,9 +64,15 @@
             forceWaitQueueInMemory: true,
             asyncRequestTimeout: 50000,
             callOptions: {
-                callSocketAddress: "wss://46.32.6.187/gsthandler",
-                callTurnIp: "46.32.6.188",
+                callSocketAddress: "wss://online-stream.pod.ir/gsthandler",
+                // callSocketAddress: "wss://46.32.6.187/gsthandler",
+                callTurnIp: "188.75.65.144",
+                // callTurnIp: "46.32.6.188",
                 callDivId: "call-div",
+                callVideo: {
+                    minWidth: 320,
+                    minHeight: 180
+                },
                 callAudioTagClassName: "podcall-audio",
                 callVideoTagClassName: "podcall-video",
                 callPingInterval: 8000
@@ -445,10 +451,10 @@
              * @param email
              */
             // var addContactInstantResult = chatAgent.addContacts({
-            //   firstName: "Poo",
-            //   lastName: "Pah",
-            //   cellphoneNumber: "09387",
-            //   email: "poo@gmail.com"
+            //   firstName: "Niloufar",
+            //   lastName: "Soltani",
+            //   cellphoneNumber: "0912",
+            //   email: "*****@gmail.com"
             // }, function(result) {
             //   console.log(result);
             // });
@@ -946,6 +952,8 @@
             switch (type) {
                 case 'RECEIVE_CALL':
 
+                    document.getElementById('call-receive-id').innerText = event.result.callId;
+
                     console.log('Accepting the call #' + event.result.callId);
 
                     chatAgent.acceptCall({
@@ -953,6 +961,7 @@
                     }, function (res) {
                         console.log({res});
                     });
+
 
                     // console.log('Rejecting the call #' + event.result.callId);
                     // chatAgent.rejectCall({
@@ -971,6 +980,7 @@
                     break;
 
                 case 'CALL_SESSION_CREATED':
+
                     document.getElementById('call-receive-id').innerText = event.result.callId;
                     break;
 
@@ -1506,17 +1516,28 @@ Thread: <input type="text" id="threadInput" autocomplete="on" width="500">
 
         <a class="btn" href="#" onclick="chatAgent.startCall({
             threadId: document.getElementById('call-p2p-thread').value,
-            type: 'video'
+            type: 'video',
+            mute: false
         })">P2P Call</a>
         <br>
 
         <label for="call-group-thread">Group Thread Id : </label>
-        <input type="text" name="call-group-thread" id="call-group-thread" value="37014" class="custom-thread-id">
+        <input type="text" name="call-group-thread" id="call-group-thread" value="40755" class="custom-thread-id">
 
         <a class="btn" href="#" onclick="chatAgent.startGroupCall({
             threadId: document.getElementById('call-group-thread').value,
             type: 'video'
         })">Group Call</a>
+        <br>
+        
+        <label for="call-group-thread">Call Size : </label>
+        <select name="call-size" id="call-size">
+            <option value="small">Small (320 × 180)</option>
+            <option value="medium">Medium (640 × 360)</option>
+            <option value="large">large (720 × 405)</option>
+            <option value="hd">HD (1280 × 720)</option>
+            <option value="fullhd">FullHD (1920 × 1080)</option>
+        </select>
         <br>
         <br>
 
@@ -1547,7 +1568,9 @@ Thread: <input type="text" id="threadInput" autocomplete="on" width="500">
         <br style="clear: fix">
 
         <a class="btn" href="#" onclick="chatAgent.restartMedia()">Restart Call</a>
-        <a class="btn" href="#" onclick="chatAgent.callStop()">Stop Call</a>
+        <a class="btn" href="#" onclick="chatAgent.endCall({
+            callId: +document.getElementById('call-receive-id').innerText
+        })">Stop Call</a>
 
         </div>
 </form>
@@ -2593,6 +2616,51 @@ Thread: <input type="text" id="threadInput" autocomplete="on" width="500">
         var items = document.getElementsByClassName('custom-thread-id');
         for (var i = 0; i < items.length; i++) {
             items[i].value = document.getElementById('threadInput').value;
+        }
+    });
+
+    document.getElementById('call-size').addEventListener('change', function() {
+        switch (this.value) {
+            case 'small':
+                chatAgent.resizeCallVideo({
+                    width: 320,
+                    height: 180
+                }, function() {
+                    console.log('Call Video has been resized to 320 × 180');
+                })
+                break;
+            case 'medium':
+                chatAgent.resizeCallVideo({
+                    width: 640,
+                    height: 360
+                }, function() {
+                    console.log('Call Video has been resized to 640 × 360');
+                })
+                break;
+            case 'large':
+                chatAgent.resizeCallVideo({
+                    width: 720,
+                    height: 405
+                }, function() {
+                    console.log('Call Video has been resized to 720 × 405');
+                })
+                break;
+            case 'hd':
+                chatAgent.resizeCallVideo({
+                    width: 1280,
+                    height: 720
+                }, function() {
+                    console.log('Call Video has been resized to 1280 × 720');
+                })
+                break;
+            case 'fullhd':
+                chatAgent.resizeCallVideo({
+                    width: 1920,
+                    height: 1080
+                }, function() {
+                    console.log('Call Video has been resized to 1920 × 1080');
+                })
+                break;
         }
     });
 
