@@ -10249,20 +10249,23 @@
             removeStreamFromWebRTC = function (RTCStream) {
                 var callParentDiv = document.getElementById(callDivId);
 
-                const stream = uiRemoteMedias[RTCStream].srcObject;
-                if (!!stream) {
-                    const tracks = stream.getTracks();
+                if (uiRemoteMedias.hasOwnProperty(RTCStream)) {
+                    const stream = uiRemoteMedias[RTCStream].srcObject;
+                    if (!!stream) {
+                        const tracks = stream.getTracks();
 
-                    if (!!tracks) {
-                        tracks.forEach(function (track) {
-                            track.stop();
-                        });
+                        if (!!tracks) {
+                            tracks.forEach(function (track) {
+                                track.stop();
+                            });
+                        }
+
+                        uiRemoteMedias[RTCStream].srcObject = null;
                     }
 
-                    uiRemoteMedias[RTCStream].srcObject = null;
+                    callParentDiv.removeChild(uiRemoteMedias[RTCStream]);
+                    delete (uiRemoteMedias[RTCStream]);
                 }
-                callParentDiv.removeChild(uiRemoteMedias[RTCStream]);
-                delete (uiRemoteMedias[RTCStream]);
             },
 
             removeFromCallUI = function (topic) {
