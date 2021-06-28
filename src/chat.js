@@ -10138,20 +10138,27 @@
             restartMedia = function () {
                 if (webpeers[callTopics['sendVideoTopic']] && !!webpeers[callTopics['sendVideoTopic']].getLocalStream()) {
                     if (navigator && !!navigator.userAgent.match(/firefox/gi)) {
-                        webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].enabled = false;
-                    }
-                    webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].applyConstraints({
-                        "width": callVideoMinWidth - 10,
-                        "height": callVideoMinHeight - 10
-                    }).then((res) => {
-                        if (navigator && !!navigator.userAgent.match(/firefox/gi)) {
-                            webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].enabled = true;
-                        }
+                        // webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].enabled = false;
                         webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].applyConstraints({
-                            "width": callVideoMinWidth,
-                            "height": callVideoMinHeight
-                        });
-                    }).catch(e => consoleLogging && console.log(e));
+                            "width": callVideoMinWidth - 110
+                        }).then((res) => {
+                            // webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].enabled = true;
+                            webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].applyConstraints({
+                                "width": callVideoMinWidth,
+                                "height": callVideoMinHeight
+                            });
+                        }).catch(e => consoleLogging && console.log(e));
+                    } else {
+                        webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].applyConstraints({
+                            "width": callVideoMinWidth - 20,
+                            "height": callVideoMinHeight - 20
+                        }).then((res) => {
+                            webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].applyConstraints({
+                                "width": callVideoMinWidth,
+                                "height": callVideoMinHeight
+                            });
+                        }).catch(e => consoleLogging && console.log(e));
+                    }
                 }
             },
 
