@@ -47758,8 +47758,8 @@ WildEmitter.mixin(WildEmitter);
                 };
 
                 // Add Chat Participant if exist
-                if (messageContent.threadParticipant) {
-                    participant.threadParticipant = messageContent.threadParticipant;
+                if (messageContent.participantVO) {
+                    participant.participantVO = messageContent.participantVO;
                 }
 
                 // Add Call Session if exist
