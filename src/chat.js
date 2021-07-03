@@ -9829,6 +9829,11 @@
                             video: {
                                 width: callVideoMinWidth,
                                 height: callVideoMinHeight,
+                                mandatory : {
+                                    maxWidth : callVideoMinWidth, /*Change to resolution, such as 720*/
+                                    maxFrameRate : 15,/*Change to the desired frame rate, such as 30*/
+                                    minFrameRate : 15/*Change to the desired small frame rate, such as 24*/
+                                }
                             }
                         },
                         onicecandidate: (candidate) => {
