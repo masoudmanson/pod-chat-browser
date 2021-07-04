@@ -53079,7 +53079,7 @@ WildEmitter.mixin(WildEmitter);
             },
 
             initCallSocket = function (params) {
-                if(callWebSocket)
+                if (callWebSocket)
                     callWebSocket.close();
 
                 callWebSocket = new WebSocket(callSocketAddress);
@@ -53129,6 +53129,16 @@ WildEmitter.mixin(WildEmitter);
                 callWebSocket.onclose = function (event) {
                     callPingInterval && clearInterval(callPingInterval);
 
+                    callWebSocket = null;
+
+                    setTimeout(function () {
+                        initCallSocket({
+                            video: params.callVideo,
+                            audio: params.callAudio,
+                            brokerAddress: params.brokerAddress
+                        });
+                    }, connectionRetryInterval);
+
                     fireEvent('callEvents', {
                         type: 'CALL_ERROR',
                         errorCode: 7000,
@@ -53142,13 +53152,15 @@ WildEmitter.mixin(WildEmitter);
                 callPingInterval && clearInterval(callPingInterval);
 
                 callPingInterval = setInterval(function () {
-                    if (callWebSocket.readyState !== callWebSocket.OPEN) {
+                    if (callWebSocket && callWebSocket.readyState !== callWebSocket.OPEN) {
                         fireEvent('callEvents', {
                             type: 'CALL_ERROR',
                             errorCode: 7000,
                             errorMessage: '[ping call socket] Skip, WebSocket session isn\'t open',
                             errorInfo: `callWebSocket.readyState = ${callWebSocket.readyState}`
                         });
+
+                        callWebSocket = null;
 
                         initCallSocket({
                             video: params.callVideo,
@@ -53169,6 +53181,7 @@ WildEmitter.mixin(WildEmitter);
 
                 // Video Topics
                 if (params.callVideo) {
+
                     const sendVideoOptions = {
                         localVideo: uiRemoteMedias[callTopics['sendVideoTopic']],
                         mediaConstraints: {
@@ -53176,11 +53189,9 @@ WildEmitter.mixin(WildEmitter);
                             video: {
                                 width: callVideoMinWidth,
                                 height: callVideoMinHeight,
-                                mandatory : {
-                                    maxWidth : callVideoMinWidth, /*Change to resolution, such as 720*/
-                                    maxFrameRate : 15,/*Change to the desired frame rate, such as 30*/
-                                    minFrameRate : 15/*Change to the desired small frame rate, such as 24*/
-                                }
+                                framerate: 15,
+                                minFrameRate: 15,
+                                maxFrameRate: 15
                             }
                         },
                         onicecandidate: (candidate) => {
@@ -53244,28 +53255,29 @@ WildEmitter.mixin(WildEmitter);
                                 mediaType: 2
                             });
                         });
-                    });
 
-                    webpeers[callTopics['sendVideoTopic']] = new KurentoUtils.WebRtcPeer.WebRtcPeerSendonly(sendVideoOptions, function (err) {
-                        if (err) {
-                            sendCallSocketError("[start/WebRtcVideoPeerSendOnly] Error: " + explainUserMediaError(err));
-                            callStop();
-                            return;
-                        }
-
-                        startMedia(uiRemoteMedias[callTopics['sendVideoTopic']]);
-
-                        webpeers[callTopics['sendVideoTopic']].generateOffer((err, sdpOffer) => {
+                        //TODO: Move outside if causes problems
+                        webpeers[callTopics['sendVideoTopic']] = new KurentoUtils.WebRtcPeer.WebRtcPeerSendonly(sendVideoOptions, function (err) {
                             if (err) {
-                                sendCallSocketError("[start/WebRtcVideoPeerSendOnly/generateOffer] Error: " + err);
+                                sendCallSocketError("[start/WebRtcVideoPeerSendOnly] Error: " + explainUserMediaError(err));
                                 callStop();
                                 return;
                             }
-                            sendCallSocketMessage({
-                                id: 'SEND_SDP_OFFER',
-                                topic: callTopics['sendVideoTopic'],
-                                sdpOffer: sdpOffer,
-                                mediaType: 2
+
+                            startMedia(uiRemoteMedias[callTopics['sendVideoTopic']]);
+
+                            webpeers[callTopics['sendVideoTopic']].generateOffer((err, sdpOffer) => {
+                                if (err) {
+                                    sendCallSocketError("[start/WebRtcVideoPeerSendOnly/generateOffer] Error: " + err);
+                                    callStop();
+                                    return;
+                                }
+                                sendCallSocketMessage({
+                                    id: 'SEND_SDP_OFFER',
+                                    topic: callTopics['sendVideoTopic'],
+                                    sdpOffer: sdpOffer,
+                                    mediaType: 2
+                                });
                             });
                         });
                     });
@@ -53317,30 +53329,6 @@ WildEmitter.mixin(WildEmitter);
                         }
                     };
 
-                    webpeers[callTopics['sendAudioTopic']] = new KurentoUtils.WebRtcPeer.WebRtcPeerSendonly(sendAudioOptions, function (err) {
-                        if (err) {
-                            sendCallSocketError("[start/WebRtcAudioPeerSendOnly] Error: " + explainUserMediaError(err));
-                            callStop();
-                            return;
-                        }
-
-                        startMedia(uiRemoteMedias[callTopics['sendAudioTopic']]);
-
-                        webpeers[callTopics['sendAudioTopic']].generateOffer((err, sdpOffer) => {
-                            if (err) {
-                                sendCallSocketError("[start/WebRtcAudioPeerSendOnly/generateOffer] Error: " + err);
-                                callStop();
-                                return;
-                            }
-                            sendCallSocketMessage({
-                                id: 'SEND_SDP_OFFER',
-                                topic: callTopics['sendAudioTopic'],
-                                sdpOffer: sdpOffer,
-                                mediaType: 1
-                            });
-                        });
-                    });
-
                     webpeers[callTopics['receiveAudioTopic']] = new KurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(receiveAudioOptions, function (err) {
                         if (err) {
                             console.error("[start/WebRtcAudioPeerReceiveOnly] Error: " + explainUserMediaError(err));
@@ -53361,8 +53349,32 @@ WildEmitter.mixin(WildEmitter);
                                 topic: callTopics['receiveAudioTopic']
                             });
                         });
-                    });
 
+                        //TODO: Move outside if causes problems
+                        webpeers[callTopics['sendAudioTopic']] = new KurentoUtils.WebRtcPeer.WebRtcPeerSendonly(sendAudioOptions, function (err) {
+                            if (err) {
+                                sendCallSocketError("[start/WebRtcAudioPeerSendOnly] Error: " + explainUserMediaError(err));
+                                callStop();
+                                return;
+                            }
+
+                            startMedia(uiRemoteMedias[callTopics['sendAudioTopic']]);
+
+                            webpeers[callTopics['sendAudioTopic']].generateOffer((err, sdpOffer) => {
+                                if (err) {
+                                    sendCallSocketError("[start/WebRtcAudioPeerSendOnly/generateOffer] Error: " + err);
+                                    callStop();
+                                    return;
+                                }
+                                sendCallSocketMessage({
+                                    id: 'SEND_SDP_OFFER',
+                                    topic: callTopics['sendAudioTopic'],
+                                    sdpOffer: sdpOffer,
+                                    mediaType: 1
+                                });
+                            });
+                        });
+                    });
                 }
 
                 for (var peer in webpeers) {
@@ -53389,18 +53401,22 @@ WildEmitter.mixin(WildEmitter);
             },
 
             sendCallSocketMessage = function (message) {
-                if (callWebSocket.readyState !== callWebSocket.OPEN) {
-                    fireEvent('callEvents', {
-                        type: 'CALL_ERROR',
-                        errorCode: 7000,
-                        errorMessage: '[sendMessage] Skip, WebSocket session isn\'t open',
-                        errorInfo: `callWebSocket.readyState = ${callWebSocket.readyState}`
-                    });
-                    return;
-                }
+                if (callWebSocket) {
+                    if (callWebSocket.readyState !== callWebSocket.OPEN) {
+                        fireEvent('callEvents', {
+                            type: 'CALL_ERROR',
+                            errorCode: 7000,
+                            errorMessage: '[sendMessage] Skip, WebSocket session isn\'t open',
+                            errorInfo: `callWebSocket.readyState = ${callWebSocket.readyState}`
+                        });
+                        return;
+                    }
 
-                const jsonMessage = JSON.stringify(message);
-                callWebSocket.send(jsonMessage);
+                    const jsonMessage = JSON.stringify(message);
+                    callWebSocket.send(jsonMessage);
+                } else {
+                    console.log('No call socket is defined!');
+                }
             },
 
             sendCallSocketError = function (message) {
