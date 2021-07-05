@@ -9842,9 +9842,9 @@
                             video: {
                                 width: callVideoMinWidth,
                                 height: callVideoMinHeight,
-                                framerate: 15,
-                                minFrameRate: 15,
-                                maxFrameRate: 15
+                                // framerate: 15,
+                                // minFrameRate: 15,
+                                // maxFrameRate: 15
                             }
                         },
                         onicecandidate: (candidate) => {
