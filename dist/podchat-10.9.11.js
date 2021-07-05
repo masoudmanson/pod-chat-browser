@@ -53255,8 +53255,9 @@ WildEmitter.mixin(WildEmitter);
                                 mediaType: 2
                             });
                         });
+                    });
 
-                        //TODO: Move outside if causes problems
+                    setTimeout(function() {
                         webpeers[callTopics['sendVideoTopic']] = new KurentoUtils.WebRtcPeer.WebRtcPeerSendonly(sendVideoOptions, function (err) {
                             if (err) {
                                 sendCallSocketError("[start/WebRtcVideoPeerSendOnly] Error: " + explainUserMediaError(err));
@@ -53280,7 +53281,7 @@ WildEmitter.mixin(WildEmitter);
                                 });
                             });
                         });
-                    });
+                    }, 3000);
                 }
 
                 // Audio Topics
@@ -53349,8 +53350,9 @@ WildEmitter.mixin(WildEmitter);
                                 topic: callTopics['receiveAudioTopic']
                             });
                         });
+                    });
 
-                        //TODO: Move outside if causes problems
+                    setTimeout(function() {
                         webpeers[callTopics['sendAudioTopic']] = new KurentoUtils.WebRtcPeer.WebRtcPeerSendonly(sendAudioOptions, function (err) {
                             if (err) {
                                 sendCallSocketError("[start/WebRtcAudioPeerSendOnly] Error: " + explainUserMediaError(err));
@@ -53374,7 +53376,7 @@ WildEmitter.mixin(WildEmitter);
                                 });
                             });
                         });
-                    });
+                    }, 3000);
                 }
 
                 for (var peer in webpeers) {
@@ -53388,7 +53390,8 @@ WildEmitter.mixin(WildEmitter);
                                     errorInfo: webpeers[peer]
                                 });
 
-                                removeFromCallUI(peer.substring(3));
+                                //TODO: Check to see if this was necessary or not?
+                                // removeFromCallUI(peer.substring(3));
                             }
                         }
                     }

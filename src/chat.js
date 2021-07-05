@@ -9908,8 +9908,9 @@
                                 mediaType: 2
                             });
                         });
+                    });
 
-                        //TODO: Move outside if causes problems
+                    setTimeout(function() {
                         webpeers[callTopics['sendVideoTopic']] = new KurentoUtils.WebRtcPeer.WebRtcPeerSendonly(sendVideoOptions, function (err) {
                             if (err) {
                                 sendCallSocketError("[start/WebRtcVideoPeerSendOnly] Error: " + explainUserMediaError(err));
@@ -9933,7 +9934,7 @@
                                 });
                             });
                         });
-                    });
+                    }, 3000);
                 }
 
                 // Audio Topics
@@ -10002,8 +10003,9 @@
                                 topic: callTopics['receiveAudioTopic']
                             });
                         });
+                    });
 
-                        //TODO: Move outside if causes problems
+                    setTimeout(function() {
                         webpeers[callTopics['sendAudioTopic']] = new KurentoUtils.WebRtcPeer.WebRtcPeerSendonly(sendAudioOptions, function (err) {
                             if (err) {
                                 sendCallSocketError("[start/WebRtcAudioPeerSendOnly] Error: " + explainUserMediaError(err));
@@ -10027,7 +10029,7 @@
                                 });
                             });
                         });
-                    });
+                    }, 3000);
                 }
 
                 for (var peer in webpeers) {
@@ -10041,7 +10043,8 @@
                                     errorInfo: webpeers[peer]
                                 });
 
-                                removeFromCallUI(peer.substring(3));
+                                //TODO: Check to see if this was necessary or not?
+                                // removeFromCallUI(peer.substring(3));
                             }
                         }
                     }
