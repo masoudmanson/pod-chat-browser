@@ -53257,7 +53257,7 @@ WildEmitter.mixin(WildEmitter);
                         });
                     });
 
-                    setTimeout(function() {
+                    // setTimeout(function() {
                         webpeers[callTopics['sendVideoTopic']] = new KurentoUtils.WebRtcPeer.WebRtcPeerSendonly(sendVideoOptions, function (err) {
                             if (err) {
                                 sendCallSocketError("[start/WebRtcVideoPeerSendOnly] Error: " + explainUserMediaError(err));
@@ -53281,7 +53281,7 @@ WildEmitter.mixin(WildEmitter);
                                 });
                             });
                         });
-                    }, 3000);
+                    // }, 3000);
                 }
 
                 // Audio Topics
@@ -53352,7 +53352,7 @@ WildEmitter.mixin(WildEmitter);
                         });
                     });
 
-                    setTimeout(function() {
+                    // setTimeout(function() {
                         webpeers[callTopics['sendAudioTopic']] = new KurentoUtils.WebRtcPeer.WebRtcPeerSendonly(sendAudioOptions, function (err) {
                             if (err) {
                                 sendCallSocketError("[start/WebRtcAudioPeerSendOnly] Error: " + explainUserMediaError(err));
@@ -53376,7 +53376,7 @@ WildEmitter.mixin(WildEmitter);
                                 });
                             });
                         });
-                    }, 3000);
+                    // }, 3000);
                 }
 
                 for (var peer in webpeers) {
