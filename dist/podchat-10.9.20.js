@@ -53426,6 +53426,9 @@ WildEmitter.mixin(WildEmitter);
 
                                 //TODO: Check to see if this was necessary or not?
                                 // removeFromCallUI(peer.substring(3));
+
+                                setTimeout(restartMedia, 4000);
+                                setTimeout(restartMedia, 8000);
                             }
                         }
                     }
