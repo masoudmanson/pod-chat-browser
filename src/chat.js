@@ -9737,7 +9737,6 @@
                     callWebSocket = new WebSocket(callSocketAddress);
 
                     callWebSocket.onopen = function () {
-                        consoleLogging && console.log('Call socket is open and handleCallSocketOpen called');
                         handleCallSocketOpen({
                             brokerAddress: params.brokerAddress,
                             callVideo: params.video,
@@ -9804,7 +9803,7 @@
                 callWebSocket = null;
 
                 if (callSocketForceReconnect) {
-                    setTimeout(function () {
+                    setTimeout(function (data) {
                         fireEvent('callEvents', {
                             type: 'CALL_STATUS',
                             errorCode: 7000,
@@ -9812,11 +9811,15 @@
                         });
 
                         initCallSocket({
-                            video: params.callVideo,
-                            audio: params.callAudio,
-                            brokerAddress: params.brokerAddress
+                            video: data.video,
+                            audio: data.audio,
+                            brokerAddress: data.brokerAddress
                         });
-                    }, connectionRetryInterval);
+                    }, connectionRetryInterval, {
+                        video: params.video,
+                        audio: params.audio,
+                        brokerAddress: params.brokerAddress
+                    });
                 } else {
                     callSocketForceReconnect = true;
                 }
@@ -9928,6 +9931,7 @@
                                 console.error("[start/WebRtcVideoPeerReceiveOnly/generateOffer] " + err);
                                 return;
                             }
+
                             sendCallSocketMessage({
                                 id: 'RECIVE_SDP_OFFER',
                                 sdpOffer: sdpOffer,
@@ -9955,6 +9959,7 @@
                                     callStop();
                                     return;
                                 }
+
                                 sendCallSocketMessage({
                                     id: 'SEND_SDP_OFFER',
                                     topic: callTopics['sendVideoTopic'],
