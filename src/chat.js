@@ -10295,6 +10295,7 @@
                 }
 
                 callWebSocket && callWebSocket.close();
+                callWebSocket = null;
             },
 
             removeStreamFromWebRTC = function (RTCStream) {
