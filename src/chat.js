@@ -9732,80 +9732,84 @@
             },
 
             initCallSocket = function (params) {
-                if (callWebSocket)
-                    callWebSocket.close();
+                if (!callWebSocket) {
+                    callWebSocket = new WebSocket(callSocketAddress);
 
-                callWebSocket = new WebSocket(callSocketAddress);
+                    callWebSocket.onopen = function () {
+                        consoleLogging && console.log('Call socket is open and handleCallSocketOpen called');
+                        handleCallSocketOpen({
+                            brokerAddress: params.brokerAddress,
+                            callVideo: params.video,
+                            callAudio: params.audio
+                        });
+                    };
 
-                callWebSocket.onopen = function () {
-                    consoleLogging && console.log('Call socket is open and handleCallSocketOpen called');
+                    callWebSocket.onmessage = function (message) {
+                        const jsonMessage = JSON.parse(message.data);
+
+                        switch (jsonMessage.id) {
+                            case 'PROCESS_SDP_ANSWER':
+                                handleProcessSdpAnswer(jsonMessage);
+                                break;
+                            case 'ADD_ICE_CANDIDATE':
+                                handleAddIceCandidate(jsonMessage);
+                                break;
+                            case 'GET_KEY_FRAME':
+                                setTimeout(restartMedia, 4000);
+                                setTimeout(restartMedia, 8000);
+                                setTimeout(restartMedia, 12000);
+                                setTimeout(restartMedia, 20000);
+                                break;
+                            case 'ERROR':
+                                handleError(jsonMessage, params.sendingTopic, params.receiveTopic);
+                                break;
+                            default:
+                                console.warn("[onmessage] Invalid message, id: " + jsonMessage.id);
+                                break;
+                        }
+                    }
+
+                    callWebSocket.onerror = function (error) {
+                        fireEvent('callEvents', {
+                            type: 'CALL_ERROR',
+                            errorCode: 7000,
+                            errorMessage: 'Call Socket encountered an Error!',
+                            errorInfo: error
+                        });
+                    }
+
+                    callWebSocket.onclose = function (event) {
+                        callPingInterval && clearInterval(callPingInterval);
+
+                        callWebSocket = null;
+
+                        setTimeout(function () {
+                            fireEvent('callEvents', {
+                                type: 'CALL_STATUS',
+                                errorCode: 7000,
+                                errorMessage: 'Call Socket is reconnecting ...',
+                                errorInfo: event
+                            });
+
+                            initCallSocket({
+                                video: params.callVideo,
+                                audio: params.callAudio,
+                                brokerAddress: params.brokerAddress
+                            });
+                        }, connectionRetryInterval);
+
+                        fireEvent('callEvents', {
+                            type: 'CALL_ERROR',
+                            errorCode: 7000,
+                            errorMessage: 'Call Socket has been closed!',
+                            errorInfo: event
+                        });
+                    }
+                } else {
                     handleCallSocketOpen({
                         brokerAddress: params.brokerAddress,
                         callVideo: params.video,
                         callAudio: params.audio
-                    });
-                };
-
-                callWebSocket.onmessage = function (message) {
-                    const jsonMessage = JSON.parse(message.data);
-
-                    switch (jsonMessage.id) {
-                        case 'PROCESS_SDP_ANSWER':
-                            handleProcessSdpAnswer(jsonMessage);
-                            break;
-                        case 'ADD_ICE_CANDIDATE':
-                            handleAddIceCandidate(jsonMessage);
-                            break;
-                        case 'GET_KEY_FRAME':
-                            setTimeout(restartMedia, 4000);
-                            setTimeout(restartMedia, 8000);
-                            setTimeout(restartMedia, 12000);
-                            setTimeout(restartMedia, 20000);
-                            break;
-                        case 'ERROR':
-                            handleError(jsonMessage, params.sendingTopic, params.receiveTopic);
-                            break;
-                        default:
-                            console.warn("[onmessage] Invalid message, id: " + jsonMessage.id);
-                            break;
-                    }
-                }
-
-                callWebSocket.onerror = function (error) {
-                    fireEvent('callEvents', {
-                        type: 'CALL_ERROR',
-                        errorCode: 7000,
-                        errorMessage: 'Call Socket encountered an Error!',
-                        errorInfo: error
-                    });
-                }
-
-                callWebSocket.onclose = function (event) {
-                    callPingInterval && clearInterval(callPingInterval);
-
-                    callWebSocket = null;
-
-                    setTimeout(function () {
-
-                        fireEvent('callEvents', {
-                            type: 'CALL_STATUS',
-                            errorCode: 7000,
-                            errorMessage: 'Call Socket is reconnecting ...',
-                            errorInfo: event
-                        });
-
-                        initCallSocket({
-                            video: params.callVideo,
-                            audio: params.callAudio,
-                            brokerAddress: params.brokerAddress
-                        });
-                    }, connectionRetryInterval);
-
-                    fireEvent('callEvents', {
-                        type: 'CALL_ERROR',
-                        errorCode: 7000,
-                        errorMessage: 'Call Socket has been closed!',
-                        errorInfo: event
                     });
                 }
             },
@@ -9838,6 +9842,10 @@
                     callWebSocket.send('');
                 }, callPingIntervalTime);
 
+                generateAndSendSdpOffers(params);
+            },
+
+            generateAndSendSdpOffers = function(params) {
                 sendCallSocketMessage({
                     id: 'CREATE_SESSION',
                     brokerAddress: params.brokerAddress,
@@ -10295,7 +10303,6 @@
                 }
 
                 callWebSocket && callWebSocket.close();
-                callWebSocket = null;
             },
 
             removeStreamFromWebRTC = function (RTCStream) {
