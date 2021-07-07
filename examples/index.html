@@ -23,7 +23,7 @@
     <script type="text/javascript">
         // Developement
         var PodChat = window.POD.Chat;
-        var env = 'sandbox'; // main | sandbox | integration
+        var env = 'main'; // main | sandbox | integration
 
         var params = {
             appId: new Date().getTime(),
@@ -53,7 +53,7 @@
             enableCache: false,
             fullResponseObject: true,
             mapApiKey: CONFIG.mapApiKey,
-            typeCode: "Clasor",
+            typeCode: "default",
             wsConnectionWaitTime: 500,
             connectionRetryInterval: 5000,
             connectionCheckTimeout: 10000,
@@ -450,14 +450,14 @@
              * @param cellphoneNumber
              * @param email
              */
-            var addContactInstantResult = chatAgent.addContacts({
-              firstName: "Masoud",
-              lastName: "Amjadi",
-              cellphoneNumber: "091******",
-              email: "ma.amjadi@fanap.ir"
-            }, function(result) {
-              console.log(result);
-            });
+            // var addContactInstantResult = chatAgent.addContacts({
+            //   firstName: "Masoud",
+            //   lastName: "Amjadi",
+            //   cellphoneNumber: "091******",
+            //   email: "ma.amjadi@fanap.ir"
+            // }, function(result) {
+            //   console.log(result);
+            // });
             /**
              * UPDATE CONTACTS
              * @param id

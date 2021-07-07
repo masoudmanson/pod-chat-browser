@@ -9720,7 +9720,7 @@
                     //init call
                     initCallSocket({
                         video: callVideo,
-                        audio: true,
+                        audio: !callMute,
                         brokerAddress: params.brokerAddress,
                         sendingTopic: params.sendingTopic,
                         receiveTopic: params.receiveTopic
@@ -9738,6 +9738,7 @@
                 callWebSocket = new WebSocket(callSocketAddress);
 
                 callWebSocket.onopen = function () {
+                    consoleLogging && console.log('Call socket is open and handleCallSocketOpen called');
                     handleCallSocketOpen({
                         brokerAddress: params.brokerAddress,
                         callVideo: params.video,
@@ -9785,6 +9786,14 @@
                     callWebSocket = null;
 
                     setTimeout(function () {
+
+                        fireEvent('callEvents', {
+                            type: 'CALL_STATUS',
+                            errorCode: 7000,
+                            errorMessage: 'Call Socket is reconnecting ...',
+                            errorInfo: event
+                        });
+
                         initCallSocket({
                             video: params.callVideo,
                             audio: params.callAudio,
@@ -9813,13 +9822,16 @@
                             errorInfo: `callWebSocket.readyState = ${callWebSocket.readyState}`
                         });
 
-                        callWebSocket = null;
 
-                        initCallSocket({
-                            video: params.callVideo,
-                            audio: params.callAudio,
-                            brokerAddress: params.brokerAddress
-                        });
+                        // TODO: Check again
+
+                        // callWebSocket = null;
+                        //
+                        // initCallSocket({
+                        //     video: params.callVideo,
+                        //     audio: params.callAudio,
+                        //     brokerAddress: params.brokerAddress
+                        // });
 
                         return;
                     }
@@ -9836,13 +9848,14 @@
                 if (params.callVideo) {
 
                     const sendVideoOptions = {
+                        // sendSource : 'screen',
                         localVideo: uiRemoteMedias[callTopics['sendVideoTopic']],
                         mediaConstraints: {
                             audio: false,
                             video: {
                                 width: callVideoMinWidth,
                                 height: callVideoMinHeight,
-                                // framerate: 15,
+                                framerate: 15,
                                 // minFrameRate: 15,
                                 // maxFrameRate: 15
                             }
@@ -9910,7 +9923,7 @@
                         });
                     });
 
-                    // setTimeout(function() {
+                    setTimeout(function() {
                         webpeers[callTopics['sendVideoTopic']] = new KurentoUtils.WebRtcPeer.WebRtcPeerSendonly(sendVideoOptions, function (err) {
                             if (err) {
                                 sendCallSocketError("[start/WebRtcVideoPeerSendOnly] Error: " + explainUserMediaError(err));
@@ -9934,7 +9947,7 @@
                                 });
                             });
                         });
-                    // }, 3000);
+                    }, 2000);
                 }
 
                 // Audio Topics
@@ -10005,7 +10018,7 @@
                         });
                     });
 
-                    // setTimeout(function() {
+                    setTimeout(function() {
                         webpeers[callTopics['sendAudioTopic']] = new KurentoUtils.WebRtcPeer.WebRtcPeerSendonly(sendAudioOptions, function (err) {
                             if (err) {
                                 sendCallSocketError("[start/WebRtcAudioPeerSendOnly] Error: " + explainUserMediaError(err));
@@ -10029,7 +10042,7 @@
                                 });
                             });
                         });
-                    // }, 3000);
+                    }, 2000);
                 }
 
                 for (var peer in webpeers) {
