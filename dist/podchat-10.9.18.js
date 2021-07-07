@@ -43616,6 +43616,7 @@ WildEmitter.mixin(WildEmitter);
             callPingInterval = null,
             callTopics = {},
             callWebSocket = null,
+            callSocketForceReconnect = true,
             callClientType = {
                 WEB: 1,
                 ANDROID: 2,
@@ -53126,24 +53127,7 @@ WildEmitter.mixin(WildEmitter);
                     }
 
                     callWebSocket.onclose = function (event) {
-                        callPingInterval && clearInterval(callPingInterval);
-
-                        callWebSocket = null;
-
-                        setTimeout(function () {
-                            fireEvent('callEvents', {
-                                type: 'CALL_STATUS',
-                                errorCode: 7000,
-                                errorMessage: 'Call Socket is reconnecting ...',
-                                errorInfo: event
-                            });
-
-                            initCallSocket({
-                                video: params.callVideo,
-                                audio: params.callAudio,
-                                brokerAddress: params.brokerAddress
-                            });
-                        }, connectionRetryInterval);
+                        handleCallSocketClose(params);
 
                         fireEvent('callEvents', {
                             type: 'CALL_ERROR',
@@ -53158,6 +53142,30 @@ WildEmitter.mixin(WildEmitter);
                         callVideo: params.video,
                         callAudio: params.audio
                     });
+                }
+            },
+
+            handleCallSocketClose = function (params) {
+                callPingInterval && clearInterval(callPingInterval);
+
+                callWebSocket = null;
+
+                if (callSocketForceReconnect) {
+                    setTimeout(function () {
+                        fireEvent('callEvents', {
+                            type: 'CALL_STATUS',
+                            errorCode: 7000,
+                            errorMessage: 'Call Socket is reconnecting ...'
+                        });
+
+                        initCallSocket({
+                            video: params.callVideo,
+                            audio: params.callAudio,
+                            brokerAddress: params.brokerAddress
+                        });
+                    }, connectionRetryInterval);
+                } else {
+                    callSocketForceReconnect = true;
                 }
             },
 
@@ -53192,7 +53200,7 @@ WildEmitter.mixin(WildEmitter);
                 generateAndSendSdpOffers(params);
             },
 
-            generateAndSendSdpOffers = function(params) {
+            generateAndSendSdpOffers = function (params) {
                 sendCallSocketMessage({
                     id: 'CREATE_SESSION',
                     brokerAddress: params.brokerAddress,
@@ -53278,7 +53286,7 @@ WildEmitter.mixin(WildEmitter);
                         });
                     });
 
-                    setTimeout(function() {
+                    setTimeout(function () {
                         webpeers[callTopics['sendVideoTopic']] = new KurentoUtils.WebRtcPeer.WebRtcPeerSendonly(sendVideoOptions, function (err) {
                             if (err) {
                                 sendCallSocketError("[start/WebRtcVideoPeerSendOnly] Error: " + explainUserMediaError(err));
@@ -53373,7 +53381,7 @@ WildEmitter.mixin(WildEmitter);
                         });
                     });
 
-                    setTimeout(function() {
+                    setTimeout(function () {
                         webpeers[callTopics['sendAudioTopic']] = new KurentoUtils.WebRtcPeer.WebRtcPeerSendonly(sendAudioOptions, function (err) {
                             if (err) {
                                 sendCallSocketError("[start/WebRtcAudioPeerSendOnly] Error: " + explainUserMediaError(err));
@@ -53648,7 +53656,7 @@ WildEmitter.mixin(WildEmitter);
                         topic: callTopics[i].substr(3)
                     });
                 }
-
+                callSocketForceReconnect = false;
                 callWebSocket && callWebSocket.close();
             },
 

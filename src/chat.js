@@ -269,6 +269,7 @@
             callPingInterval = null,
             callTopics = {},
             callWebSocket = null,
+            callSocketForceReconnect = true,
             callClientType = {
                 WEB: 1,
                 ANDROID: 2,
@@ -9779,24 +9780,7 @@
                     }
 
                     callWebSocket.onclose = function (event) {
-                        callPingInterval && clearInterval(callPingInterval);
-
-                        callWebSocket = null;
-
-                        setTimeout(function () {
-                            fireEvent('callEvents', {
-                                type: 'CALL_STATUS',
-                                errorCode: 7000,
-                                errorMessage: 'Call Socket is reconnecting ...',
-                                errorInfo: event
-                            });
-
-                            initCallSocket({
-                                video: params.callVideo,
-                                audio: params.callAudio,
-                                brokerAddress: params.brokerAddress
-                            });
-                        }, connectionRetryInterval);
+                        handleCallSocketClose(params);
 
                         fireEvent('callEvents', {
                             type: 'CALL_ERROR',
@@ -9811,6 +9795,30 @@
                         callVideo: params.video,
                         callAudio: params.audio
                     });
+                }
+            },
+
+            handleCallSocketClose = function (params) {
+                callPingInterval && clearInterval(callPingInterval);
+
+                callWebSocket = null;
+
+                if (callSocketForceReconnect) {
+                    setTimeout(function () {
+                        fireEvent('callEvents', {
+                            type: 'CALL_STATUS',
+                            errorCode: 7000,
+                            errorMessage: 'Call Socket is reconnecting ...'
+                        });
+
+                        initCallSocket({
+                            video: params.callVideo,
+                            audio: params.callAudio,
+                            brokerAddress: params.brokerAddress
+                        });
+                    }, connectionRetryInterval);
+                } else {
+                    callSocketForceReconnect = true;
                 }
             },
 
@@ -9845,7 +9853,7 @@
                 generateAndSendSdpOffers(params);
             },
 
-            generateAndSendSdpOffers = function(params) {
+            generateAndSendSdpOffers = function (params) {
                 sendCallSocketMessage({
                     id: 'CREATE_SESSION',
                     brokerAddress: params.brokerAddress,
@@ -9931,7 +9939,7 @@
                         });
                     });
 
-                    setTimeout(function() {
+                    setTimeout(function () {
                         webpeers[callTopics['sendVideoTopic']] = new KurentoUtils.WebRtcPeer.WebRtcPeerSendonly(sendVideoOptions, function (err) {
                             if (err) {
                                 sendCallSocketError("[start/WebRtcVideoPeerSendOnly] Error: " + explainUserMediaError(err));
@@ -10026,7 +10034,7 @@
                         });
                     });
 
-                    setTimeout(function() {
+                    setTimeout(function () {
                         webpeers[callTopics['sendAudioTopic']] = new KurentoUtils.WebRtcPeer.WebRtcPeerSendonly(sendAudioOptions, function (err) {
                             if (err) {
                                 sendCallSocketError("[start/WebRtcAudioPeerSendOnly] Error: " + explainUserMediaError(err));
@@ -10301,7 +10309,7 @@
                         topic: callTopics[i].substr(3)
                     });
                 }
-
+                callSocketForceReconnect = false;
                 callWebSocket && callWebSocket.close();
             },
 
