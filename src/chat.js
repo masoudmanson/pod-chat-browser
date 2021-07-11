@@ -3245,6 +3245,15 @@
                             result: messageContent
                         });
 
+
+                        for (var peer in webpeers) {
+                            if (webpeers[peer]) {
+                                webpeers[peer].dispose();
+                                delete webpeers[peer];
+                            }
+                        }
+                        webpeers = {};
+
                         //TODO : Check video status
                         startCallWebRTCFunctions({
                             video: true,//messageContent.clientDTO.video,
@@ -9821,8 +9830,20 @@
                         brokerAddress: params.brokerAddress
                     });
                 } else {
+                    for (var media in uiRemoteMedias) {
+                        removeStreamFromWebRTC(media);
+                    }
+
                     callSocketForceReconnect = true;
                 }
+
+                for (var peer in webpeers) {
+                    if (webpeers[peer]) {
+                        webpeers[peer].dispose();
+                        delete webpeers[peer];
+                    }
+                }
+                webpeers = {};
             },
 
             handleCallSocketOpen = function (params) {
@@ -10066,26 +10087,28 @@
                     }, 2000);
                 }
 
-                for (var peer in webpeers) {
-                    if (webpeers[peer]) {
-                        webpeers[peer].peerConnection.oniceconnectionstatechange = function () {
-                            if (webpeers[peer].peerConnection.iceConnectionState == 'disconnected') {
-                                fireEvent('callEvents', {
-                                    type: 'CALL_ERROR',
-                                    errorCode: 7000,
-                                    errorMessage: 'Call Peer is Disconnected!',
-                                    errorInfo: webpeers[peer]
-                                });
+                setTimeout(function() {
+                    for (var peer in webpeers) {
+                        if (webpeers[peer]) {
+                            webpeers[peer].peerConnection.oniceconnectionstatechange = function () {
+                                if (webpeers[peer].peerConnection.iceConnectionState == 'disconnected') {
+                                    fireEvent('callEvents', {
+                                        type: 'CALL_ERROR',
+                                        errorCode: 7000,
+                                        errorMessage: `Call Peer (${peer}) is Disconnected!`,
+                                        errorInfo: webpeers[peer]
+                                    });
 
-                                //TODO: Check to see if this was necessary or not?
-                                // removeFromCallUI(peer.substring(3));
+                                    //TODO: Check to see if this was necessary or not?
+                                    // removeFromCallUI(peer.substring(3));
 
-                                setTimeout(restartMedia, 4000);
-                                setTimeout(restartMedia, 8000);
+                                    setTimeout(restartMedia, 4000);
+                                    setTimeout(restartMedia, 8000);
+                                }
                             }
                         }
                     }
-                }
+                }, 4000);
 
                 setTimeout(restartMedia, 4000);
                 setTimeout(restartMedia, 8000);
