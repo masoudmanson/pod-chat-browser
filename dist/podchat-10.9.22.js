@@ -46689,7 +46689,7 @@ WildEmitter.mixin(WildEmitter);
                             result: messageContent
                         });
 
-                        restartMedia();
+                        restartMedia(callTopics['sendVideoTopic']);
 
                         break;
 
@@ -46765,7 +46765,7 @@ WildEmitter.mixin(WildEmitter);
                             result: messageContent
                         });
 
-                        restartMedia();
+                        restartMedia(callTopics['sendVideoTopic']);
 
                         break;
 
@@ -46951,7 +46951,7 @@ WildEmitter.mixin(WildEmitter);
                             result: messageContent
                         });
 
-                        restartMedia();
+                        restartMedia(callTopics['sendVideoTopic']);
 
                         break;
 
@@ -53098,6 +53098,13 @@ WildEmitter.mixin(WildEmitter);
                             callVideo: params.video,
                             callAudio: params.audio
                         });
+
+                        fireEvent('callEvents', {
+                            type: 'CALL_STATUS',
+                            errorCode: 7000,
+                            errorMessage: 'Call Socket has opened successfully!',
+                            errorInfo: event
+                        });
                     };
 
                     callWebSocket.onmessage = function (message) {
@@ -53111,10 +53118,13 @@ WildEmitter.mixin(WildEmitter);
                                 handleAddIceCandidate(jsonMessage);
                                 break;
                             case 'GET_KEY_FRAME':
-                                setTimeout(restartMedia, 4000);
-                                setTimeout(restartMedia, 8000);
-                                setTimeout(restartMedia, 12000);
-                                setTimeout(restartMedia, 20000);
+                                setTimeout(restartMedia(callTopics['sendVideoTopic']), 4000);
+                                setTimeout(restartMedia(callTopics['sendVideoTopic']), 8000);
+                                setTimeout(restartMedia(callTopics['sendVideoTopic']), 12000);
+                                setTimeout(restartMedia(callTopics['sendVideoTopic']), 20000);
+                                break;
+                            case 'FREEZED':
+                                handlePartnerFreeze(jsonMessage);
                                 break;
                             case 'ERROR':
                                 handleError(jsonMessage, params.sendingTopic, params.receiveTopic);
@@ -53449,18 +53459,18 @@ WildEmitter.mixin(WildEmitter);
                                     //TODO: Check to see if this was necessary or not?
                                     // removeFromCallUI(peer.substring(3));
 
-                                    setTimeout(restartMedia, 4000);
-                                    setTimeout(restartMedia, 8000);
+                                    setTimeout(restartMedia(callTopics['sendVideoTopic']), 4000);
+                                    setTimeout(restartMedia(callTopics['sendVideoTopic']), 8000);
                                 }
                             }
                         }
                     }
                 }, 4000);
 
-                setTimeout(restartMedia, 4000);
-                setTimeout(restartMedia, 8000);
-                setTimeout(restartMedia, 12000);
-                setTimeout(restartMedia, 20000);
+                setTimeout(restartMedia(callTopics['sendVideoTopic']), 4000);
+                setTimeout(restartMedia(callTopics['sendVideoTopic']), 8000);
+                setTimeout(restartMedia(callTopics['sendVideoTopic']), 12000);
+                setTimeout(restartMedia(callTopics['sendVideoTopic']), 20000);
             },
 
             sendCallSocketMessage = function (message) {
@@ -53566,11 +53576,11 @@ WildEmitter.mixin(WildEmitter);
                 });
             },
 
-            restartMedia = function () {
-                if (webpeers[callTopics['sendVideoTopic']] && !!webpeers[callTopics['sendVideoTopic']].getLocalStream()) {
+            restartMedia = function (videoTopic) {
+                if (webpeers[videoTopic] && !!webpeers[videoTopic].getLocalStream()) {
                     if (navigator && !!navigator.userAgent.match(/firefox/gi)) {
-                        webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].enabled = false;
-                        webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].applyConstraints({
+                        webpeers[videoTopic].getLocalStream().getTracks()[0].enabled = false;
+                        webpeers[videoTopic].getLocalStream().getTracks()[0].applyConstraints({
                             width: {min: callVideoMinWidth - 110, ideal: 1280},
                             height: {min: callVideoMinHeight - 110, ideal: 720},
                             advanced: [
@@ -53578,18 +53588,18 @@ WildEmitter.mixin(WildEmitter);
                                 {aspectRatio: 1.333}
                             ]
                         }).then((res) => {
-                            webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].enabled = true;
-                            webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].applyConstraints({
+                            webpeers[videoTopic].getLocalStream().getTracks()[0].enabled = true;
+                            webpeers[videoTopic].getLocalStream().getTracks()[0].applyConstraints({
                                 "width": callVideoMinWidth,
                                 "height": callVideoMinHeight
                             });
                         }).catch(e => consoleLogging && console.log(e));
                     } else {
-                        webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].applyConstraints({
+                        webpeers[videoTopic].getLocalStream().getTracks()[0].applyConstraints({
                             "width": callVideoMinWidth - 20,
                             "height": callVideoMinHeight - 20
                         }).then((res) => {
-                            webpeers[callTopics['sendVideoTopic']].getLocalStream().getTracks()[0].applyConstraints({
+                            webpeers[videoTopic].getLocalStream().getTracks()[0].applyConstraints({
                                 "width": callVideoMinWidth,
                                 "height": callVideoMinHeight
                             });
@@ -53621,7 +53631,8 @@ WildEmitter.mixin(WildEmitter);
                             errorMessage: "[handleProcessSdpAnswer] Error: " + err
                         });
 
-                        callStop();
+                        //TODO : is necessary or not?
+                        // callStop();
                         return;
                     }
                     startMedia(uiRemoteMedias[jsonMessage.topic]);
@@ -53656,6 +53667,14 @@ WildEmitter.mixin(WildEmitter);
                 });
             },
 
+            handlePartnerFreeze = function (jsonMessage) {
+                if(!!jsonMessage && !!jsonMessage.topic && jsonMessage.topic.substring(0, 2) === 'Vi') {
+                    restartMedia(jsonMessage.topic);
+                    setTimeout(restartMedia(jsonMessage.topic, 4000));
+                    setTimeout(restartMedia(jsonMessage.topic, 8000));
+                }
+            },
+
             handleError = function (jsonMessage, sendingTopic, receiveTopic) {
                 const errMessage = jsonMessage.message;
 
@@ -53665,11 +53684,10 @@ WildEmitter.mixin(WildEmitter);
                     errorMessage: "Kurento error: " + errMessage
                 });
 
-                callStop(sendingTopic, receiveTopic);
+                callStop();
             },
 
-            callStop = function (params) {
-                var callParentDiv = document.getElementById(callDivId);
+            callStop = function () {
                 for (var media in uiRemoteMedias) {
                     removeStreamFromWebRTC(media);
                 }
@@ -56947,7 +56965,7 @@ WildEmitter.mixin(WildEmitter);
 
             return sendMessage(recordCallData, {
                 onResult: function (result) {
-                    restartMedia();
+                    restartMedia(callTopics['sendVideoTopic']);
                     callback && callback(result);
                 }
             });
