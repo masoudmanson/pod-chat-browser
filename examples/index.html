@@ -13,6 +13,7 @@
     <script type="text/javascript" src="../node_modules/crypto-js/crypto-js.js"></script>
     <script type="text/javascript" src="../node_modules/dexie/dist/dexie.min.js"></script>
     <script type="text/javascript" src="./kurento-utils.min.js"></script>
+    <script type="text/javascript" src="./adapter.js"></script>
     <script type="text/javascript" src="../src/chat.js"></script>
     <script type="text/javascript" src="./config.js"></script>
 
@@ -23,7 +24,7 @@
     <script type="text/javascript">
         // Developement
         var PodChat = window.POD.Chat;
-        var env = 'main'; // main | sandbox | integration
+        var env = 'sandbox'; // main | sandbox | integration
 
         var params = {
             appId: new Date().getTime(),
@@ -47,6 +48,7 @@
             fileServer: CONFIG[env].fileServer,
             podSpaceFileServer: CONFIG[env].podSpaceFileServer,
             serverName: CONFIG[env].serverName,
+            callServerName: CONFIG[env].callServerName,
 
             token: CONFIG.token,
             grantDeviceIdFromSSO: false,
@@ -63,11 +65,12 @@
             httpUploadRequestTimeout: 0,
             forceWaitQueueInMemory: true,
             asyncRequestTimeout: 50000,
+            callRequestTimeout: 5000,
             callOptions: {
-                callSocketAddress: "wss://online-stream.pod.ir/gsthandler",
-                callTurnIp: "188.75.65.144",
-                // callSocketAddress: "wss://46.32.6.187/gsthandler",
-                // callTurnIp: "46.32.6.188",
+                // callSocketAddress: "wss://online-stream.pod.ir/gsthandler",
+                // callTurnIp: "188.75.65.144",
+                callSocketAddress: "wss://46.32.6.187/gsthandler",
+                callTurnIp: "46.32.6.188",
                 callDivId: "call-div",
                 callVideo: {
                     minWidth: 320,
@@ -948,6 +951,9 @@
         chatAgent.on('callEvents', function (event) {
             var type = event.type;
             console.log(event);
+
+            // if (type === 'CALL_ERROR')
+                // debugger;
 
             switch (type) {
                 case 'RECEIVE_CALL':
