@@ -589,21 +589,54 @@
                         }
                     }, seenIntervalPitch);
 
+                    // if (currentCallParams && Object.keys(currentCallParams).length) {
+                    //     sendCallMessage({
+                    //         id: 'STOPALL'
+                    //     }, function (result) {
+                    //         if (result.done === 'TRUE') {
+                    //             handleCallSocketOpen(currentCallParams);
+                    //         } else if (result.done === 'SKIP') {
+                    //             handleCallSocketOpen(currentCallParams);
+                    //         } else {
+                    //             consoleLogging && console.log('STOPALL faced a problem', result);
+                    //             endCall({
+                    //                 callId: currentCallId
+                    //             });
+                    //         }
+                    //     });
+                    // }
+
                     if (currentCallParams && Object.keys(currentCallParams).length) {
-                        sendCallMessage({
-                            id: 'STOPALL'
-                        }, function (result) {
-                            if (result.done === 'TRUE') {
-                                handleCallSocketOpen(currentCallParams);
-                            } else if (result.done === 'SKIP') {
-                                handleCallSocketOpen(currentCallParams);
-                            } else {
-                                consoleLogging && console.log('STOPALL faced a problem', result);
-                                endCall({
-                                    callId: currentCallId
-                                });
+                        for (var peer in webpeers) {
+                            if (webpeers[peer]) {
+                                if (webpeers[peer].peerConnection.iceConnectionState != 'connected') {
+                                    fireEvent('callEvents', {
+                                        type: 'CALL_STATUS',
+                                        errorCode: 7000,
+                                        errorMessage: `Call Peer (${peer}) is not in connected state, Restarting call in progress ...!`,
+                                        errorInfo: webpeers[peer]
+                                    });
+
+                                    sendCallMessage({
+                                        id: 'STOPALL'
+                                    }, function (result) {
+                                        if (result.done === 'TRUE') {
+                                            handleCallSocketOpen(currentCallParams);
+                                        } else if (result.done === 'SKIP') {
+                                            handleCallSocketOpen(currentCallParams);
+                                        } else {
+                                            consoleLogging && console.log('STOPALL faced a problem', result);
+                                            endCall({
+                                                callId: currentCallId
+                                            });
+                                            callStop();
+                                        }
+                                    });
+
+                                    break;
+                                }
                             }
-                        });
+                        }
                     }
                 });
 
@@ -641,12 +674,10 @@
                     peerId = undefined;
                     fireEvent('disconnect', event);
 
-                    handleCallSocketClose();
-
                     fireEvent('callEvents', {
                         type: 'CALL_ERROR',
                         errorCode: 7000,
-                        errorMessage: 'Call Socket has been closed!',
+                        errorMessage: 'Call Socket is closed!',
                         errorInfo: event
                     });
                 });
@@ -9949,16 +9980,6 @@
                 }
             },
 
-            handleCallSocketClose = function () {
-                for (var peer in webpeers) {
-                    if (webpeers[peer]) {
-                        webpeers[peer].dispose();
-                        delete webpeers[peer];
-                    }
-                }
-                webpeers = {};
-            },
-
             handleCallSocketOpen = function (params) {
                 currentCallParams = params;
 
@@ -10186,27 +10207,37 @@
                             webpeers[peer].peerConnection.oniceconnectionstatechange = function () {
                                 if (webpeers[peer].peerConnection.iceConnectionState == 'disconnected') {
                                     fireEvent('callEvents', {
-                                        type: 'CALL_ERROR',
+                                        type: 'CALL_STATUS',
                                         errorCode: 7000,
-                                        errorMessage: `Call Peer (${peer}) is Disconnected!`,
+                                        errorMessage: `Call Peer (${peer}) is disconnected!`,
+                                        errorInfo: webpeers[peer]
+                                    });
+                                }
+
+                                if (webpeers[peer].peerConnection.iceConnectionState === "failed") {
+                                    fireEvent('callEvents', {
+                                        type: 'CALL_STATUS',
+                                        errorCode: 7000,
+                                        errorMessage: `Call Peer (${peer}) has failed!`,
+                                        errorInfo: webpeers[peer]
+                                    });
+                                }
+
+                                if (webpeers[peer].peerConnection.iceConnectionState === "connected") {
+                                    fireEvent('callEvents', {
+                                        type: 'CALL_STATUS',
+                                        errorCode: 7000,
+                                        errorMessage: `Call Peer (${peer}) has connected!`,
                                         errorInfo: webpeers[peer]
                                     });
 
                                     setTimeout(function () {
                                         restartMedia(callTopics['sendVideoTopic'])
                                     }, 2000);
+
                                     setTimeout(function () {
                                         restartMedia(callTopics['sendVideoTopic'])
-                                    }, 4000);
-                                }
-
-                                if (webpeers[peer].peerConnection.iceConnectionState === "failed") {
-                                }
-
-                                if (webpeers[peer].peerConnection.iceConnectionState === "connected") {
-                                    setTimeout(function () {
-                                        restartMedia(callTopics['sendVideoTopic'])
-                                    }, 1000);
+                                    }, 6000);
                                 }
                             }
                         }
@@ -10314,33 +10345,54 @@
             restartMedia = function (videoTopicParam) {
                 if (currentCallParams && Object.keys(currentCallParams).length && chatState) {
                     consoleLogging && console.log('Sending Key Frame ...');
+
                     var videoTopic = !!videoTopicParam ? videoTopicParam : callTopics['sendVideoTopic'];
-                    if (webpeers[videoTopic] && !!webpeers[videoTopic].getLocalStream()) {
+                    let videoElement = document.getElementById(`uiRemoteVideo-${videoTopic}`);
+
+                    if (videoElement) {
+                        let videoTrack = videoElement.srcObject.getTracks()[0];
+
                         if (navigator && !!navigator.userAgent.match(/firefox/gi)) {
-                            webpeers[videoTopic].getLocalStream().getTracks()[0].enabled = false;
-                            webpeers[videoTopic].getLocalStream().getTracks()[0].applyConstraints({
-                                width: {min: callVideoMinWidth - 110, ideal: 1280},
-                                height: {min: callVideoMinHeight - 110, ideal: 720},
+                            videoTrack.enable = false;
+                            let newWidth = callVideoMinWidth - (Math.ceil(Math.random() * 50) + 20);
+                            let newHeight = callVideoMinHeight - (Math.ceil(Math.random() * 50) + 20);
+
+                            videoTrack.applyConstraints({
+                                width: {
+                                    min: newWidth,
+                                    ideal: 1280
+                                },
+                                height: {
+                                    min: newHeight,
+                                    ideal: 720
+                                },
                                 advanced: [
-                                    {width: callVideoMinWidth - 110, height: callVideoMinHeight - 110},
-                                    {aspectRatio: 1.333}
+                                    {
+                                        width: newWidth,
+                                        height: newHeight
+                                    },
+                                    {
+                                        aspectRatio: 1.333
+                                    }
                                 ]
                             }).then((res) => {
-                                webpeers[videoTopic].getLocalStream().getTracks()[0].enabled = true;
-                                webpeers[videoTopic].getLocalStream().getTracks()[0].applyConstraints({
-                                    "width": callVideoMinWidth,
-                                    "height": callVideoMinHeight
-                                });
+                                videoTrack.enabled = true;
+                                setTimeout(() => {
+                                    videoTrack.applyConstraints({
+                                        "width": callVideoMinWidth,
+                                        "height": callVideoMinHeight
+                                    });
+                                }, 500);
                             }).catch(e => consoleLogging && console.log(e));
                         } else {
-                            webpeers[videoTopic].getLocalStream().getTracks()[0].applyConstraints({
-                                "width": callVideoMinWidth - 20,
-                                "height": callVideoMinHeight - 20
+                            videoTrack.applyConstraints({
+                                "width": callVideoMinWidth - (Math.ceil(Math.random() * 5) + 5)
                             }).then((res) => {
-                                webpeers[videoTopic].getLocalStream().getTracks()[0].applyConstraints({
-                                    "width": callVideoMinWidth,
-                                    "height": callVideoMinHeight
-                                });
+                                setTimeout(function () {
+                                    videoTrack.applyConstraints({
+                                        "width": callVideoMinWidth
+                                    });
+                                }, 500);
                             }).catch(e => consoleLogging && console.log(e));
                         }
                     }
@@ -10445,6 +10497,7 @@
                 });
 
                 currentCallParams = {};
+                currentCallId = null;
             },
 
             removeStreamFromWebRTC = function (RTCStream) {
