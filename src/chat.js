@@ -10212,6 +10212,14 @@
                                         errorMessage: `Call Peer (${peer}) is disconnected!`,
                                         errorInfo: webpeers[peer]
                                     });
+
+                                    setTimeout(function () {
+                                        restartMedia(callTopics['sendVideoTopic'])
+                                    }, 2000);
+
+                                    setTimeout(function () {
+                                        restartMedia(callTopics['sendVideoTopic'])
+                                    }, 6000);
                                 }
 
                                 if (webpeers[peer].peerConnection.iceConnectionState === "failed") {
