@@ -274,6 +274,7 @@
             callPingInterval = null,
             currentCallParams = {},
             currentCallId = null,
+            shouldReconnectCallTimeout = null,
             callTopics = {},
             callWebSocket = null,
             callSocketForceReconnect = true,
@@ -589,55 +590,7 @@
                         }
                     }, seenIntervalPitch);
 
-                    // if (currentCallParams && Object.keys(currentCallParams).length) {
-                    //     sendCallMessage({
-                    //         id: 'STOPALL'
-                    //     }, function (result) {
-                    //         if (result.done === 'TRUE') {
-                    //             handleCallSocketOpen(currentCallParams);
-                    //         } else if (result.done === 'SKIP') {
-                    //             handleCallSocketOpen(currentCallParams);
-                    //         } else {
-                    //             consoleLogging && console.log('STOPALL faced a problem', result);
-                    //             endCall({
-                    //                 callId: currentCallId
-                    //             });
-                    //         }
-                    //     });
-                    // }
-
-                    if (currentCallParams && Object.keys(currentCallParams).length) {
-                        for (var peer in webpeers) {
-                            if (webpeers[peer]) {
-                                if (webpeers[peer].peerConnection.iceConnectionState != 'connected') {
-                                    fireEvent('callEvents', {
-                                        type: 'CALL_STATUS',
-                                        errorCode: 7000,
-                                        errorMessage: `Call Peer (${peer}) is not in connected state, Restarting call in progress ...!`,
-                                        errorInfo: webpeers[peer]
-                                    });
-
-                                    sendCallMessage({
-                                        id: 'STOPALL'
-                                    }, function (result) {
-                                        if (result.done === 'TRUE') {
-                                            handleCallSocketOpen(currentCallParams);
-                                        } else if (result.done === 'SKIP') {
-                                            handleCallSocketOpen(currentCallParams);
-                                        } else {
-                                            consoleLogging && console.log('STOPALL faced a problem', result);
-                                            endCall({
-                                                callId: currentCallId
-                                            });
-                                            callStop();
-                                        }
-                                    });
-
-                                    break;
-                                }
-                            }
-                        }
-                    }
+                    shouldReconnectCall();
                 });
 
                 asyncClient.on('stateChange', function (state) {
@@ -10000,6 +9953,41 @@
                 });
             },
 
+            shouldReconnectCall = function () {
+                if (currentCallParams && Object.keys(currentCallParams).length) {
+                    for (var peer in webpeers) {
+                        if (webpeers[peer]) {
+                            if (webpeers[peer].peerConnection.iceConnectionState != 'connected') {
+                                fireEvent('callEvents', {
+                                    type: 'CALL_STATUS',
+                                    errorCode: 7000,
+                                    errorMessage: `Call Peer (${peer}) is not in connected state, Restarting call in progress ...!`,
+                                    errorInfo: webpeers[peer]
+                                });
+
+                                sendCallMessage({
+                                    id: 'STOPALL'
+                                }, function (result) {
+                                    if (result.done === 'TRUE') {
+                                        handleCallSocketOpen(currentCallParams);
+                                    } else if (result.done === 'SKIP') {
+                                        handleCallSocketOpen(currentCallParams);
+                                    } else {
+                                        consoleLogging && console.log('STOPALL faced a problem', result);
+                                        endCall({
+                                            callId: currentCallId
+                                        });
+                                        callStop();
+                                    }
+                                });
+
+                                break;
+                            }
+                        }
+                    }
+                }
+            },
+
             generateAndSendSdpOffers = function (params) {
                 // Video Topics
                 if (params.callVideo) {
@@ -10220,6 +10208,11 @@
                                     setTimeout(function () {
                                         restartMedia(callTopics['sendVideoTopic'])
                                     }, 6000);
+
+                                    shouldReconnectCallTimeout && clearTimeout(shouldReconnectCallTimeout);
+                                    shouldReconnectCallTimeout = setTimeout(function () {
+                                        shouldReconnectCall();
+                                    }, 5000);
                                 }
 
                                 if (webpeers[peer].peerConnection.iceConnectionState === "failed") {
@@ -10351,7 +10344,7 @@
             },
 
             restartMedia = function (videoTopicParam) {
-                if (currentCallParams && Object.keys(currentCallParams).length && chatState) {
+                if (currentCallParams && Object.keys(currentCallParams).length) {
                     consoleLogging && console.log('Sending Key Frame ...');
 
                     var videoTopic = !!videoTopicParam ? videoTopicParam : callTopics['sendVideoTopic'];
