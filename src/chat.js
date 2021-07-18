@@ -10212,7 +10212,7 @@
                                     shouldReconnectCallTimeout && clearTimeout(shouldReconnectCallTimeout);
                                     shouldReconnectCallTimeout = setTimeout(function () {
                                         shouldReconnectCall();
-                                    }, 5000);
+                                    }, 7000);
                                 }
 
                                 if (webpeers[peer].peerConnection.iceConnectionState === "failed") {
@@ -10496,6 +10496,8 @@
                 sendCallMessage({
                     id: 'CLOSE'
                 });
+
+
 
                 currentCallParams = {};
                 currentCallId = null;
