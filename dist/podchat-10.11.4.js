@@ -56700,10 +56700,16 @@ WildEmitter.mixin(WildEmitter);
                         });
                     }
 
-                    handleCallSocketOpen({
-                        brokerAddress: params.brokerAddress,
-                        callVideo: callVideo,
-                        callAudio: !callMute
+                    sendCallMessage({
+                        id: 'STOPALL'
+                    }, function (result) {
+                        if (result.done === 'TRUE' || result.done === 'SKIP') {
+                            handleCallSocketOpen({
+                                brokerAddress: params.brokerAddress,
+                                callVideo: callVideo,
+                                callAudio: !callMute
+                            });
+                        }
                     });
                 } else {
                     consoleLogging && console.log('No Call DIV has been declared!');
