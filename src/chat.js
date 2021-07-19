@@ -270,8 +270,6 @@
                 && params.callOptions.callVideo.hasOwnProperty('minHeight'))
                 ? params.callOptions.callVideo.minHeight
                 : 180,
-            callPingIntervalTime = params.callOptions.callPingInterval || 8000,
-            callPingInterval = null,
             currentCallParams = {},
             currentCallId = null,
             shouldReconnectCallTimeout = null,
