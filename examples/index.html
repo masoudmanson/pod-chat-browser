@@ -962,7 +962,9 @@
                     console.log('Accepting the call #' + event.result.callId);
 
                     chatAgent.acceptCall({
-                        callId: event.result.callId
+                        callId: event.result.callId,
+                        video: true,
+                        mute: false
                     }, function (res) {
                         console.log({res});
                     });

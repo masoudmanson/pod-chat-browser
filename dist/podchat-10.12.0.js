@@ -47073,7 +47073,7 @@ WildEmitter.mixin(WildEmitter);
             queueConnectionTimeout = params.queueConnectionTimeout,
             socketAddress = params.socketAddress,
             serverName = params.serverName || '',
-            callServerName = params.callServerName || '',
+            callServerName,
             wsConnectionWaitTime = params.wsConnectionWaitTime,
             connectionRetryInterval = params.connectionRetryInterval,
             msgPriority = params.msgPriority || 1,
@@ -47682,7 +47682,7 @@ WildEmitter.mixin(WildEmitter);
                 var hasFile = false;
 
                 httpRequestObject[eval('fileUploadUniqueId')] = new XMLHttpRequest();
-                settings = params.settings;
+                var settings = params.settings;
 
                 httpRequestObject[eval('fileUploadUniqueId')].responseType = xhrResponseType;
 
@@ -47835,7 +47835,7 @@ WildEmitter.mixin(WildEmitter);
                                 var keys = Object.keys(data);
 
                                 if (keys.length > 0) {
-                                    sendData = '';
+                                    var sendData = '';
 
                                     for (var i = 0; i < keys.length; i++) {
                                         var key = keys[i];
@@ -50110,19 +50110,31 @@ WildEmitter.mixin(WildEmitter);
                         }
                         webpeers = {};
 
-                        //TODO : Check video status
-                        startCallWebRTCFunctions({
-                            video: true,//messageContent.clientDTO.video,
-                            mute: false,//messageContent.clientDTO.mute,
-                            sendingTopic: messageContent.clientDTO.topicSend,
-                            receiveTopic: messageContent.clientDTO.topicReceive,
-                            brokerAddress: messageContent.clientDTO.brokerAddress
-                        }, function (callDivs) {
-                            fireEvent('callEvents', {
-                                type: 'CALL_DIVS',
-                                result: callDivs
+                        if (typeof messageContent === 'object'
+                            && messageContent.hasOwnProperty('chatDataDto')
+                            && !!messageContent.chatDataDto.kurentoAddress) {
+
+                            setCallServerName(messageContent.chatDataDto.kurentoAddress.split(',')[0]);
+
+                            startCallWebRTCFunctions({
+                                video: messageContent.clientDTO.video,
+                                mute: messageContent.clientDTO.mute,
+                                sendingTopic: messageContent.clientDTO.topicSend,
+                                receiveTopic: messageContent.clientDTO.topicReceive,
+                                brokerAddress: messageContent.chatDataDto.brokerAddressWeb,
+                                turnAddress: messageContent.chatDataDto.turnAddress,
+                            }, function (callDivs) {
+                                fireEvent('callEvents', {
+                                    type: 'CALL_DIVS',
+                                    result: callDivs
+                                });
                             });
-                        });
+                        } else {
+                            fireEvent('callEvents', {
+                                type: 'CALL_ERROR',
+                                result: 'Chat Data DTO is not present!'
+                            });
+                        }
 
                         break;
 
@@ -51529,7 +51541,6 @@ WildEmitter.mixin(WildEmitter);
                  */
 
                 var replyInfo = {
-                    deleted: messageContent.deleted,
                     participant: undefined,
                     repliedToMessageId: messageContent.repliedToMessageId,
                     repliedToMessageTime: (messageContent.repliedToMessageNanos)
@@ -54035,7 +54046,7 @@ WildEmitter.mixin(WildEmitter);
              * @return {object} Image Object
              */
             getImage = function (params, callback) {
-                getImageData = {};
+                var getImageData = {};
 
                 if (params) {
                     if (parseInt(params.imageId) > 0) {
@@ -54102,7 +54113,7 @@ WildEmitter.mixin(WildEmitter);
              * @return {object} File Object
              */
             getFile = function (params, callback) {
-                getFileData = {};
+                var getFileData = {};
 
                 if (params) {
                     if (typeof params.fileId !== 'undefined') {
@@ -54778,7 +54789,7 @@ WildEmitter.mixin(WildEmitter);
 
 
                 if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
-                    uploadImageData = {};
+                    var uploadImageData = {};
 
                     if (params) {
                         if (typeof params.image !== 'undefined') {
@@ -54949,7 +54960,7 @@ WildEmitter.mixin(WildEmitter);
 
                 continueImageUpload = function (params) {
                     if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
-                        uploadImageData = {};
+                        var uploadImageData = {};
                         if (params) {
                             if (typeof params.image !== 'undefined') {
                                 uploadImageData.file = params.image;
@@ -55091,7 +55102,7 @@ WildEmitter.mixin(WildEmitter);
                     uploadThreadId;
                 var continueImageUpload = function (params) {
                     if (imageMimeTypes.indexOf(fileType) >= 0 || imageExtentions.indexOf(fileExtension) >= 0) {
-                        uploadImageData = {};
+                        var uploadImageData = {};
                         if (params) {
                             if (typeof params.image !== 'undefined') {
                                 uploadImageData.file = params.image;
@@ -56701,13 +56712,12 @@ WildEmitter.mixin(WildEmitter);
                     sendCallMessage({
                         id: 'STOPALL'
                     }, function (result) {
-                        if (result.done === 'TRUE' || result.done === 'SKIP') {
-                            handleCallSocketOpen({
-                                brokerAddress: params.brokerAddress,
-                                callVideo: callVideo,
-                                callAudio: !callMute
-                            });
-                        }
+                        handleCallSocketOpen({
+                            brokerAddress: params.brokerAddress,
+                            turnAddress: params.turnAddress,
+                            callVideo: callVideo,
+                            callAudio: !callMute
+                        });
                     });
                 } else {
                     consoleLogging && console.log('No Call DIV has been declared!');
@@ -56720,7 +56730,8 @@ WildEmitter.mixin(WildEmitter);
 
                 sendCallMessage({
                     id: 'CREATE_SESSION',
-                    brokerAddress: params.brokerAddress
+                    brokerAddress: params.brokerAddress,
+                    turnAddress: params.turnAddress.split(',')[0]
                 }, function (res) {
                     if (res.done === 'TRUE') {
                         generateAndSendSdpOffers(params);
@@ -56771,6 +56782,30 @@ WildEmitter.mixin(WildEmitter);
             },
 
             generateAndSendSdpOffers = function (params) {
+                var turnServers = [];
+
+                if (!!params.turnAddress && params.turnAddress.length > 0) {
+                    var serversTemp = params.turnAddress.split(',');
+
+                    turnServers = [
+                        {"urls": "stun:" + serversTemp[0]},
+                        {
+                            "urls": "turn:" + serversTemp[1],
+                            "username": "mkhorrami",
+                            "credential": "mkh_123456"
+                        }
+                    ];
+                } else {
+                    turnServers = [
+                        {"urls": "stun:" + callTurnIp + ":3478"},
+                        {
+                            "urls": "turn:" + callTurnIp + ":3478",
+                            "username": "mkhorrami",
+                            "credential": "mkh_123456"
+                        }
+                    ];
+                }
+
                 // Video Topics
                 if (params.callVideo) {
 
@@ -56785,21 +56820,16 @@ WildEmitter.mixin(WildEmitter);
                             }
                         },
                         onicecandidate: (candidate) => {
-                            sendCallMessage({
-                                id: 'ADD_ICE_CANDIDATE',
-                                topic: callTopics['sendVideoTopic'],
-                                candidateDto: candidate
-                            })
+                            setTimeout(function () {
+                                sendCallMessage({
+                                    id: 'ADD_ICE_CANDIDATE',
+                                    topic: callTopics['sendVideoTopic'],
+                                    candidateDto: candidate
+                                })
+                            }, 500, {candidate: candidate});
                         },
                         configuration: {
-                            iceServers: [
-                                {"urls": "stun:" + callTurnIp + ":3478"},
-                                {
-                                    "urls": "turn:" + callTurnIp + ":3478",
-                                    "username": "mkhorrami",
-                                    "credential": "mkh_123456"
-                                }
-                            ]
+                            iceServers: turnServers
                         }
                     };
 
@@ -56807,21 +56837,16 @@ WildEmitter.mixin(WildEmitter);
                         remoteVideo: uiRemoteMedias[callTopics['receiveVideoTopic']],
                         mediaConstraints: {audio: false, video: true},
                         onicecandidate: (candidate) => {
-                            sendCallMessage({
-                                id: 'ADD_ICE_CANDIDATE',
-                                topic: callTopics['receiveVideoTopic'],
-                                candidateDto: candidate
-                            })
+                            setTimeout(function () {
+                                sendCallMessage({
+                                    id: 'ADD_ICE_CANDIDATE',
+                                    topic: callTopics['receiveVideoTopic'],
+                                    candidateDto: candidate
+                                })
+                            }, 500, {candidate: candidate});
                         },
                         configuration: {
-                            iceServers: [
-                                {"urls": "stun:" + callTurnIp + ":3478"},
-                                {
-                                    "urls": "turn:" + callTurnIp + ":3478",
-                                    "username": "mkhorrami",
-                                    "credential": "mkh_123456"
-                                }
-                            ]
+                            iceServers: turnServers
                         }
                     };
 
@@ -56882,21 +56907,16 @@ WildEmitter.mixin(WildEmitter);
                         localVideo: uiRemoteMedias[callTopics['sendAudioTopic']],
                         mediaConstraints: {audio: true, video: false},
                         onicecandidate: (candidate) => {
-                            sendCallMessage({
-                                id: 'ADD_ICE_CANDIDATE',
-                                topic: callTopics['sendAudioTopic'],
-                                candidateDto: candidate,
-                            })
+                            setTimeout(function () {
+                                sendCallMessage({
+                                    id: 'ADD_ICE_CANDIDATE',
+                                    topic: callTopics['sendAudioTopic'],
+                                    candidateDto: candidate,
+                                })
+                            }, 500, {candidate: candidate});
                         },
                         configuration: {
-                            iceServers: [
-                                {"urls": "stun:" + callTurnIp + ":3478"},
-                                {
-                                    "urls": "turn:" + callTurnIp + ":3478",
-                                    "username": "mkhorrami",
-                                    "credential": "mkh_123456"
-                                }
-                            ]
+                            iceServers: turnServers
                         }
                     };
 
@@ -56904,21 +56924,16 @@ WildEmitter.mixin(WildEmitter);
                         remoteVideo: uiRemoteMedias[callTopics['receiveAudioTopic']],
                         mediaConstraints: {audio: true, video: false},
                         onicecandidate: (candidate) => {
-                            sendCallMessage({
-                                id: 'ADD_ICE_CANDIDATE',
-                                topic: callTopics['receiveAudioTopic'],
-                                candidateDto: candidate,
-                            })
+                            setTimeout(function () {
+                                sendCallMessage({
+                                    id: 'ADD_ICE_CANDIDATE',
+                                    topic: callTopics['receiveAudioTopic'],
+                                    candidateDto: candidate,
+                                })
+                            }, 500, {candidate: candidate});
                         },
                         configuration: {
-                            iceServers: [
-                                {"urls": "stun:" + callTurnIp + ":3478"},
-                                {
-                                    "urls": "turn:" + callTurnIp + ":3478",
-                                    "username": "mkhorrami",
-                                    "credential": "mkh_123456"
-                                }
-                            ]
+                            iceServers: turnServers
                         }
                     };
 
@@ -57107,6 +57122,12 @@ WildEmitter.mixin(WildEmitter);
                 }
             },
 
+            setCallServerName = function (serverName) {
+                if (!!serverName) {
+                    callServerName = serverName;
+                }
+            },
+
             startMedia = function (media) {
                 media.play().catch((err) => {
                     if (err.name === 'NotAllowedError') {
@@ -57278,8 +57299,6 @@ WildEmitter.mixin(WildEmitter);
                 sendCallMessage({
                     id: 'CLOSE'
                 });
-
-
 
                 currentCallParams = {};
                 currentCallId = null;
@@ -58519,7 +58538,7 @@ WildEmitter.mixin(WildEmitter);
             var messageIdsList = params.messageIds,
                 uniqueIdsList = [];
 
-            for (i in messageIdsList) {
+            for (var i in messageIdsList) {
                 var uniqueId = Utility.generateUUID();
                 uniqueIdsList.push(uniqueId);
 
@@ -58702,7 +58721,7 @@ WildEmitter.mixin(WildEmitter);
                 messageIdsList = params.messageIds,
                 uniqueIdsList = [];
 
-            for (i in messageIdsList) {
+            for (var i in messageIdsList) {
                 if (!threadCallbacks[threadId]) {
                     threadCallbacks[threadId] = {};
                 }
