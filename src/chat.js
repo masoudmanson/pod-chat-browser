@@ -197,6 +197,7 @@
                 ADD_TAG_PARTICIPANT: 143,
                 REMOVE_TAG_PARTICIPANT: 144,
                 GET_TAG_LIST: 145,
+                DELETE_MESSAGE_THREAD: 151,
                 ERROR: 999
             },
             inviteeVOidTypes = {
@@ -3993,6 +3994,21 @@
 
                         fireEvent('threadEvents', {
                             type: 'TAG_LIST',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 151    Delete Message Thread
+                     */
+                    case chatMessageVOTypes.DELETE_MESSAGE_THREAD:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        fireEvent('threadEvents', {
+                            type: 'DELETE_THREAD',
                             result: messageContent
                         });
 
@@ -12650,6 +12666,41 @@
             }, {
                 onResult: function (result) {
                     callback && callback(result);
+                }
+            });
+        };
+
+        this.deleteThread = function (params, callback) {
+            var sendData = {
+                chatMessageVOType: chatMessageVOTypes.DELETE_MESSAGE_THREAD,
+                typeCode: params.typeCode
+            };
+
+            if (params) {
+                if (+params.threadId > 0) {
+                    sendData.subjectId = +params.threadId;
+                }
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to Delete Thread!'
+                });
+                return;
+            }
+
+            return sendMessage(sendData, {
+                onResult: function (result) {
+                    var returnData = {
+                        hasError: result.hasError,
+                        cache: false,
+                        errorMessage: result.errorMessage,
+                        errorCode: result.errorCode
+                    };
+                    if (!returnData.hasError) {
+                        var messageContent = result.result;
+                        returnData.result = messageContent;
+                    }
+                    callback && callback(returnData);
                 }
             });
         };
