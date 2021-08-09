@@ -189,6 +189,7 @@
                 END_RECORD_CALL: 122,
                 START_SCREEN_SHARE: 123,
                 END_SCREEN_SHARE: 124,
+                MUTUAL_GROUPS: 130,
                 CREATE_TAG: 140,
                 EDIT_TAG: 141,
                 DELETE_TAG: 142,
@@ -3690,7 +3691,7 @@
                      */
                     case chatMessageVOTypes.GET_ASSISTANTS:
                         if (messagesCallbacks[uniqueId]) {
-                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
                         }
 
                         fireEvent('assistantEvents', {
@@ -3757,7 +3758,7 @@
                      */
                     case chatMessageVOTypes.ASSISTANT_HISTORY:
                         if (messagesCallbacks[uniqueId]) {
-                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
                         }
 
                         fireEvent('assistantEvents', {
@@ -3802,7 +3803,7 @@
                      */
                     case chatMessageVOTypes.BLOCKED_ASSISTANTS:
                         if (messagesCallbacks[uniqueId]) {
-                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
                         }
 
                         fireEvent('assistantEvents', {
@@ -3869,6 +3870,21 @@
 
                         fireEvent('callEvents', {
                             type: 'END_SCREEN_SHARE',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 130    Mutual Groups
+                     */
+                    case chatMessageVOTypes.MUTUAL_GROUPS:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        fireEvent('threadEvents', {
+                            type: 'MUTUAL_GROUPS',
                             result: messageContent
                         });
 
@@ -14247,13 +14263,13 @@
 
         this.getAssistantsHistory = function (params, callback) {
             var sendData = {
-                    chatMessageVOType: chatMessageVOTypes.ASSISTANT_HISTORY,
-                    typeCode: params.typeCode,
-                    content: {
-                        offset: +params.offset > 0 ? +params.offset : 0,
-                        count: +params.count > 0 ? +params.count : config.getHistoryCount
-                    }
-                };
+                chatMessageVOType: chatMessageVOTypes.ASSISTANT_HISTORY,
+                typeCode: params.typeCode,
+                content: {
+                    offset: +params.offset > 0 ? +params.offset : 0,
+                    count: +params.count > 0 ? +params.count : config.getHistoryCount
+                }
+            };
 
             if (+params.fromTime > 0 && +params.fromTime < 9999999999999) {
                 sendData.content.fromTime = +params.fromTime;
@@ -15126,6 +15142,86 @@
         this.restartMedia = restartMedia;
 
         this.callStop = callStop;
+
+        this.getMutualGroups = function (params, callback) {
+            var count = +params.count ? +params.count : 50,
+                offset = +params.offset ? +params.offset : 0;
+
+            var sendData = {
+                chatMessageVOType: chatMessageVOTypes.MUTUAL_GROUPS,
+                typeCode: params.typeCode,
+                content: {
+                    count: count,
+                    offset: offset
+                }
+            };
+
+            if (params) {
+                if (typeof params.user === 'object'
+                    && params.user.hasOwnProperty('id')
+                    && params.user.hasOwnProperty('idType')
+                    && params.user.id.length
+                    && inviteeVOidTypes[params.user.idType] > 0) {
+                    sendData.content.toBeUserVO = {
+                        id: params.user.id,
+                        idType: +inviteeVOidTypes[params.user.idType]
+                    };
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'You should send an user object like {id: 92, idType: "TO_BE_USER_CONTACT_ID"}'
+                    });
+                    return;
+                }
+
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to Get Mutual Groups!'
+                });
+                return;
+            }
+
+            return sendMessage(sendData, {
+                onResult: function (result) {
+                    var returnData = {
+                        hasError: result.hasError,
+                        cache: false,
+                        errorMessage: result.errorMessage,
+                        errorCode: result.errorCode,
+                        uniqueId: result.uniqueId
+                    };
+
+                    if (!returnData.hasError) {
+                        var messageContent = result.result,
+                            messageLength = messageContent.length,
+                            resultData = {
+                                threads: [],
+                                contentCount: result.contentCount,
+                                hasNext: (offset + count < result.contentCount && messageLength > 0),
+                                nextOffset: offset * 1 + messageLength * 1
+                            },
+                            threadData;
+
+                        for (var i = 0; i < messageLength; i++) {
+                            threadData = createThread(messageContent[i], false);
+                            if (threadData) {
+                                resultData.threads.push(threadData);
+                            }
+                        }
+
+                        returnData.result = resultData;
+                    }
+
+                    callback && callback(returnData);
+                    /**
+                     * Delete callback so if server pushes response before
+                     * cache, cache won't send data again
+                     */
+                    callback = undefined;
+                }
+            });
+        };
 
         this.sendLocationPing = function (params, callback) {
             /**
