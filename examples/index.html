@@ -94,6 +94,35 @@
          * Main Chat Ready Listener
          */
         var chatReadyInstance = chatAgent.on("chatReady", function () {
+            setTimeout(function () {
+                // chatAgent.createTag({
+                //     tagName: 'Friendly'
+                // }, function (result) {
+                //     console.log(result);
+                // });
+
+                // chatAgent.editTag({
+                //     tagId: 161,
+                //     tagName: 'تاک'
+                // }, function (result) {
+                //     console.log(result);
+                // });
+
+                // chatAgent.deleteTag({
+                //     tagId: 161
+                // }, function (result) {
+                //     console.log(result);
+                // });
+
+                // chatAgent.getTagList({}, function (result) {
+                //     console.log(result);
+                // });
+            }, 5000);
+
+
+
+
+
 
             // chatAgent.createSelfThread({
             //     description: 'Use this space to save messages for your own sake',
@@ -962,7 +991,7 @@
             console.log(event);
 
             // if (type === 'CALL_ERROR')
-                // debugger;
+            // debugger;
 
             switch (type) {
                 case 'RECEIVE_CALL':
@@ -1546,7 +1575,7 @@ Thread: <input type="text" id="threadInput" autocomplete="on" width="500">
             type: 'video'
         })">Group Call</a>
         <br>
-        
+
         <label for="call-group-thread">Call Size : </label>
         <select name="call-size" id="call-size">
             <option value="small">Small (320 × 180)</option>
@@ -2636,13 +2665,13 @@ Thread: <input type="text" id="threadInput" autocomplete="on" width="500">
         }
     });
 
-    document.getElementById('call-size').addEventListener('change', function() {
+    document.getElementById('call-size').addEventListener('change', function () {
         switch (this.value) {
             case 'small':
                 chatAgent.resizeCallVideo({
                     width: 320,
                     height: 180
-                }, function() {
+                }, function () {
                     console.log('Call Video has been resized to 320 × 180');
                 })
                 break;
@@ -2650,7 +2679,7 @@ Thread: <input type="text" id="threadInput" autocomplete="on" width="500">
                 chatAgent.resizeCallVideo({
                     width: 640,
                     height: 360
-                }, function() {
+                }, function () {
                     console.log('Call Video has been resized to 640 × 360');
                 })
                 break;
@@ -2658,7 +2687,7 @@ Thread: <input type="text" id="threadInput" autocomplete="on" width="500">
                 chatAgent.resizeCallVideo({
                     width: 720,
                     height: 405
-                }, function() {
+                }, function () {
                     console.log('Call Video has been resized to 720 × 405');
                 })
                 break;
@@ -2666,7 +2695,7 @@ Thread: <input type="text" id="threadInput" autocomplete="on" width="500">
                 chatAgent.resizeCallVideo({
                     width: 1280,
                     height: 720
-                }, function() {
+                }, function () {
                     console.log('Call Video has been resized to 1280 × 720');
                 })
                 break;
@@ -2674,7 +2703,7 @@ Thread: <input type="text" id="threadInput" autocomplete="on" width="500">
                 chatAgent.resizeCallVideo({
                     width: 1920,
                     height: 1080
-                }, function() {
+                }, function () {
                     console.log('Call Video has been resized to 1920 × 1080');
                 })
                 break;

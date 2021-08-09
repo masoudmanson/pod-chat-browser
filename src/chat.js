@@ -180,6 +180,10 @@
                 TURN_OFF_VIDEO_CALL: 114,
                 RECORD_CALL: 121,
                 END_RECORD_CALL: 122,
+                CREATE_TAG: 140,
+                EDIT_TAG: 141,
+                DELETE_TAG: 142,
+                GET_TAG_LIST: 145,
                 ERROR: 999
             },
             inviteeVOidTypes = {
@@ -3715,6 +3719,66 @@
 
                         fireEvent('callEvents', {
                             type: 'STOP_RECORDING_CALL',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 140    Create Tag
+                     */
+                    case chatMessageVOTypes.CREATE_TAG:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        fireEvent('threadEvents', {
+                            type: 'NEW_TAG',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 141    Edit Tag
+                     */
+                    case chatMessageVOTypes.EDIT_TAG:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        fireEvent('threadEvents', {
+                            type: 'EDIT_TAG',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 142    Delete Tag
+                     */
+                    case chatMessageVOTypes.DELETE_TAG:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        fireEvent('threadEvents', {
+                            type: 'DELETE_TAG',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 145    Delete Tag
+                     */
+                    case chatMessageVOTypes.GET_TAG_LIST:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        fireEvent('threadEvents', {
+                            type: 'TAG_LIST',
                             result: messageContent
                         });
 
@@ -13542,6 +13606,134 @@
             }
 
             return sendMessage(getThreadBotsData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.createTag = function (params, callback) {
+            var createTagData = {
+                chatMessageVOType: chatMessageVOTypes.CREATE_TAG,
+                typeCode: params.typeCode,
+                content: {},
+                pushMsgType: 3,
+                token: token
+            };
+
+            if (params) {
+                if (typeof params.tagName === 'string' && params.tagName.length > 0) {
+                    createTagData.content.name = params.tagName;
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: `No tag name has been declared!`
+                    });
+                    return;
+                }
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to Create New Tag!'
+                });
+                return;
+            }
+
+            return sendMessage(createTagData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.editTag = function (params, callback) {
+            var sendData = {
+                chatMessageVOType: chatMessageVOTypes.EDIT_TAG,
+                typeCode: params.typeCode,
+                content: {},
+                pushMsgType: 3,
+                token: token
+            };
+
+            if (params) {
+                if (parseInt(params.tagId) > 0) {
+                    sendData.subjectId = +params.tagId;
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: `No Tag Id has been sent!`
+                    });
+                    return;
+                }
+
+                if (typeof params.tagName === 'string' && params.tagName.length > 0) {
+                    sendData.content.name = params.tagName;
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: `No tag name has been declared!`
+                    });
+                    return;
+                }
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to Edit Tag!'
+                });
+                return;
+            }
+
+            return sendMessage(sendData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.deleteTag = function (params, callback) {
+            var sendData = {
+                chatMessageVOType: chatMessageVOTypes.DELETE_TAG,
+                typeCode: params.typeCode,
+                content: {},
+                pushMsgType: 3,
+                token: token
+            };
+
+            if (params) {
+                if (parseInt(params.tagId) > 0) {
+                    sendData.subjectId = +params.tagId;
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: `No Tag Id has been sent!`
+                    });
+                    return;
+                }
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to Delete Tag!'
+                });
+                return;
+            }
+
+            return sendMessage(sendData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.getTagList = function (params, callback) {
+            var sendData = {
+                chatMessageVOType: chatMessageVOTypes.GET_TAG_LIST,
+                typeCode: params.typeCode,
+                content: {},
+                pushMsgType: 3,
+                token: token
+            };
+
+            return sendMessage(sendData, {
                 onResult: function (result) {
                     callback && callback(result);
                 }
