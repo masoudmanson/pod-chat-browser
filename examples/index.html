@@ -24,7 +24,7 @@
     <script type="text/javascript">
         // Developement
         var PodChat = window.POD.Chat;
-        var env = 'integration'; // main | sandbox | integration
+        var env = 'sandbox'; // main | sandbox | integration
 
         var params = {
             appId: new Date().getTime(),
@@ -95,34 +95,95 @@
          */
         var chatReadyInstance = chatAgent.on("chatReady", function () {
             setTimeout(function () {
-                // chatAgent.createTag({
-                //     tagName: 'Friendly'
+
+                // chatAgent.registerAssistant({
+                //     assistants: [{
+                //         contactType: 'default',
+                //         roleTypes: ['read_thread', 'edit_thread', 'add_rule_to_user'],
+                //         assistant: {
+                //             id: 'h.amouzegar',
+                //             idType: 'TO_BE_USER_USERNAME'
+                //         }
+                //     }]
+                // }, function(result) {
+                //     console.log(result);
+                // });
+
+                // chatAgent.deactivateAssistant({
+                //     assistants: [{
+                //         assistant: {
+                //             id: 'h.amouzegar',
+                //             idType: 'TO_BE_USER_USERNAME'
+                //         }
+                //     }]
                 // }, function (result) {
                 //     console.log(result);
                 // });
 
-                // chatAgent.editTag({
-                //     tagId: 161,
-                //     tagName: 'تاک'
+                // chatAgent.getAssistantsList({
+                //     contactType: 'default'
+                // }, function(assistants) {
+                //     console.log({assistants});
+                // });
+
+                // chatAgent.getAssistantsHistory({
+                //     // actionType: 'register'
+                //     // toTime: 1628509673879
+                // }, function(assistantsHistory) {
+                //     console.log({assistantsHistory})
+                // });
+
+                // chatAgent.blockAssistant({
+                //     assistants: [{
+                //         assistant: {
+                //             id: 'h.amouzegar',
+                //             idType: 'TO_BE_USER_USERNAME'
+                //         }
+                //     }]
                 // }, function (result) {
                 //     console.log(result);
                 // });
 
-                // chatAgent.deleteTag({
-                //     tagId: 161
+                // chatAgent.unblockAssistant({
+                //     assistants: [{
+                //         assistant: {
+                //             id: 'h.amouzegar',
+                //             idType: 'TO_BE_USER_USERNAME'
+                //         }
+                //     }]
                 // }, function (result) {
                 //     console.log(result);
                 // });
 
-                // chatAgent.getTagList({}, function (result) {
-                //     console.log(result);
+                // chatAgent.getBlockedAssistantsList({
+                //     contactType: 'default'
+                // }, function(assistants) {
+                //     console.log({assistants});
                 // });
-            }, 5000);
+            }, 0);
 
+            // chatAgent.createTag({
+            //     tagName: 'Friendly'
+            // }, function (result) {
+            //     console.log(result);
+            // });
 
+            // chatAgent.editTag({
+            //     tagId: 161,
+            //     tagName: 'تاک'
+            // }, function (result) {
+            //     console.log(result);
+            // });
 
+            // chatAgent.deleteTag({
+            //     tagId: 161
+            // }, function (result) {
+            //     console.log(result);
+            // });
 
-
+            // chatAgent.getTagList({}, function (result) {
+            //     console.log(result);
+            // });
 
             // chatAgent.createSelfThread({
             //     description: 'Use this space to save messages for your own sake',

@@ -173,11 +173,18 @@
                 REMOVE_BOT_COMMANDS: 104,
                 SEARCH: 105,
                 CONTINUE_SEARCH: 106,
+                REGISTER_ASSISTANT: 107,
+                DEACTIVATE_ASSISTANT: 108,
+                GET_ASSISTANTS: 109,
                 ACTIVE_CALL_PARTICIPANTS: 110,
                 CALL_SESSION_CREATED: 111,
                 IS_BOT_NAME_AVAILABLE: 112,
                 TURN_ON_VIDEO_CALL: 113,
                 TURN_OFF_VIDEO_CALL: 114,
+                ASSISTANT_HISTORY: 115,
+                BLOCK_ASSISTANT: 116,
+                UNBLOCK_ASSISTANT: 117,
+                BLOCKED_ASSISTANTS: 118,
                 RECORD_CALL: 121,
                 END_RECORD_CALL: 122,
                 CREATE_TAG: 140,
@@ -221,6 +228,12 @@
                 END_CALL: '13',
                 START_CALL: '14',
                 STICKER: '15'
+            },
+            assistantActionTypes = {
+                REGISTER: 1,
+                ACTIVATE: 2,
+                DEACTIVATE: 3,
+                BLOCK: 4
             },
             systemMessageTypes = {
                 IS_TYPING: '1',
@@ -3641,6 +3654,51 @@
                         break;
 
                     /**
+                     * Type 107    Register Assistant
+                     */
+                    case chatMessageVOTypes.REGISTER_ASSISTANT:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        fireEvent('assistantEvents', {
+                            type: 'ASSISTANT_REGISTER',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 108    Deactivate Assistant
+                     */
+                    case chatMessageVOTypes.DEACTIVATE_ASSISTANT:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        fireEvent('assistantEvents', {
+                            type: 'ASSISTANT_DEACTIVATE',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 109    Get Assistants List
+                     */
+                    case chatMessageVOTypes.GET_ASSISTANTS:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        fireEvent('assistantEvents', {
+                            type: 'ASSISTANTS_LIST',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
                      * Type 110    Active Call Participants List
                      */
                     case chatMessageVOTypes.ACTIVE_CALL_PARTICIPANTS:
@@ -3687,6 +3745,66 @@
 
                         fireEvent('callEvents', {
                             type: 'TURN_OFF_VIDEO_CALL',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 115    Get Assistants History
+                     */
+                    case chatMessageVOTypes.ASSISTANT_HISTORY:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        fireEvent('assistantEvents', {
+                            type: 'ASSISTANTS_HSITORY',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 116    Block Assistants
+                     */
+                    case chatMessageVOTypes.BLOCK_ASSISTANT:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        fireEvent('assistantEvents', {
+                            type: 'ASSISTANT_BLOCK',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 117    UnBlock Assistant
+                     */
+                    case chatMessageVOTypes.UNBLOCK_ASSISTANT:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        fireEvent('assistantEvents', {
+                            type: 'ASSISTANT_UNBLOCK',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 118    Blocked Assistants List
+                     */
+                    case chatMessageVOTypes.BLOCKED_ASSISTANTS:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        fireEvent('assistantEvents', {
+                            type: 'ASSISTANTS_BLOCKED_LIST',
                             result: messageContent
                         });
 
@@ -4508,6 +4626,32 @@
                 }
                 // return blockedUser;
                 return JSON.parse(JSON.stringify(blockedUser));
+            },
+
+            formatDataToMakeAssistanthistoryItem = function (messageContent) {
+
+                var assistant = {
+                    actionType: Object.keys(assistantActionTypes)[Object.values(assistantActionTypes).indexOf(messageContent.actionType)],
+                    actionTime: messageContent.actionTime
+                };
+
+                // Add chatProfileVO if exist
+                if (messageContent.participantVO) {
+                    assistant.participantVO = messageContent.participantVO;
+                }
+
+                // return participant;
+                return JSON.parse(JSON.stringify(assistant));
+            },
+
+            formatDataToMakeAssistantHistoryList = function (assistantsList) {
+                var returnData = [];
+
+                for (var i = 0; i < assistantsList.length; i++) {
+                    returnData.push(formatDataToMakeAssistanthistoryItem(assistantsList[i]));
+                }
+
+                return returnData;
             },
 
             /**
@@ -11319,7 +11463,7 @@
 
         };
 
-        this.createSelfThread = function(params, callback) {
+        this.createSelfThread = function (params, callback) {
             var content = {
                 type: createThreadTypes['SELF']
             };
@@ -13740,6 +13884,385 @@
             });
         };
 
+        this.registerAssistant = function (params, callback) {
+            var sendData = {
+                chatMessageVOType: chatMessageVOTypes.REGISTER_ASSISTANT,
+                typeCode: params.typeCode,
+                content: []
+            };
+
+            if (params) {
+                if (Array.isArray(params.assistants) && typeof params.assistants[0] === 'object') {
+                    for (var i = 0; i < params.assistants.length; i++) {
+                        if (typeof params.assistants[i] === 'object'
+                            && params.assistants[i].hasOwnProperty('contactType')
+                            && !!params.assistants[i].contactType
+                            && params.assistants[i].hasOwnProperty('roleTypes')
+                            && Array.isArray(params.assistants[i].roleTypes)
+                            && params.assistants[i].roleTypes.length
+                            && params.assistants[i].hasOwnProperty('assistant')
+                            && params.assistants[i].assistant.hasOwnProperty('id')
+                            && params.assistants[i].assistant.hasOwnProperty('idType')
+                            && params.assistants[i].assistant.id.length
+                            && inviteeVOidTypes[params.assistants[i].assistant.idType] > 0) {
+                            sendData.content.push({
+                                contactType: params.assistants[i].contactType,
+                                roleTypes: params.assistants[i].roleTypes,
+                                assistant: {
+                                    id: params.assistants[i].assistant.id,
+                                    idType: +inviteeVOidTypes[params.assistants[i].assistant.idType]
+                                }
+                            });
+                        } else {
+                            fireEvent('error', {
+                                code: 999,
+                                message: 'You should send an array of Assistant Objects each containing of contactType, roleTypes and assistant itself!'
+                            });
+                            return;
+                        }
+                    }
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'You should send an array of Assistant Objects each containing of contactType, roleTypes and assistant itself!'
+                    });
+                    return;
+                }
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to Create Assistants!'
+                });
+                return;
+            }
+
+            return sendMessage(sendData, {
+                onResult: function (result) {
+                    var returnData = {
+                        hasError: result.hasError,
+                        cache: false,
+                        errorMessage: result.errorMessage,
+                        errorCode: result.errorCode
+                    };
+                    if (!returnData.hasError) {
+                        var messageContent = result.result;
+                        returnData.result = messageContent;
+                    }
+                    callback && callback(returnData);
+                }
+            });
+        };
+
+        this.deactivateAssistant = function (params, callback) {
+            var sendData = {
+                chatMessageVOType: chatMessageVOTypes.DEACTIVATE_ASSISTANT,
+                typeCode: params.typeCode,
+                content: []
+            };
+
+            if (params) {
+                if (Array.isArray(params.assistants) && typeof params.assistants[0] === 'object') {
+                    for (var i = 0; i < params.assistants.length; i++) {
+                        if (typeof params.assistants[i] === 'object'
+                            && params.assistants[i].hasOwnProperty('assistant')
+                            && params.assistants[i].assistant.hasOwnProperty('id')
+                            && params.assistants[i].assistant.hasOwnProperty('idType')
+                            && params.assistants[i].assistant.id.length
+                            && inviteeVOidTypes[params.assistants[i].assistant.idType] > 0) {
+                            sendData.content.push({
+                                assistant: {
+                                    id: params.assistants[i].assistant.id,
+                                    idType: +inviteeVOidTypes[params.assistants[i].assistant.idType]
+                                }
+                            });
+                        } else {
+                            fireEvent('error', {
+                                code: 999,
+                                message: 'You should send an array of Assistant Objects each containing of an assistant!'
+                            });
+                            return;
+                        }
+                    }
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'You should send an array of Assistant Objects each containing of an assistant!'
+                    });
+                    return;
+                }
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to Deactivate Assistants!'
+                });
+                return;
+            }
+
+            return sendMessage(sendData, {
+                onResult: function (result) {
+                    var returnData = {
+                        hasError: result.hasError,
+                        cache: false,
+                        errorMessage: result.errorMessage,
+                        errorCode: result.errorCode
+                    };
+                    if (!returnData.hasError) {
+                        var messageContent = result.result;
+                        returnData.result = messageContent;
+                    }
+                    callback && callback(returnData);
+                }
+            });
+        };
+
+        this.blockAssistant = function (params, callback) {
+            var sendData = {
+                chatMessageVOType: chatMessageVOTypes.BLOCK_ASSISTANT,
+                typeCode: params.typeCode,
+                content: []
+            };
+
+            if (params) {
+                if (Array.isArray(params.assistants) && typeof params.assistants[0] === 'object') {
+                    for (var i = 0; i < params.assistants.length; i++) {
+                        if (typeof params.assistants[i] === 'object'
+                            && params.assistants[i].hasOwnProperty('assistant')
+                            && params.assistants[i].assistant.hasOwnProperty('id')
+                            && params.assistants[i].assistant.hasOwnProperty('idType')
+                            && params.assistants[i].assistant.id.length
+                            && inviteeVOidTypes[params.assistants[i].assistant.idType] > 0) {
+                            sendData.content.push({
+                                assistant: {
+                                    id: params.assistants[i].assistant.id,
+                                    idType: +inviteeVOidTypes[params.assistants[i].assistant.idType]
+                                }
+                            });
+                        } else {
+                            fireEvent('error', {
+                                code: 999,
+                                message: 'You should send an array of Assistant Objects each containing of an assistant!'
+                            });
+                            return;
+                        }
+                    }
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'You should send an array of Assistant Objects each containing of an assistant!'
+                    });
+                    return;
+                }
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to Block Assistants!'
+                });
+                return;
+            }
+
+            return sendMessage(sendData, {
+                onResult: function (result) {
+                    var returnData = {
+                        hasError: result.hasError,
+                        cache: false,
+                        errorMessage: result.errorMessage,
+                        errorCode: result.errorCode
+                    };
+                    if (!returnData.hasError) {
+                        var messageContent = result.result;
+                        returnData.result = messageContent;
+                    }
+                    callback && callback(returnData);
+                }
+            });
+        };
+
+        this.unblockAssistant = function (params, callback) {
+            var sendData = {
+                chatMessageVOType: chatMessageVOTypes.UNBLOCK_ASSISTANT,
+                typeCode: params.typeCode,
+                content: []
+            };
+
+            if (params) {
+                if (Array.isArray(params.assistants) && typeof params.assistants[0] === 'object') {
+                    for (var i = 0; i < params.assistants.length; i++) {
+                        if (typeof params.assistants[i] === 'object'
+                            && params.assistants[i].hasOwnProperty('assistant')
+                            && params.assistants[i].assistant.hasOwnProperty('id')
+                            && params.assistants[i].assistant.hasOwnProperty('idType')
+                            && params.assistants[i].assistant.id.length
+                            && inviteeVOidTypes[params.assistants[i].assistant.idType] > 0) {
+                            sendData.content.push({
+                                assistant: {
+                                    id: params.assistants[i].assistant.id,
+                                    idType: +inviteeVOidTypes[params.assistants[i].assistant.idType]
+                                }
+                            });
+                        } else {
+                            fireEvent('error', {
+                                code: 999,
+                                message: 'You should send an array of Assistant Objects each containing of an assistant!'
+                            });
+                            return;
+                        }
+                    }
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'You should send an array of Assistant Objects each containing of an assistant!'
+                    });
+                    return;
+                }
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to Unblock Assistants!'
+                });
+                return;
+            }
+
+            return sendMessage(sendData, {
+                onResult: function (result) {
+                    var returnData = {
+                        hasError: result.hasError,
+                        cache: false,
+                        errorMessage: result.errorMessage,
+                        errorCode: result.errorCode
+                    };
+                    if (!returnData.hasError) {
+                        var messageContent = result.result;
+                        returnData.result = messageContent;
+                    }
+                    callback && callback(returnData);
+                }
+            });
+        };
+
+        this.getAssistantsList = function (params, callback) {
+            var sendData = {
+                chatMessageVOType: chatMessageVOTypes.GET_ASSISTANTS,
+                typeCode: params.typeCode,
+                content: {},
+                pushMsgType: 3,
+                token: token
+            };
+
+            if (params) {
+                if (typeof params.contactType === 'string' && params.contactType.length) {
+                    sendData.content.contactType = params.contactType;
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'Enter a ContactType to get all related Assistants!'
+                    });
+                    return;
+                }
+
+                sendData.content.count = !!params.count ? +params.count : 50;
+                sendData.content.offset = !!params.offset ? +params.offset : 0;
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to get Assistants list!'
+                });
+                return;
+            }
+
+            return sendMessage(sendData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.getBlockedAssistantsList = function (params, callback) {
+            var sendData = {
+                chatMessageVOType: chatMessageVOTypes.BLOCKED_ASSISTANTS,
+                typeCode: params.typeCode,
+                content: {},
+                pushMsgType: 3,
+                token: token
+            };
+
+            if (params) {
+                if (typeof params.contactType === 'string' && params.contactType.length) {
+                    sendData.content.contactType = params.contactType;
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'Enter a ContactType to get all Blocked Assistants!'
+                    });
+                    return;
+                }
+
+                sendData.content.count = !!params.count ? +params.count : 50;
+                sendData.content.offset = !!params.offset ? +params.offset : 0;
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to get Blocked Assistants list!'
+                });
+                return;
+            }
+
+            return sendMessage(sendData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.getAssistantsHistory = function (params, callback) {
+            var sendData = {
+                    chatMessageVOType: chatMessageVOTypes.ASSISTANT_HISTORY,
+                    typeCode: params.typeCode,
+                    content: {
+                        offset: +params.offset > 0 ? +params.offset : 0,
+                        count: +params.count > 0 ? +params.count : config.getHistoryCount
+                    }
+                };
+
+            if (+params.fromTime > 0 && +params.fromTime < 9999999999999) {
+                sendData.content.fromTime = +params.fromTime;
+            }
+
+            if (+params.toTime > 0 && +params.toTime < 9999999999999) {
+                sendData.content.toTime = +params.toTime;
+            }
+
+            if (!!params.actionType && assistantActionTypes.hasOwnProperty(params.actionType.toUpperCase())) {
+                sendData.content.actionType = assistantActionTypes[params.actionType.toUpperCase()];
+            }
+
+            return sendMessage(sendData, {
+                onResult: function (result) {
+                    var returnData = {
+                        hasError: result.hasError,
+                        cache: false,
+                        errorMessage: result.errorMessage,
+                        errorCode: result.errorCode
+                    };
+
+                    if (!returnData.hasError) {
+                        var messageContent = result.result,
+                            messageLength = messageContent.length,
+                            resultData = {
+                                participants: formatDataToMakeAssistantHistoryList(messageContent),
+                                contentCount: result.contentCount,
+                                hasNext: (sendData.content.offset + sendData.content.count < result.contentCount && messageLength > 0),
+                                nextOffset: sendData.content.offset * 1 + messageLength * 1
+                            };
+
+                        returnData.result = resultData;
+                    }
+
+                    callback && callback(returnData);
+                    callback = undefined;
+                }
+            });
+        };
+
         this.mapReverse = mapReverse;
 
         this.mapSearch = mapSearch;
@@ -14605,4 +15128,5 @@
         }
         window.POD.Chat = Chat;
     }
-})();
+})
+();
