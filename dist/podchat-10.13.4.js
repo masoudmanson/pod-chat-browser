@@ -46967,6 +46967,7 @@ WildEmitter.mixin(WildEmitter);
                 END_RECORD_CALL: 122,
                 START_SCREEN_SHARE: 123,
                 END_SCREEN_SHARE: 124,
+                DELETE_FROM_CALL_HISTORY: 125,
                 MUTUAL_GROUPS: 130,
                 CREATE_TAG: 140,
                 EDIT_TAG: 141,
@@ -50650,6 +50651,21 @@ WildEmitter.mixin(WildEmitter);
 
                         fireEvent('callEvents', {
                             type: 'END_SCREEN_SHARE',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 125   Delete From Call List
+                     */
+                    case chatMessageVOTypes.DELETE_FROM_CALL_HISTORY:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        fireEvent('callEvents', {
+                            type: 'DELETE_FROM_CALL_LIST',
                             result: messageContent
                         });
 
@@ -61667,6 +61683,52 @@ WildEmitter.mixin(WildEmitter);
             return sendMessage(getCallListData, {
                 onResult: function (result) {
                     callback && callback(result);
+                }
+            });
+        };
+
+        this.deleteFromCallList = function (params, callback) {
+            var sendData = {
+                chatMessageVOType: chatMessageVOTypes.DELETE_FROM_CALL_HISTORY,
+                typeCode: params.typeCode,
+                content: []
+            };
+
+            if (params) {
+                if (typeof params.contactType === 'string' && params.contactType.length) {
+                    sendData.content.contactType = params.contactType;
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'You should enter a contactType!'
+                    });
+                    return;
+                }
+
+                if (Array.isArray(params.callIds)) {
+                    sendData.content = params.callIds;
+                }
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to Delete a call from Call History!'
+                });
+                return;
+            }
+
+            return sendMessage(sendData, {
+                onResult: function (result) {
+                    var returnData = {
+                        hasError: result.hasError,
+                        cache: false,
+                        errorMessage: result.errorMessage,
+                        errorCode: result.errorCode
+                    };
+                    if (!returnData.hasError) {
+                        var messageContent = result.result;
+                        returnData.result = messageContent;
+                    }
+                    callback && callback(returnData);
                 }
             });
         };
