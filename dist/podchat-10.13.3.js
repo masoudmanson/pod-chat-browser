@@ -46971,6 +46971,8 @@ WildEmitter.mixin(WildEmitter);
                 CREATE_TAG: 140,
                 EDIT_TAG: 141,
                 DELETE_TAG: 142,
+                ADD_TAG_PARTICIPANT: 143,
+                REMOVE_TAG_PARTICIPANT: 144,
                 GET_TAG_LIST: 145,
                 ERROR: 999
             },
@@ -50708,6 +50710,36 @@ WildEmitter.mixin(WildEmitter);
 
                         fireEvent('threadEvents', {
                             type: 'DELETE_TAG',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 143    Delete Tag
+                     */
+                    case chatMessageVOTypes.ADD_TAG_PARTICIPANT:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        fireEvent('threadEvents', {
+                            type: 'ADD_TAG_PARTICIPANT',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 144    Delete Tag
+                     */
+                    case chatMessageVOTypes.REMOVE_TAG_PARTICIPANT:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent));
+                        }
+
+                        fireEvent('threadEvents', {
+                            type: 'REMOVE_TAG_PARTICIPANT',
                             result: messageContent
                         });
 
@@ -60709,6 +60741,86 @@ WildEmitter.mixin(WildEmitter);
             return sendMessage(sendData, {
                 onResult: function (result) {
                     callback && callback(result);
+                }
+            });
+        };
+
+        this.addTagParticipants = function (params, callback) {
+            var sendData = {
+                chatMessageVOType: chatMessageVOTypes.ADD_TAG_PARTICIPANT,
+                typeCode: params.typeCode,
+                content: []
+            };
+
+            if (params) {
+                if (+params.tagId > 0) {
+                    sendData.subjectId = +params.tagId;
+                }
+
+                if (Array.isArray(params.threadIds)) {
+                    sendData.content = params.threadIds;
+                }
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to Add Tag PArticipants!'
+                });
+                return;
+            }
+
+            return sendMessage(sendData, {
+                onResult: function (result) {
+                    var returnData = {
+                        hasError: result.hasError,
+                        cache: false,
+                        errorMessage: result.errorMessage,
+                        errorCode: result.errorCode
+                    };
+                    if (!returnData.hasError) {
+                        var messageContent = result.result;
+                        returnData.result = messageContent;
+                    }
+                    callback && callback(returnData);
+                }
+            });
+        };
+
+        this.removeTagParticipants = function (params, callback) {
+            var sendData = {
+                chatMessageVOType: chatMessageVOTypes.REMOVE_TAG_PARTICIPANT,
+                typeCode: params.typeCode,
+                content: []
+            };
+
+            if (params) {
+                if (+params.tagId > 0) {
+                    sendData.subjectId = +params.tagId;
+                }
+
+                if (Array.isArray(params.threadIds)) {
+                    sendData.content = params.threadIds;
+                }
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to Remove Tag Participants!'
+                });
+                return;
+            }
+
+            return sendMessage(sendData, {
+                onResult: function (result) {
+                    var returnData = {
+                        hasError: result.hasError,
+                        cache: false,
+                        errorMessage: result.errorMessage,
+                        errorCode: result.errorCode
+                    };
+                    if (!returnData.hasError) {
+                        var messageContent = result.result;
+                        returnData.result = messageContent;
+                    }
+                    callback && callback(returnData);
                 }
             });
         };
