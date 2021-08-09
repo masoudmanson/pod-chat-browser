@@ -187,6 +187,8 @@
                 BLOCKED_ASSISTANTS: 118,
                 RECORD_CALL: 121,
                 END_RECORD_CALL: 122,
+                START_SCREEN_SHARE: 123,
+                END_SCREEN_SHARE: 124,
                 CREATE_TAG: 140,
                 EDIT_TAG: 141,
                 DELETE_TAG: 142,
@@ -3837,6 +3839,36 @@
 
                         fireEvent('callEvents', {
                             type: 'STOP_RECORDING_CALL',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 123   Start Screen Share
+                     */
+                    case chatMessageVOTypes.START_SCREEN_SHARE:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        fireEvent('callEvents', {
+                            type: 'START_SCREEN_SHARE',
+                            result: messageContent
+                        });
+
+                        break;
+
+                    /**
+                     * Type 124   End Screen Share
+                     */
+                    case chatMessageVOTypes.END_SCREEN_SHARE:
+                        if (messagesCallbacks[uniqueId]) {
+                            messagesCallbacks[uniqueId](Utility.createReturnData(false, '', 0, messageContent, contentCount));
+                        }
+
+                        fireEvent('callEvents', {
+                            type: 'END_SCREEN_SHARE',
                             result: messageContent
                         });
 
@@ -14599,6 +14631,72 @@
             });
         };
 
+        this.startScreenShare = function (params, callback) {
+            var sendData = {
+                chatMessageVOType: chatMessageVOTypes.START_SCREEN_SHARE,
+                typeCode: params.typeCode,
+                pushMsgType: 3,
+                token: token
+            };
+
+            if (params) {
+                if (typeof +params.callId === 'number' && params.callId > 0) {
+                    sendData.subjectId = +params.callId;
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'Invalid Call id!'
+                    });
+                    return;
+                }
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to Share Screen!'
+                });
+                return;
+            }
+
+            return sendMessage(sendData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
+        this.endScreenShare = function (params, callback) {
+            var sendData = {
+                chatMessageVOType: chatMessageVOTypes.END_SCREEN_SHARE,
+                typeCode: params.typeCode,
+                pushMsgType: 3,
+                token: token
+            };
+
+            if (params) {
+                if (typeof +params.callId === 'number' && params.callId > 0) {
+                    sendData.subjectId = +params.callId;
+                } else {
+                    fireEvent('error', {
+                        code: 999,
+                        message: 'Invalid Call id!'
+                    });
+                    return;
+                }
+            } else {
+                fireEvent('error', {
+                    code: 999,
+                    message: 'No params have been sent to End Screen Sharing!'
+                });
+                return;
+            }
+
+            return sendMessage(sendData, {
+                onResult: function (result) {
+                    callback && callback(result);
+                }
+            });
+        };
+
         this.getCallsList = function (params, callback) {
             var getCallListData = {
                 chatMessageVOType: chatMessageVOTypes.GET_CALLS,
@@ -15128,5 +15226,4 @@
         }
         window.POD.Chat = Chat;
     }
-})
-();
+})();
