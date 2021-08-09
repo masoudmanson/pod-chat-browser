@@ -24,7 +24,7 @@
     <script type="text/javascript">
         // Developement
         var PodChat = window.POD.Chat;
-        var env = 'sandbox'; // main | sandbox | integration
+        var env = 'integration'; // main | sandbox | integration
 
         var params = {
             appId: new Date().getTime(),
@@ -94,6 +94,16 @@
          * Main Chat Ready Listener
          */
         var chatReadyInstance = chatAgent.on("chatReady", function () {
+
+            // chatAgent.createSelfThread({
+            //     description: 'Use this space to save messages for your own sake',
+            //     metadata: {
+            //         name: 'Masoud',
+            //         status: '😒'
+            //     }
+            // }, function(result) {
+            //     console.log({result});
+            // });
 
             // chatAgent.changeThreadPrivacy({
             //     threadId: 149486,
