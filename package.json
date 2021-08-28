@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/masoudmanson/pod-chat-browser.git"
+    "url": "git+https://github.com/FanapSoft/pod-chat-browser-js-sdk.git"
   },
   "keywords": [
     "POD",
@@ -22,9 +22,9 @@
   "author": "Masoud Amjadi <masoudmanson@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/masoudmanson/pod-chat-browser/issues"
+    "url": "https://github.com/FanapSoft/pod-chat-browser-js-sdk/issues"
   },
-  "homepage": "https://github.com/masoudmanson/pod-chat-browser#readme",
+  "homepage": "https://github.com/FanapSoft/pod-chat-browser-js-sdk#readme",
   "dependencies": {
     "crypto-js": "^4.0.0",
     "dexie": "^2.0.4",

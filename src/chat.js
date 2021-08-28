@@ -260,11 +260,6 @@
                 'VIDEO': 0x1
             },
             callOptions = params.callOptions,
-            callSocketAddress = (params.callOptions
-                && params.callOptions.hasOwnProperty('callSocketAddress')
-                && typeof params.callOptions.callSocketAddress === 'string')
-                ? params.callOptions.callSocketAddress
-                : 'wss://46.32.6.187/gsthandler',
             callTurnIp = (params.callOptions
                 && params.callOptions.hasOwnProperty('callTurnIp')
                 && typeof params.callOptions.callTurnIp === 'string')
