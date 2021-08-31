@@ -54804,7 +54804,6 @@ WildEmitter.mixin(WildEmitter);
             KurentoUtils = require('kurento-utils');
             WebrtcAdapter = require('webrtc-adapter');
             Sentry = require('@sentry/browser');
-            console.log({Sentry})
         } else {
             Async = window.POD.Async;
             ChatUtility = window.POD.ChatUtility;
@@ -54820,11 +54819,13 @@ WildEmitter.mixin(WildEmitter);
 
         var Utility = new ChatUtility();
 
-        Sentry.init({
-            dsn: 'http://784a14966f6a416b8b58a4b144aef0f5@talksentry.sakku-khatam.ir:9000/4',
-            attachStacktrace: true
-        });
-        Sentry.setContext("Chat Params", params);
+        if (!!Sentry) {
+            Sentry.init({
+                dsn: 'http://784a14966f6a416b8b58a4b144aef0f5@talksentry.sakku-khatam.ir:9000/4',
+                attachStacktrace: true
+            });
+            Sentry.setContext("Chat Params", params);
+        }
 
         var asyncClient,
             peerId,
