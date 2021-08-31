@@ -15,16 +15,18 @@
     <script type="text/javascript" src="./kurento-utils.min.js"></script>
     <script type="text/javascript" src="./adapter.js"></script>
     <script type="text/javascript" src="../src/chat.js"></script>
+    <script src="https://browser.sentry-cdn.com/5.5.0/bundle.min.js" crossorigin="anonymous"></script>
+
     <script type="text/javascript" src="./config.js"></script>
 
     <!-- Production Mode -->
-    <!--<script type="text/javascript" src="podchat.js"></script>-->
+    <!-- <script type="text/javascript" src="/dist/podchat-10.13.8.js"></script>-->
     <!--<script type="text/javascript" src="podchat-browser.min.js"></script>-->
 
     <script type="text/javascript">
         // Developement
         var PodChat = window.POD.Chat;
-        var env = 'sandbox'; // main | sandbox | integration
+        var env = 'main'; // main | sandbox | integration
 
         var params = {
             appId: new Date().getTime(),

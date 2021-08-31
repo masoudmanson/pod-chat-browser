@@ -11,7 +11,8 @@
         ChatUtility,
         Dexie,
         KurentoUtils,
-        WebrtcAdapter;
+        WebrtcAdapter,
+        Sentry;
 
     function Chat(params) {
         if (typeof (require) !== 'undefined' && typeof (exports) !== 'undefined') {
@@ -20,12 +21,14 @@
             Dexie = require('dexie').default || require('dexie');
             KurentoUtils = require('kurento-utils');
             WebrtcAdapter = require('webrtc-adapter');
+            Sentry = require('@sentry/browser');
         } else {
             Async = window.POD.Async;
             ChatUtility = window.POD.ChatUtility;
             Dexie = window.Dexie;
             KurentoUtils = window.kurentoUtils;
             WebrtcAdapter = window.adapter;
+            Sentry = window.Sentry;
         }
 
         /*******************************************************
@@ -33,6 +36,14 @@
          *******************************************************/
 
         var Utility = new ChatUtility();
+
+        if (!!Sentry) {
+            Sentry.init({
+                dsn: 'http://784a14966f6a416b8b58a4b144aef0f5@talksentry.sakku-khatam.ir:9000/4',
+                attachStacktrace: true
+            });
+            Sentry.setContext("Chat Params", params);
+        }
 
         var asyncClient,
             peerId,
@@ -509,6 +520,8 @@
                             if (!userInfoResult.hasError) {
                                 userInfo = userInfoResult.result.user;
 
+                                !!Sentry && Sentry.setUser(userInfo);
+
                                 getAllThreads({
                                     summary: true,
                                     cache: false
@@ -649,9 +662,9 @@
 
                     fireEvent('callEvents', {
                         type: 'CALL_ERROR',
-                        errorCode: 7000,
-                        errorMessage: 'Call Socket is closed!',
-                        errorInfo: event
+                        code: 7000,
+                        message: 'Call Socket is closed!',
+                        error: event
                     });
                 });
 
@@ -3376,7 +3389,7 @@
                         } else {
                             fireEvent('callEvents', {
                                 type: 'CALL_ERROR',
-                                result: 'Chat Data DTO is not present!'
+                                message: 'Chat Data DTO is not present!'
                             });
                         }
 
@@ -4048,8 +4061,10 @@
                         fireEvent('error', {
                             code: messageContent.code,
                             message: messageContent.message,
-                            error: messageContent
+                            error: messageContent,
+                            uniqueId: uniqueId
                         });
+
                         break;
                 }
             },
@@ -8655,7 +8670,7 @@
                                 return;
                             }
                             if (typeof params.userGroupHash == 'string') {
-                                userGroupHash = params.userGroupHash;
+                                // userGroupHash = params.userGroupHash;
                                 uploadImageData.userGroupHash = params.userGroupHash;
                             } else {
                                 callback({
@@ -8891,9 +8906,34 @@
                         consoleLogging && console.log("%c   Chat is Ready 😉", 'border-left: solid #666 10px; color: #666;');
                     }
                 }
+
+                if (eventName === "error" || (eventName === "callEvents" && param.type === "CALL_ERROR")) {
+                    try {
+                        throw new PodChatErrorException(param);
+                    } catch (err) {
+                        if (!!Sentry) {
+                            Sentry.setExtra('errorMessage', err.message);
+                            Sentry.setExtra('errorCode', err.code);
+                            Sentry.setExtra('uniqueId', err.uniqueId);
+                            Sentry.setExtra('token', err.token);
+                            Sentry.captureException(err.error, {
+                                logger: eventName
+                            });
+                        }
+                    }
+                }
+
                 for (var id in eventCallbacks[eventName]) {
                     eventCallbacks[eventName][id](param);
                 }
+            },
+
+            PodChatErrorException = function (error) {
+                this.code = error.error.code;
+                this.message = error.error.message;
+                this.uniqueId = error.uniqueId;
+                this.token = token;
+                this.error = JSON.stringify(error.error);
             },
 
             /**
@@ -10599,8 +10639,8 @@
             sendCallSocketError = function (message) {
                 fireEvent('callEvents', {
                     type: 'CALL_ERROR',
-                    errorCode: 7000,
-                    errorMessage: message
+                    code: 7000,
+                    message: message
                 });
 
                 sendCallMessage({
@@ -10612,51 +10652,51 @@
             explainUserMediaError = function (err) {
                 fireEvent('callEvents', {
                     type: 'CALL_ERROR',
-                    errorCode: 7000,
-                    errorMessage: err
+                    code: 7000,
+                    message: err
                 });
 
                 const n = err.name;
                 if (n === 'NotFoundError' || n === 'DevicesNotFoundError') {
                     fireEvent('callEvents', {
                         type: 'CALL_ERROR',
-                        errorCode: 7000,
-                        errorMessage: "Missing webcam for required tracks"
+                        code: 7000,
+                        message: "Missing webcam for required tracks"
                     });
                     return "Missing webcam for required tracks";
                 } else if (n === 'NotReadableError' || n === 'TrackStartError') {
                     fireEvent('callEvents', {
                         type: 'CALL_ERROR',
-                        errorCode: 7000,
-                        errorMessage: "Webcam is already in use"
+                        code: 7000,
+                        message: "Webcam is already in use"
                     });
                     return "Webcam is already in use";
                 } else if (n === 'OverconstrainedError' || n === 'ConstraintNotSatisfiedError') {
                     fireEvent('callEvents', {
                         type: 'CALL_ERROR',
-                        errorCode: 7000,
-                        errorMessage: "Webcam doesn't provide required tracks"
+                        code: 7000,
+                        message: "Webcam doesn't provide required tracks"
                     });
                     return "Webcam doesn't provide required tracks";
                 } else if (n === 'NotAllowedError' || n === 'PermissionDeniedError') {
                     fireEvent('callEvents', {
                         type: 'CALL_ERROR',
-                        errorCode: 7000,
-                        errorMessage: "Webcam permission has been denied by the user"
+                        code: 7000,
+                        message: "Webcam permission has been denied by the user"
                     });
                     return "Webcam permission has been denied by the user";
                 } else if (n === 'TypeError') {
                     fireEvent('callEvents', {
                         type: 'CALL_ERROR',
-                        errorCode: 7000,
-                        errorMessage: "No media tracks have been requested"
+                        code: 7000,
+                        message: "No media tracks have been requested"
                     });
                     return "No media tracks have been requested";
                 } else {
                     fireEvent('callEvents', {
                         type: 'CALL_ERROR',
-                        errorCode: 7000,
-                        errorMessage: "Unknown error: " + err
+                        code: 7000,
+                        message: "Unknown error: " + err
                     });
                     return "Unknown error: " + err;
                 }
@@ -10673,14 +10713,14 @@
                     if (err.name === 'NotAllowedError') {
                         fireEvent('callEvents', {
                             type: 'CALL_ERROR',
-                            errorCode: 7000,
-                            errorMessage: "[start] Browser doesn't allow playing media: " + err
+                            code: 7000,
+                            message: "[start] Browser doesn't allow playing media: " + err
                         });
                     } else {
                         fireEvent('callEvents', {
                             type: 'CALL_ERROR',
-                            errorCode: 7000,
-                            errorMessage: "[start] Error in media.play(): " + err
+                            code: 7000,
+                            message: "[start] Error in media.play(): " + err
                         });
                     }
                 });
@@ -10749,9 +10789,9 @@
                 if (sampleWebRtc == null) {
                     fireEvent('callEvents', {
                         type: 'CALL_ERROR',
-                        errorCode: 7000,
-                        errorMessage: "[handleProcessSdpAnswer] Skip, no WebRTC Peer",
-                        errorInfo: webpeers[jsonMessage.topic]
+                        code: 7000,
+                        message: "[handleProcessSdpAnswer] Skip, no WebRTC Peer",
+                        error: webpeers[jsonMessage.topic]
                     });
                     return;
                 }
@@ -10762,8 +10802,8 @@
 
                         fireEvent('callEvents', {
                             type: 'CALL_ERROR',
-                            errorCode: 7000,
-                            errorMessage: "[handleProcessSdpAnswer] Error: " + err
+                            code: 7000,
+                            message: "[handleProcessSdpAnswer] Error: " + err
                         });
 
                         return;
@@ -10777,9 +10817,9 @@
                 if (sampleWebRtc == null) {
                     fireEvent('callEvents', {
                         type: 'CALL_ERROR',
-                        errorCode: 7000,
-                        errorMessage: "[handleAddIceCandidate] Skip, no WebRTC Peer",
-                        errorInfo: JSON.stringify(webpeers[jsonMessage.topic])
+                        code: 7000,
+                        message: "[handleAddIceCandidate] Skip, no WebRTC Peer",
+                        error: JSON.stringify(webpeers[jsonMessage.topic])
                     });
                     return;
                 }
@@ -10790,9 +10830,9 @@
 
                         fireEvent('callEvents', {
                             type: 'CALL_ERROR',
-                            errorCode: 7000,
-                            errorMessage: "[handleAddIceCandidate] " + err,
-                            errorInfo: JSON.stringify(jsonMessage.candidate)
+                            code: 7000,
+                            message: "[handleAddIceCandidate] " + err,
+                            error: JSON.stringify(jsonMessage.candidate)
                         });
 
                         return;
@@ -10817,8 +10857,8 @@
 
                 fireEvent('callEvents', {
                     type: 'CALL_ERROR',
-                    errorCode: 7000,
-                    errorMessage: "Kurento error: " + errMessage
+                    code: 7000,
+                    essage: "Kurento error: " + errMessage
                 });
             },
 

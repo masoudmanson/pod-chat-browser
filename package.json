@@ -26,11 +26,13 @@
   },
   "homepage": "https://github.com/FanapSoft/pod-chat-browser-js-sdk#readme",
   "dependencies": {
+    "@sentry/browser": "^6.11.0",
+    "@sentry/tracing": "^6.11.0",
     "crypto-js": "^4.0.0",
     "dexie": "^2.0.4",
     "faker": "^5.5.3",
     "kurento-utils": "^6.16.0",
-    "podasync-ws-only": "^2.7.5",
+    "podasync-ws-only": "^2.7.9",
     "query-string": "^6.8.1",
     "webrtc-adapter": "^8.0.0"
   },
