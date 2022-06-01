@@ -29,7 +29,7 @@
     "@sentry/browser": "^6.11.0",
     "@sentry/tracing": "^6.11.0",
     "crypto-js": "^4.0.0",
-    "dexie": "^2.0.4",
+    "dexie": "^3.2.2",
     "faker": "^5.5.3",
     "kurento-utils": "^6.16.0",
     "podasync-ws-only": "^2.7.9",
